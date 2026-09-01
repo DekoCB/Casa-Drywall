@@ -1,0 +1,1005 @@
+/* ═══════════════════════════════════════════════════════
+   Facturas Pendientes — transcrito de administrador/facturas.php
+   ═══════════════════════════════════════════════════════ */
+.fac-wrapper {
+    --fac-verde:   var(--brand);
+    --fac-verde-2: var(--brand-2);
+    --fac-tenue:   rgba(217, 203, 22,.06);
+    --fac-borde-v: rgba(217, 203, 22,.18);
+    --fac-borde:   rgba(180,160,140,.18);
+    --fac-texto:   var(--ink);
+    --fac-mudo:    var(--ink-3);
+    --fac-sup:     var(--surface);
+    --fac-sup-2:   var(--surface-2);
+    color: var(--fac-texto);
+}
+.fac-wrapper table,
+.fac-wrapper input,
+.fac-wrapper select { font-variant-numeric: lining-nums tabular-nums; }
+
+/* ── Cabecera ────────────────────────────────────────── */
+.fac-header {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 24px;
+    padding: 22px 26px;
+    border-radius: var(--r-lg);
+    background: var(--brand);
+    overflow: hidden;
+}
+.fac-header-left h2 { margin: 0 0 5px; font-family: var(--font-display); font-size: 19px; font-weight: 400; color: var(--on-brand); letter-spacing: .01em; }
+.fac-header-left p  { margin: 0; font-size: 13.5px; color: var(--on-brand); opacity: .72; letter-spacing: .02em; }
+.fac-header-right   { position: relative; z-index: 1; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.btn-upload-pdf {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border: 1.5px solid var(--on-brand);
+    border-radius: 7px;
+    background: var(--on-brand);
+    color: var(--brand);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: .03em;
+    cursor: pointer;
+    transition: all .2s;
+}
+.btn-upload-pdf:hover { background: #000; border-color: #000; }
+.btn-upload-pdf svg   { width: 15px; height: 15px; flex-shrink: 0; }
+
+.btn-add-fac {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 18px;
+    border: 1px solid rgba(26,26,24,.3);
+    border-radius: 7px;
+    background: rgba(26,26,24,.08);
+    color: var(--on-brand);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: .03em;
+    cursor: pointer;
+    transition: all .2s;
+}
+.btn-add-fac:hover { background: rgba(26,26,24,.16); border-color: rgba(26,26,24,.45); }
+
+/* ── Indicadores ─────────────────────────────────────── */
+.fac-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.fac-kpi {
+    padding: 18px 20px;
+    border: 1px solid var(--fac-borde);
+    border-top: 2px solid var(--fac-verde);
+    border-radius: 10px;
+    background: var(--fac-sup);
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    transition: transform .2s;
+}
+.fac-kpi:hover { transform: translateY(-2px); }
+.fac-kpi-label { margin-bottom: 6px; font-size: 10px; font-weight: 700; color: var(--fac-mudo); text-transform: uppercase; letter-spacing: .18em; }
+.fac-kpi-val   { font-size: 28px; font-weight: 700; line-height: 1.1; color: var(--fac-texto); letter-spacing: .01em; }
+.fac-kpi-sub   { margin-top: 4px; font-size: 12px; color: var(--fac-mudo); letter-spacing: .02em; }
+.fac-kpi-sub span { color: var(--fac-verde); }
+.fac-kpi.kpi-galones .fac-kpi-val { color: var(--fac-verde); }
+
+/* ── Tarjeta y filtros ───────────────────────────────── */
+.fac-card {
+    margin-bottom: 20px;
+    border: 1px solid var(--fac-borde);
+    border-radius: 10px;
+    background: var(--fac-sup);
+    overflow: hidden;
+}
+.fac-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--fac-borde);
+    background: var(--fac-sup-2);
+}
+.fac-search {
+    min-width: 200px;
+    padding: 8px 12px 8px 32px;
+    border: 1px solid var(--fac-borde);
+    border-radius: 7px;
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--fac-texto);
+    background-color: var(--fac-sup);
+    background-repeat: no-repeat;
+    background-position: 9px center;
+    background-size: 13px 13px;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23aaaaaa' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+}
+.fac-search:focus { outline: none; border-color: rgba(217, 203, 22,.35); box-shadow: 0 0 0 3px rgba(217, 203, 22,.06); }
+
+.filtro-mes-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--fac-borde);
+    background: var(--surface-2);
+}
+.filtro-mes-label { font-size: 11px; font-weight: 700; color: var(--fac-mudo); text-transform: uppercase; letter-spacing: .07em; white-space: nowrap; flex-shrink: 0; }
+.filtro-mini { font-size: 11px; color: var(--fac-mudo); }
+.filtro-sep  { width: 1px; height: 28px; margin: 0 6px; background: var(--fac-borde); flex-shrink: 0; }
+
+.mes-pill {
+    padding: 5px 14px;
+    border: 1.5px solid var(--line);
+    border-radius: var(--r-lg);
+    background: var(--surface);
+    color: var(--ink-3);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all .2s;
+}
+.mes-pill:hover  { border-color: var(--fac-verde); color: var(--fac-verde); }
+.mes-pill.active { background: var(--fac-verde); border-color: var(--fac-verde); color: var(--on-brand); box-shadow: 0 2px 8px rgba(217, 203, 22,.25); }
+
+.fecha-input {
+    padding: 4px 8px;
+    border: 1.5px solid var(--line);
+    border-radius: 7px;
+    background: var(--surface);
+    color: var(--fac-texto);
+    font-family: inherit;
+    font-size: 12px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color .2s;
+}
+.fecha-input:hover, .fecha-input:focus, .fecha-input.activo { border-color: var(--fac-verde); }
+
+.btn-limpiar-fecha {
+    padding: 4px 11px;
+    border: 1.5px solid var(--line);
+    border-radius: var(--r-lg);
+    background: var(--surface);
+    color: var(--ink-3);
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all .2s;
+}
+.btn-limpiar-fecha:hover { border-color: var(--fac-verde); color: var(--fac-verde); }
+
+/* ── Barra de desplazamiento horizontal ──────────────── */
+.scroll-nav-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 6px 16px;
+    border-bottom: 1px solid var(--fac-borde);
+    background: var(--surface-2);
+}
+.scroll-hint-txt { font-size: 11px; color: var(--fac-mudo); letter-spacing: .03em; }
+.scroll-nav-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 28px;
+    border: 1.5px solid var(--line);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--ink-2);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .15s;
+}
+.scroll-nav-btn:hover { border-color: var(--fac-verde); color: var(--fac-verde); }
+
+.tabla-outer { position: relative; }
+.scroll-shadow-left, .scroll-shadow-right {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 8;
+    width: 40px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s;
+}
+.scroll-shadow-left  { left: 0;  background: linear-gradient(to right, rgba(0,0,0,.10), transparent); }
+.scroll-shadow-right { right: 0; background: linear-gradient(to left,  rgba(0,0,0,.10), transparent); }
+.scroll-shadow-left.vis, .scroll-shadow-right.vis { opacity: 1; }
+
+/* ── Tabla ───────────────────────────────────────────── */
+.fac-table-wrap { overflow-x: auto; scroll-behavior: smooth; }
+.fac-table-wrap::-webkit-scrollbar { height: 8px; }
+.fac-table-wrap::-webkit-scrollbar-track { background: var(--surface-2); border-radius: 4px; }
+.fac-table-wrap::-webkit-scrollbar-thumb { background: var(--fac-verde); border-radius: 4px; }
+
+.fac-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.fac-table thead tr { background: var(--fac-sup-2); }
+.fac-table th {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--fac-borde);
+    text-align: left;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--fac-mudo);
+    text-transform: uppercase;
+    letter-spacing: .16em;
+    white-space: nowrap;
+}
+.fac-table td { padding: 11px 14px; border-bottom: 1px solid rgba(180,160,140,.08); vertical-align: middle; }
+.fac-table tbody tr:hover td { background: rgba(250,248,245,.7); }
+
+/* La columna del N° de factura queda fija al desplazar en horizontal. */
+.fac-table th:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 7;
+    background: var(--fac-sup-2);
+    border-right: 1px solid var(--fac-borde);
+}
+.fac-table td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    background: var(--surface);
+    border-right: 1px solid rgba(180,160,140,.15);
+    box-shadow: 3px 0 6px rgba(0,0,0,.05);
+}
+.fac-table tr:hover td:first-child          { background: var(--surface-2); }
+.fac-table tr.grupo-header td:first-child   { background: var(--side); box-shadow: 3px 0 6px rgba(0,0,0,.18); border-right: 1px solid rgba(217, 203, 22,.2); }
+.fac-table tr.fila-cancelada td:first-child { background: var(--surface-2); }
+.fac-table tr.fila-pagada td:first-child    { background: var(--pos-bg); }
+.fac-table tfoot td:first-child             { background: var(--side); box-shadow: 3px 0 6px rgba(0,0,0,.18); border-right: 1px solid rgba(217, 203, 22,.2); }
+
+/* Encabezado de cada mes */
+.fac-table tr.grupo-header td {
+    padding: 8px 14px;
+    background: var(--side);
+    color: rgba(240,237,232,.7);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    border-bottom: 1px solid rgba(217, 203, 22,.15);
+}
+.gh-mes    { font-size: 13px; letter-spacing: .12em; color: var(--surface-2); }
+.gh-conteo { margin-left: 12px; font-size: 11px; color: rgba(240,237,232,.5); }
+
+/* ── Distintivos ─────────────────────────────────────── */
+.fac-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; letter-spacing: .08em; }
+.badge-vencida   { background: var(--neg); color: #fff; }
+.badge-por_vencer{ background: var(--warn-bg); color: var(--warn); border: 1px solid var(--warn); }
+.badge-vigente   { background: var(--fac-tenue); color: var(--fac-verde); border: 1px solid var(--fac-borde-v); }
+.badge-pendiente { background: var(--warn); color: #fff; }
+.badge-cancelado { background: rgba(180,160,140,.1); color: var(--fac-mudo); border: 1px solid var(--fac-borde); text-decoration: line-through; }
+.badge-pagada    { background: var(--pos); color: #fff; }
+.badge-nueva     { margin-left: 4px; padding: 1px 5px; border-radius: 3px; background: var(--fac-verde); color: var(--on-brand); font-size: 9px; vertical-align: middle; }
+
+.mora-badge { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700; }
+.mora-alta  { background: var(--neg); color: #fff; }
+.mora-media { background: var(--warn-bg); color: var(--warn); border: 1px solid var(--warn); }
+.mora-baja  { background: rgba(180,160,140,.08); color: var(--fac-mudo); border: 1px solid var(--fac-borde); }
+
+.num-factura {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: var(--fac-tenue);
+    color: var(--fac-verde);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .04em;
+}
+.num-doc      { font-size: 12px; color: var(--fac-mudo); letter-spacing: .04em; }
+.celda-guia   { font-size: 12px; font-weight: 600; color: var(--fac-mudo); }
+.celda-venc   { font-weight: 600; }
+.celda-tc     { font-size: 13px; color: var(--fac-mudo); }
+.celda-soles  { font-size: 13px; color: var(--fac-mudo); }
+.celda-producto {
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+    color: var(--fac-mudo);
+}
+.importe-me   { font-size: 15px; font-weight: 700; color: var(--fac-texto); }
+.galones-cell { font-size: 14px; font-weight: 700; color: var(--fac-verde); }
+.galones-cell.vacio { font-size: 12px; font-weight: 400; color: var(--fac-mudo); }
+.toggle-icon  { margin-left: 6px; font-size: 10px; color: var(--fac-mudo); }
+
+/* Filas atenuadas */
+.fila-cancelada td { opacity: .38; }
+.fila-cancelada .num-factura, .fila-cancelada .importe-me { text-decoration: line-through; }
+.fila-pagada td { opacity: .55; }
+.fila-pagada .num-factura { background: rgba(26,158,92,.08); color: var(--pos); }
+.fila-pagada .importe-me  { color: var(--pos); }
+
+/* ── Detalle desplegable ─────────────────────────────── */
+.fila-detalle > td { padding: 0 !important; background: rgba(217, 203, 22,.03); border-bottom: 2px solid var(--fac-borde-v); }
+.detalle-caja { padding: 16px 20px; }
+.detalle-tabla { width: 100%; border-collapse: collapse; font-size: 13px; }
+.detalle-tabla thead tr { background: rgba(217, 203, 22,.08); }
+.detalle-tabla th {
+    padding: 7px 12px;
+    border-bottom: 1px solid var(--fac-borde-v);
+    text-align: left;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--fac-mudo);
+    text-transform: uppercase;
+    letter-spacing: .14em;
+}
+.detalle-tabla th.num { text-align: right; color: var(--fac-verde); }
+.detalle-tabla th.cen { text-align: center; }
+.detalle-tabla td { padding: 8px 12px; border-bottom: 1px solid rgba(180,160,140,.08); }
+.detalle-tabla td.cen { text-align: center; }
+.detalle-tabla td.num { text-align: right; font-weight: 700; color: var(--fac-verde); }
+.det-codigo { font-size: 11px; color: var(--fac-mudo); }
+.det-nombre { font-weight: 600; }
+.det-pres   { padding: 1px 6px; border-radius: 3px; background: var(--fac-tenue); color: var(--fac-verde); font-size: 10px; font-weight: 700; }
+.det-factor { color: var(--fac-mudo); }
+.detalle-tabla tfoot tr { background: rgba(217, 203, 22,.06); }
+.detalle-tabla tfoot td {
+    padding: 8px 12px;
+    border-top: 1px solid var(--fac-borde-v);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+}
+.detalle-tabla tfoot td.num { font-size: 16px; letter-spacing: 0; }
+.detalle-simple { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--fac-mudo); }
+.detalle-simple strong { display: block; color: var(--fac-texto); }
+
+/* ── Pie con los totales ─────────────────────────────── */
+.fac-table tfoot td { padding: 12px 14px; background: var(--side); color: rgba(240,237,232,.7); font-weight: 700; }
+.total-label { font-size: 12px; color: rgba(240,237,232,.45); letter-spacing: .1em; text-transform: uppercase; }
+.total-count { margin-left: 10px; font-size: 16px; color: var(--surface-2); }
+.tfoot-lbl   { margin-bottom: 2px; font-size: 11px; color: rgba(240,237,232,.45); letter-spacing: .1em; text-transform: uppercase; }
+.tfoot-usd   { font-size: 20px; font-weight: 700; color: var(--surface-2); }
+.tfoot-soles { font-size: 18px; font-weight: 700; color: var(--surface-2); }
+
+/* ── Acciones por fila ───────────────────────────────── */
+.fac-acciones { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+.btn-cancelar {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border: 1px solid var(--fac-borde);
+    border-radius: 5px;
+    background: var(--fac-sup-2);
+    color: var(--fac-mudo);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all .2s;
+}
+.btn-cancelar:hover, .btn-cancelar.activo { background: var(--fac-verde); border-color: var(--fac-verde); color: var(--on-brand); }
+
+.btn-edit, .btn-del, .btn-pdf-up, .btn-pdf-ver, .btn-pdf-del, .btn-pagada {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border: 1px solid var(--fac-borde);
+    border-radius: 5px;
+    background: var(--fac-sup-2);
+    color: var(--fac-mudo);
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all .2s;
+}
+.btn-edit:hover    { background: var(--info-bg); border-color: var(--info); color: var(--info); }
+.btn-del:hover     { background: var(--fac-verde); border-color: var(--fac-verde); color: var(--on-brand); }
+.btn-pdf-up:hover  { background: var(--warn-bg); border-color: var(--warn); }
+.btn-pdf-ver       { background: var(--info-bg); border-color: var(--info); }
+.btn-pdf-ver:hover { background: var(--info-bg); border-color: var(--info); }
+.btn-pdf-del:hover { background: var(--fac-verde); border-color: var(--fac-verde); color: var(--on-brand); }
+.btn-pagada:hover, .btn-pagada.activo { background: var(--pos); border-color: var(--pos); color: #fff; }
+.form-inline-fac { display: inline; }
+
+.fac-vacio { padding: 40px 20px; text-align: center; color: var(--fac-mudo); }
+.fac-vacio-icono { margin-bottom: 10px; font-size: 32px; }
+.fac-vacio strong { display: block; margin-bottom: 4px; font-size: 14px; }
+
+/* ═══════════════════════════════════════════════════════
+   Modal de factura
+   ═══════════════════════════════════════════════════════ */
+.fac-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    padding: 20px;
+    background: rgba(0,0,0,.72);
+    backdrop-filter: blur(4px);
+    align-items: center;
+    justify-content: center;
+    overflow-y: auto;
+}
+.fac-modal-overlay.activo { display: flex; }
+.fac-modal {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 600px;
+    max-height: 90vh;
+    border: 1px solid var(--fac-borde);
+    border-radius: 12px;
+    background: var(--fac-sup);
+    animation: facEntra .22s ease;
+}
+@keyframes facEntra { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+
+.fac-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 24px;
+    border-radius: 12px 12px 0 0;
+    background: var(--brand);
+}
+.fac-modal-header h3 { margin: 0; font-family: var(--font-display); font-size: 15px; font-weight: 400; letter-spacing: .01em; color: var(--on-brand); }
+.fac-modal-header p  { margin: 2px 0 0; font-size: 12px; color: var(--on-brand); opacity: .72; }
+.fac-modal-cerrar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 1px solid rgba(26,26,24,.25);
+    border-radius: 6px;
+    background: rgba(26,26,24,.08);
+    color: var(--on-brand);
+    font-size: 16px;
+    cursor: pointer;
+    transition: all .2s;
+}
+.fac-modal-cerrar:hover { background: var(--on-brand); border-color: var(--on-brand); color: var(--brand); }
+
+.fac-modal-body { flex: 1; padding: 24px; overflow-y: auto; }
+.fac-modal-body::-webkit-scrollbar { width: 4px; }
+.fac-modal-body::-webkit-scrollbar-thumb { background: var(--fac-borde-v); border-radius: 4px; }
+
+/* ── Pestañas del modal: PDF o manual ────────────────── */
+.modal-tabs {
+    display: flex;
+    margin-bottom: 22px;
+    border: 1px solid var(--fac-borde);
+    border-radius: 8px;
+    overflow: hidden;
+}
+.modal-tab {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: var(--fac-sup-2);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-align: center;
+    cursor: pointer;
+    transition: all .2s;
+}
+.modal-tab:first-child { border-right: 1px solid var(--fac-borde); }
+.modal-tab.active { background: var(--fac-verde); color: var(--on-brand); }
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* Distintivo que marca lo que rellenó la IA */
+.ia-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-right: 8px;
+    padding: 2px 8px;
+    border: 1px solid var(--fac-borde-v);
+    border-radius: 4px;
+    background: var(--fac-tenue);
+    color: var(--fac-verde);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .08em;
+}
+.ia-aviso { display: flex; align-items: center; margin-bottom: 14px; font-size: 12px; color: var(--fac-mudo); }
+.fac-control.ia-lleno { border-color: rgba(217, 203, 22,.5); background: rgba(217, 203, 22,.04); }
+
+.fac-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.fac-grid .full { grid-column: 1 / -1; }
+.fac-campo { display: flex; flex-direction: column; gap: 5px; }
+.fac-label { font-size: 10px; font-weight: 700; color: var(--fac-mudo); text-transform: uppercase; letter-spacing: .16em; }
+.fac-label span { color: var(--fac-verde); }
+.fac-control {
+    padding: 9px 12px;
+    border: 1px solid var(--fac-borde);
+    border-radius: 7px;
+    background: var(--fac-sup-2);
+    color: var(--fac-texto);
+    font-family: inherit;
+    font-size: 14px;
+    transition: all .2s;
+}
+.fac-control:focus { outline: none; border-color: rgba(217, 203, 22,.35); background: var(--surface); box-shadow: 0 0 0 3px rgba(217, 203, 22,.06); }
+.fac-control.mono  { font-family: 'Courier New', monospace; font-weight: 700; }
+.fac-hint { font-size: 11px; color: var(--fac-mudo); }
+
+.fac-divisor {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 20px 0 14px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--fac-mudo);
+    text-transform: uppercase;
+    letter-spacing: .14em;
+}
+.fac-divisor::after { content: ''; flex: 1; height: 1px; background: var(--fac-borde); }
+
+/* ── Productos de la factura ─────────────────────────── */
+.mprod-cabecera { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; }
+.btn-agregar-prod-fac {
+    padding: 5px 13px;
+    border: none;
+    border-radius: 6px;
+    background: var(--fac-verde);
+    color: var(--on-brand);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .18s;
+}
+.btn-agregar-prod-fac:hover { background: var(--fac-verde-2); }
+
+.mprod-vacio {
+    padding: 18px;
+    border: 2px dashed var(--fac-borde);
+    border-radius: 8px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--fac-mudo);
+}
+.mprod-fila {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 7px;
+    padding: 7px 10px;
+    border: 1px solid var(--fac-borde);
+    border-radius: 8px;
+    background: var(--surface-2);
+}
+.mprod-buscador { position: relative; flex: 1; min-width: 0; }
+.mprod-buscador .fac-control { width: 100%; box-sizing: border-box; }
+
+.mprod-cant-grupo { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.mprod-cant-input, .mprod-gal-input {
+    flex-shrink: 0;
+    padding: 6px;
+    border: 1.5px solid var(--fac-borde);
+    border-radius: 7px;
+    background: var(--surface);
+    color: var(--fac-texto);
+    font-family: inherit;
+    font-size: 13px;
+    text-align: center;
+    outline: none;
+    transition: border-color .18s;
+}
+.mprod-cant-input { width: 62px; }
+.mprod-gal-input  { width: 85px; }
+.mprod-cant-input:focus, .mprod-gal-input:focus { border-color: rgba(217, 203, 22,.5); }
+
+.mprod-pres {
+    flex-shrink: 0;
+    padding: 3px 7px;
+    border: 1px solid var(--fac-borde-v);
+    border-radius: 4px;
+    background: var(--fac-tenue);
+    color: var(--fac-verde);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    white-space: nowrap;
+}
+.mprod-igual { flex-shrink: 0; padding: 0 1px; font-size: 12px; color: var(--fac-mudo); }
+.mprod-gl {
+    flex-shrink: 0;
+    min-width: 62px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--fac-verde);
+    text-align: right;
+    white-space: nowrap;
+}
+.mprod-unidad { flex-shrink: 0; font-size: 11px; font-weight: 700; color: var(--fac-mudo); }
+
+.mprod-borrar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--ink-4);
+    font-size: 18px;
+    font-weight: 300;
+    line-height: 1;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: all .15s;
+}
+.mprod-borrar:hover { border-color: var(--neg); background: var(--neg-bg); color: var(--neg); }
+
+.mprod-total {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    padding: 8px 14px;
+    border: 1px solid var(--fac-borde-v);
+    border-radius: 7px;
+    background: var(--fac-tenue);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--fac-verde);
+}
+.mprod-total.visible { display: flex; }
+
+/* Autocompletado del producto */
+.prod-ac-list {
+    position: absolute;
+    top: calc(100% + 3px);
+    right: 0;
+    left: 0;
+    z-index: 999;
+    max-height: 220px;
+    border: 1.5px solid var(--fac-borde-v);
+    border-radius: 8px;
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+    overflow-y: auto;
+    display: none;
+}
+.prod-ac-list.abierto { display: block; }
+.prod-ac-list::-webkit-scrollbar { width: 5px; }
+.prod-ac-list::-webkit-scrollbar-thumb { background: var(--fac-verde); border-radius: 3px; }
+.prod-ac-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 9px 13px;
+    border-bottom: 1px solid rgba(180,160,140,.1);
+    font-size: 13px;
+    color: var(--fac-texto);
+    cursor: pointer;
+    transition: background .12s;
+}
+.prod-ac-item:last-child { border-bottom: none; }
+.prod-ac-item:hover, .prod-ac-item.activo { background: var(--fac-tenue); }
+.ac-nombre { font-weight: 600; }
+.ac-cod    { margin-right: 6px; font-size: 10px; font-weight: 700; color: var(--fac-verde); letter-spacing: .06em; }
+.ac-cat    { font-size: 11px; color: var(--fac-mudo); letter-spacing: .04em; }
+.prod-ac-empty { padding: 16px 13px; text-align: center; font-size: 13px; color: var(--fac-mudo); }
+
+.fac-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 16px 24px;
+    border-top: 1px solid var(--fac-borde);
+    background: var(--fac-sup-2);
+    border-radius: 0 0 12px 12px;
+}
+.btn-cancel-fac {
+    padding: 10px 20px;
+    border: 1px solid var(--fac-borde);
+    border-radius: 7px;
+    background: var(--surface);
+    color: var(--fac-mudo);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.btn-cancel-fac:hover { background: var(--fac-sup-2); }
+.btn-save-fac {
+    padding: 10px 22px;
+    border: none;
+    border-radius: 7px;
+    background: var(--fac-verde);
+    color: var(--on-brand);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .2s;
+}
+.btn-save-fac:hover { background: var(--fac-verde-2); }
+
+/* ── Zona de carga del PDF ───────────────────────────── */
+.pdf-drop-zone {
+    position: relative;
+    padding: 32px 24px;
+    border: 2px dashed var(--fac-borde-v);
+    border-radius: 10px;
+    background: var(--fac-sup);
+    text-align: center;
+    cursor: pointer;
+    transition: all .25s;
+}
+.pdf-drop-zone:hover, .pdf-drop-zone.encima { border-color: var(--fac-verde); background: rgba(217, 203, 22,.03); }
+.pdf-drop-zone input[type=file] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.pdf-drop-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    margin: 0 auto 12px;
+    border: 1px solid var(--fac-borde-v);
+    border-radius: 10px;
+    background: var(--fac-tenue);
+}
+.pdf-drop-icon svg { width: 22px; height: 22px; stroke: var(--fac-verde); }
+.pdf-drop-title { margin-bottom: 4px; font-size: 16px; font-weight: 700; color: var(--fac-texto); }
+.pdf-drop-sub   { font-size: 13px; color: var(--fac-mudo); }
+
+.pdf-status {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    margin-top: 14px;
+    padding: 14px 18px;
+    border: 1px solid var(--fac-borde-v);
+    border-left: 3px solid var(--fac-verde);
+    border-radius: 8px;
+    background: var(--fac-sup);
+    font-size: 14px;
+    color: var(--fac-mudo);
+}
+.pdf-status.visible { display: flex; }
+.pdf-status-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--fac-borde-v);
+    border-top-color: var(--fac-verde);
+    border-radius: 50%;
+    flex-shrink: 0;
+    animation: facGira .8s linear infinite;
+}
+@keyframes facGira { to { transform: rotate(360deg); } }
+
+.pdf-resumen {
+    display: none;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+    padding: 16px 18px;
+    border: 1px solid var(--fac-borde-v);
+    border-radius: 8px;
+    background: var(--fac-tenue);
+}
+.pdf-resumen.visible { display: flex; }
+.pdf-resumen-item  { display: flex; flex-direction: column; gap: 2px; min-width: 110px; }
+.pdf-resumen-label { font-size: 10px; font-weight: 700; color: var(--fac-mudo); text-transform: uppercase; letter-spacing: .14em; }
+.pdf-resumen-val   { font-size: 15px; font-weight: 700; color: var(--fac-texto); }
+.pdf-resumen-val.destacado { font-size: 18px; color: var(--fac-verde); }
+
+@media (max-width: 640px) {
+    .fac-grid { grid-template-columns: 1fr; }
+    .fac-header { flex-direction: column; align-items: flex-start; }
+}
+
+/* ═══════════════════════════════════════════════════════
+   Estadísticas de facturas — transcrito de
+   administrador/estadisticas_facturas.php
+   ═══════════════════════════════════════════════════════ */
+.est-hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 22px;
+    padding: 26px 30px;
+    border-radius: 14px;
+    background: var(--side);
+}
+.est-hero h2 {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    margin: 0 0 4px;
+    font-size: 25px;
+    font-weight: 700;
+    color: var(--surface-2);
+}
+.est-hero p { margin: 0; font-size: 13.5px; color: rgba(240,237,232,.45); }
+.est-cerrar {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 20px;
+    border: 1px solid rgba(255,255,255,.2);
+    border-radius: 9px;
+    background: rgba(255,255,255,.1);
+    color: var(--surface-2);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background .2s var(--ease);
+}
+.est-cerrar:hover { background: rgba(255,255,255,.2); }
+
+/* ── Tarjetas de resumen ─────────────────────────────── */
+.est-tarjetas {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 18px;
+    margin-bottom: 22px;
+}
+.est-tarjeta {
+    padding: 22px 26px;
+    border: 1px solid var(--fac-borde);
+    border-left: 4px solid var(--brand-2);
+    border-radius: 14px;
+    background: var(--surface);
+}
+.est-tarjeta-lbl {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+}
+.est-tarjeta-val { margin: 6px 0 16px; font-size: 34px; font-weight: 700; letter-spacing: -.015em; }
+.est-fila {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 0;
+    font-size: 13.5px;
+    color: var(--ink-3);
+}
+.est-fila b { font-weight: 700; color: var(--ink); }
+.est-fila-alta { margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--fac-borde); }
+.est-fila-alta b { color: var(--brand-2); }
+.est-formula {
+    margin: 12px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid var(--fac-borde);
+    font-size: 12.5px;
+    color: var(--ink-4);
+}
+.est-tarjeta-mes { font-size: 25px; font-weight: 700; }
+.est-tarjeta-sub { margin-top: 4px; font-size: 14px; color: var(--ink-3); }
+
+/* ── Bloques de gráfico ──────────────────────────────── */
+.est-panel {
+    margin-bottom: 22px;
+    padding: 24px 26px;
+    border: 1px solid var(--fac-borde);
+    border-radius: 14px;
+    background: var(--surface);
+}
+.est-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+.est-panel-head h3 {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+}
+.est-leyenda { display: flex; align-items: center; gap: 16px; }
+.est-leyenda span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ink-2);
+}
+.est-leyenda i { width: 11px; height: 11px; border-radius: 3px; }
+.est-lienzo { position: relative; height: 320px; }
+.est-lienzo-alto { height: 420px; }
+
+.est-ver-todos {
+    padding: 8px 16px;
+    border: 1px solid var(--fac-borde);
+    border-radius: var(--r-lg);
+    background: var(--fac-sup-2);
+    color: var(--ink-2);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .18s var(--ease);
+}
+.est-ver-todos:hover { border-color: var(--fac-verde); color: var(--fac-verde-2); }
+
+/* ── Resumen mensual ─────────────────────────────────── */
+.est-tabla { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.est-tabla th {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--fac-borde);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .085em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    text-align: left;
+    white-space: nowrap;
+}
+.est-tabla td { padding: 14px; border-bottom: 1px solid var(--fac-borde); }
+.est-tabla tr:last-child td { border-bottom: none; }
+.est-mes-pill {
+    display: inline-block;
+    padding: 5px 14px;
+    border-radius: var(--r-lg);
+    background: var(--brand-2);
+    color: var(--on-brand);
+    font-size: 12.5px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.est-usd { font-size: 15px; font-weight: 700; white-space: nowrap; }
+.est-soles, .est-prom { color: var(--ink-2); white-space: nowrap; }
+.est-pct { display: flex; align-items: center; gap: 12px; min-width: 190px; }
+.est-barra { flex: 1; height: 8px; border-radius: 5px; background: var(--surface-2); overflow: hidden; }
+.est-barra i { display: block; height: 100%; border-radius: 5px; background: var(--brand-2); }
+.est-pct b { font-size: 13.5px; font-weight: 700; color: var(--brand-2); white-space: nowrap; }
+
+@media (max-width: 640px) {
+    .est-hero { flex-direction: column; align-items: flex-start; padding: 20px; }
+    .est-hero h2 { font-size: 21px; }
+    .est-tarjeta-val { font-size: 27px; }
+    .est-lienzo { height: 260px; }
+}

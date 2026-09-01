@@ -1,0 +1,256 @@
+/* ═══════════════════════════════════════════════════════
+   Historial de Pagos — transcrito de
+   administrador/historial_pagos.php
+   ═══════════════════════════════════════════════════════ */
+.hp-wrapper {
+    --hp-azul:    var(--info);
+    --hp-azul-2:  #1976d2;
+    --hp-azul-3:  var(--info);
+    --hp-navy:    #16283f;
+    --hp-navy-2:  #24406b;
+    --hp-suave:   rgba(21,101,192,.07);
+    --hp-linea:   var(--line);
+    --hp-sup:     var(--surface);
+    --hp-sup-2:   var(--surface-2);
+    --hp-tinta:   var(--ink);
+    --hp-mudo:    var(--ink-3);
+    --hp-verde:   var(--pos);
+    color: var(--hp-tinta);
+}
+.hp-wrapper table,
+.hp-wrapper input,
+.hp-wrapper select { font-variant-numeric: lining-nums tabular-nums; }
+
+/* ── Cabecera ────────────────────────────────────────── */
+.hp-hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 24px;
+    padding: 22px 26px;
+    border-radius: var(--r-lg);
+    background: var(--brand);
+    color: var(--on-brand);
+}
+.hp-hero h2 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 5px;
+    font-family: var(--font-display);
+    font-size: 19px;
+    font-weight: 400;
+    letter-spacing: .01em;
+    color: var(--on-brand);
+}
+.hp-hero h2 svg { width: 20px; height: 20px; color: var(--on-brand); flex-shrink: 0; }
+.hp-hero p { margin: 0; font-size: 13.5px; color: var(--on-brand); opacity: .72; }
+.hp-hero-meta { text-align: right; }
+.hp-hero-meta span { display: block; font-size: 13px; color: var(--on-brand); opacity: .68; }
+.hp-hero-meta b { display: block; margin-top: 4px; font-size: 17px; font-weight: 700; color: var(--on-brand); }
+
+/* ── Filtros ─────────────────────────────────────────── */
+.hp-filtros {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr auto;
+    gap: 20px;
+    align-items: end;
+    margin-bottom: 22px;
+    padding: 24px 26px;
+    border: 1px solid var(--hp-linea);
+    border-radius: var(--r-lg);
+    background: var(--hp-sup);
+}
+.hp-campo label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--hp-mudo);
+}
+.hp-campo input,
+.hp-campo select {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid var(--hp-linea);
+    border-radius: 10px;
+    background: var(--hp-sup);
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--hp-tinta);
+}
+.hp-campo input:focus,
+.hp-campo select:focus { outline: none; border-color: var(--hp-azul); box-shadow: 0 0 0 3px var(--hp-suave); }
+
+.hbtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    padding: 13px 24px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: none;
+    color: inherit;
+    font-family: inherit;
+    font-size: 14.5px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all .2s var(--ease);
+}
+.hbtn svg { width: 16px; height: 16px; }
+.hbtn-azul { background: var(--hp-azul); border-color: var(--hp-azul); color: var(--on-brand); }
+.hbtn-azul:hover { background: var(--hp-azul-3); transform: translateY(-1px); }
+.hbtn-claro { background: var(--hp-sup); border-color: var(--hp-linea); color: var(--hp-tinta); }
+.hbtn-claro:hover { background: var(--hp-sup-2); border-color: var(--hp-azul); color: var(--hp-azul-3); }
+
+/* ── Tarjeta por cliente ─────────────────────────────── */
+.hp-cliente {
+    margin-bottom: 18px;
+    border: 1px solid var(--hp-linea);
+    border-radius: 14px;
+    background: var(--hp-sup);
+    overflow: hidden;
+}
+.hp-cliente-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    padding: 18px 24px;
+    border: none;
+    background: var(--hp-azul);
+    color: var(--on-brand);
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.hp-cliente-head svg { width: 21px; height: 21px; flex-shrink: 0; opacity: .9; }
+.hp-cliente-nom { flex: 1; min-width: 0; font-size: 17px; font-weight: 700; letter-spacing: .01em; }
+.hp-chip {
+    flex-shrink: 0;
+    padding: 5px 13px;
+    border-radius: var(--r-lg);
+    background: rgba(26,26,24,.14);
+    color: var(--on-brand);
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.hp-flecha { flex-shrink: 0; transition: transform .22s var(--ease); }
+.hp-cliente.is-cerrado .hp-flecha { transform: rotate(-90deg); }
+.hp-cliente.is-cerrado .hp-cliente-body { display: none; }
+
+/* ── Bloque de mes ───────────────────────────────────── */
+.hp-mes + .hp-mes { border-top: 1px solid var(--hp-linea); }
+.hp-mes-head {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    width: 100%;
+    padding: 15px 24px;
+    border: none;
+    background: var(--hp-sup-2);
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.hp-mes-head svg { width: 16px; height: 16px; color: var(--hp-azul); flex-shrink: 0; }
+.hp-mes-nom { flex: 1; font-size: 15px; font-weight: 700; }
+.hp-mes-chip {
+    padding: 4px 11px;
+    border-radius: var(--r-lg);
+    background: var(--hp-azul);
+    color: var(--on-brand);
+    font-size: 11.5px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.hp-mes.is-cerrado .hp-flecha { transform: rotate(-90deg); }
+.hp-mes.is-cerrado .hp-tabla-wrap { display: none; }
+
+/* ── Tabla de pagos ──────────────────────────────────── */
+.hp-tabla-wrap { overflow-x: auto; }
+.hp-tabla { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.hp-tabla th {
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--hp-linea);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--hp-mudo);
+    text-align: left;
+    white-space: nowrap;
+}
+.hp-tabla td { padding: 15px 24px; border-bottom: 1px solid var(--surface-2); }
+.hp-tabla tr:last-child td { border-bottom: none; }
+.hp-tabla tbody tr:hover { background: var(--hp-suave); }
+.hp-num { width: 50px; color: var(--hp-azul); font-weight: 700; }
+.hp-fecha { font-weight: 700; white-space: nowrap; }
+.hp-doc { color: var(--hp-verde); font-weight: 700; text-decoration: none; white-space: nowrap; }
+.hp-doc:hover { text-decoration: underline; }
+
+.hp-metodo {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 13px;
+    border-radius: var(--r-lg);
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.4;
+}
+/* Un color por medio de pago, como en el original. */
+.hp-met-yape    { background: #f3e5f5; color: #6a1b9a; }
+.hp-met-plin    { background: var(--info-bg); color: #00838f; }
+.hp-met-efvo    { background: var(--pos-bg); color: var(--pos); }
+.hp-met-bcp     { background: var(--info-bg); color: var(--info); }
+.hp-met-ibk     { background: var(--warn-bg); color: var(--warn); }
+.hp-met-bbva    { background: #e8eaf6; color: var(--info); }
+.hp-met-transf  { background: var(--line); color: #37474f; }
+.hp-met-otro    { background: var(--surface-2); color: #555; }
+
+.hp-estado {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 11px;
+    border-radius: var(--r-lg);
+    border: 1.5px solid transparent;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    white-space: nowrap;
+}
+.hp-est-pagada  { background: var(--pos-bg); color: #1b5e20; border-color: #a5d6a7; }
+.hp-est-parcial { background: var(--warn-bg); color: var(--warn); border-color: var(--warn); }
+
+/* ── Vacío ───────────────────────────────────────────── */
+.hp-vacio {
+    padding: 60px 20px;
+    border: 1px solid var(--hp-linea);
+    border-radius: var(--r-lg);
+    background: var(--hp-sup);
+    text-align: center;
+    color: var(--hp-mudo);
+}
+.hp-vacio svg { width: 52px; height: 52px; margin-bottom: 14px; color: #ddd9d0; }
+
+/* ── Ajustes responsivos ─────────────────────────────── */
+@media (max-width: 900px) {
+    .hp-filtros { grid-template-columns: 1fr; }
+    .hp-hero { flex-direction: column; align-items: flex-start; padding: 24px; }
+    .hp-hero h2 { font-size: 24px; }
+    .hp-hero-meta { text-align: left; }
+    .hp-tabla th, .hp-tabla td { padding-left: 16px; padding-right: 16px; }
+}
+@media (max-width: 620px) {
+    .hp-cliente-head { flex-wrap: wrap; }
+    .hp-cliente-nom { flex-basis: 100%; }
+}

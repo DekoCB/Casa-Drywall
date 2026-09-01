@@ -1,0 +1,424 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\Cliente;
+use App\Models\Cobranza;
+use App\Models\Producto;
+use App\Models\Venta;
+use App\Models\VentaDetalle;
+use App\Services\GeneradorCorrelativo;
+use App\Services\NumeroALetras;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use Illuminate\View\View;
+
+/**
+ * Registro de comprobantes de venta (SUNAT).
+ *
+ * Migrado de `administrador/ventas.php`: cada venta es un comprobante con su
+ * tipo, serie y correlativo, y un único tipo de operación (gravada, exonerada
+ * o inafecta). No lleva líneas de producto.
+ */
+class VentaController extends Controller
+{
+    /** Códigos SUNAT de comprobante con su serie sugerida. */
+    public const TIPOS = [
+        '01' => ['nombre' => '01 — Factura',          'serie' => 'FF01'],
+        '03' => ['nombre' => '03 — Boleta de Venta',  'serie' => 'BB01'],
+        '07' => ['nombre' => '07 — Nota de Crédito',  'serie' => 'FC01'],
+        '08' => ['nombre' => '08 — Nota de Débito',   'serie' => 'FD01'],
+        '09' => ['nombre' => '09 — Liquidación',      'serie' => 'FL01'],
+    ];
+
+    /** Equivalente en Cobranzas (FT/BV/NC/OT) de cada código SUNAT de comprobante. */
+    private const TIPO_COBRANZA = [
+        '03' => 'BV',
+        '07' => 'NC',
+    ];
+
+    public function __construct(private readonly GeneradorCorrelativo $correlativo) {}
+
+    /** Página de alta de comprobante: monto único o detalle de productos. */
+    public function createFactura(): View
+    {
+        return view('admin.ventas.factura', [
+            'tipos' => self::TIPOS,
+            'clientes' => Cliente::orderBy('nombres')->get(['id', 'nombres', 'numero_documento']),
+            'productos' => Producto::activos()->with(['categoria:id,nombre', 'marca:id,nombre'])->orderBy('nombre')
+                ->get(['id', 'codigo', 'nombre', 'presentacion', 'categoria_id', 'marca_id', 'precio_venta', 'stock']),
+        ]);
+    }
+
+    public function index(Request $request): View
+    {
+        $busqueda = trim((string) $request->query('q', ''));
+        $mes      = trim((string) $request->query('mes', ''));   // formato YYYY-MM
+        $desde    = trim((string) $request->query('desde', ''));
+        $hasta    = trim((string) $request->query('hasta', ''));
+
+        // Las canceladas y eliminadas quedan fuera del registro y de los totales,
+        // el mismo criterio de `administrador/ventas.php`.
+        $filtrada = Venta::query()
+            ->where(function ($query) {
+                $query->whereNull('estado')
+                    ->orWhereNotIn('estado', ['cancelada', 'eliminada']);
+            })
+            ->when($busqueda !== '', function ($query) use ($busqueda) {
+                $query->where(function ($q) use ($busqueda) {
+                    $q->where('n_comp', 'like', "%{$busqueda}%")
+                        ->orWhere('n_seri', 'like', "%{$busqueda}%")
+                        ->orWhere('razonsocial', 'like', "%{$busqueda}%")
+                        ->orWhere('n_ruc', 'like', "%{$busqueda}%")
+                        ->orWhere('numero_venta', 'like', "%{$busqueda}%");
+                });
+            })
+            ->when($mes !== '', fn ($q) => $q->whereRaw("DATE_FORMAT(fecha, '%Y-%m') = ?", [$mes]))
+            ->when($desde !== '', fn ($q) => $q->whereDate('fecha', '>=', $desde))
+            ->when($hasta !== '', fn ($q) => $q->whereDate('fecha', '<=', $hasta));
+
+        $ventas = (clone $filtrada)
+            ->orderByDesc('fecha')
+            ->orderByDesc('n_comp')
+            ->get();
+
+        // El listado se agrupa por mes, como en el original.
+        $grupos = $ventas->groupBy(fn (Venta $v) => $v->fecha?->format('Y-m') ?? '');
+
+        return view('admin.ventas.index', [
+            'grupos'     => $grupos,
+            'busqueda'   => $busqueda,
+            'mesSel'     => $mes,
+            'desde'      => $desde,
+            'hasta'      => $hasta,
+            'tipos'      => self::TIPOS,
+            'nVentas'    => $ventas->count(),
+            'totalBase'  => (float) $ventas->sum('baseimp'),
+            'totalSinIgv' => (float) $ventas->sum('exonerado') + (float) $ventas->sum('inafecto'),
+            'totalIgv'   => (float) $ventas->sum('igv'),
+            'totalGeneral' => (float) $ventas->sum('total'),
+            'clientes'     => Cliente::orderBy('nombres')->get(['id', 'nombres', 'numero_documento']),
+        ]);
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $datos = $this->conImportes($this->validar($request));
+
+        $duplicado = Venta::where('tipcomp', $datos['tipcomp'])
+            ->where('n_seri', $datos['n_seri'])
+            ->where('n_comp', $datos['n_comp'])
+            ->exists();
+
+        if ($duplicado) {
+            return back()->with('error', "Ya existe el comprobante {$datos['n_seri']}-{$datos['n_comp']}.");
+        }
+
+        Venta::create($datos + [
+            'estado'         => 'activa',
+            'usuario_id'     => $request->user()->id,
+            'cliente_id'     => $this->fichaDelCliente($datos),
+            'cliente_nombre' => $datos['razonsocial'] ?? null,
+            'cliente_ruc'    => $datos['n_ruc'] ?? null,
+        ]);
+
+        return back()->with('mensaje', "Comprobante {$datos['n_seri']}-{$datos['n_comp']} registrado.");
+    }
+
+    /**
+     * Genera un comprobante para un cliente: si llegan ítems calcula el
+     * subtotal/IGV/total a partir de ellos y guarda el detalle de productos;
+     * si no, cae al monto único (igual que `store()`). En ambos casos crea la
+     * cobranza pendiente, que refleja automáticamente la venta agregada.
+     */
+    public function storeFactura(Request $request): RedirectResponse
+    {
+        $datos = $this->validarFactura($request);
+        $items = $this->itemsValidos($datos['items'] ?? []);
+
+        $duplicado = Venta::where('tipcomp', $datos['tipcomp'])
+            ->where('n_seri', $datos['n_seri'])
+            ->where('n_comp', $datos['n_comp'])
+            ->exists();
+
+        if ($duplicado) {
+            return back()->with('error', "Ya existe el comprobante {$datos['n_seri']}-{$datos['n_comp']}.");
+        }
+
+        if ($items !== []) {
+            $subtotal = collect($items)->sum(
+                fn (array $item) => (float) $item['cantidad'] * (float) $item['precio_unitario']
+            );
+            $igv = round($subtotal * config('rentaltech.igv'), 2);
+            $importes = [
+                'baseimp' => round($subtotal, 2),
+                'igv' => $igv,
+                'exonerado' => 0.0,
+                'inafecto' => 0.0,
+                'total' => round($subtotal + $igv, 2),
+            ];
+        } elseif ((float) ($datos['monto'] ?? 0) > 0 && ! empty($datos['tipo_operacion'])) {
+            $importes = $this->conImportes(['monto' => $datos['monto'], 'tipo_operacion' => $datos['tipo_operacion']]);
+        } else {
+            return back()->withInput()->with('error', 'Ingresa un monto o agrega al menos un producto.');
+        }
+
+        $venta = DB::transaction(function () use ($request, $datos, $items, $importes) {
+            // La cobranza dispara `Cobranza::reflejarEnVentas()`, que crea la
+            // venta agregada automáticamente (ver Cobranza::booted()).
+            $cobranza = new Cobranza([
+                'tipo' => self::TIPO_COBRANZA[$datos['tipcomp']] ?? 'FT',
+                'numero' => trim($datos['n_seri'].'-'.$datos['n_comp'], '-'),
+                'fecha_emision' => $datos['fecha'],
+                'fecha_vencimiento' => $datos['fecha_vencimiento'],
+                'cliente_nombre' => $datos['razonsocial'],
+                'cliente_id' => $this->fichaDelCliente($datos),
+                'monto_total' => $importes['total'],
+                'monto_pagado' => 0,
+                'usuario_id' => $request->user()->id,
+            ]);
+            $cobranza->recalcularEstado();
+            $cobranza->save();
+
+            $venta = Venta::where('cobranza_id', $cobranza->id)->firstOrFail();
+
+            $venta->update([
+                'numero_venta' => $this->correlativo->venta(),
+                'tipo_comprobante' => self::TIPOS[$datos['tipcomp']]['nombre'] ?? null,
+                'n_ruc' => $datos['n_ruc'] ?? '',
+                'cliente_ruc' => $datos['n_ruc'] ?? null,
+                'condicion_pago' => $datos['condicion_pago'] ?? null,
+                'baseimp' => $importes['baseimp'],
+                'subtotal' => round($importes['baseimp'] + $importes['exonerado'] + $importes['inafecto'], 2),
+                'igv' => $importes['igv'],
+                'exonerado' => $importes['exonerado'],
+                'inafecto' => $importes['inafecto'],
+                'total' => $importes['total'],
+                'moneda' => 'PEN',
+                'tipo_cambio' => 1,
+                'tipcambio' => 1,
+            ]);
+
+            foreach ($items as $item) {
+                VentaDetalle::create([
+                    'venta_id' => $venta->id,
+                    // Se enlaza la ficha cuando el código existe, para que el
+                    // comprobante pueda mostrar la unidad del producto.
+                    'producto_id' => $item['producto_codigo']
+                        ? Producto::where('codigo', $item['producto_codigo'])->value('id')
+                        : null,
+                    'prod_codigo' => $item['producto_codigo'] ?: null,
+                    'prod_nombre' => $item['producto_nombre'],
+                    'cantidad' => $item['cantidad'],
+                    'precio_unitario' => $item['precio_unitario'],
+                    'subtotal' => round((float) $item['cantidad'] * (float) $item['precio_unitario'], 2),
+                ]);
+            }
+
+            return $venta;
+        });
+
+        // Se abre el comprobante recién generado, listo para imprimir o enviar.
+        return redirect()->route('admin.ventas.comprobante', $venta)
+            ->with('mensaje', "Comprobante {$venta->n_seri}-{$venta->n_comp} generado para {$venta->cliente_nombre}.");
+    }
+
+    public function update(Request $request, Venta $venta): RedirectResponse
+    {
+        $datos = $this->conImportes($this->validar($request));
+
+        $duplicado = Venta::where('tipcomp', $datos['tipcomp'])
+            ->where('n_seri', $datos['n_seri'])
+            ->where('n_comp', $datos['n_comp'])
+            ->where('id', '!=', $venta->id)
+            ->exists();
+
+        if ($duplicado) {
+            return back()->with('error', "Ya existe otro comprobante {$datos['n_seri']}-{$datos['n_comp']}.");
+        }
+
+        $venta->update($datos + [
+            'cliente_id'     => $this->fichaDelCliente($datos) ?? $venta->cliente_id,
+            'cliente_nombre' => $datos['razonsocial'] ?? $venta->cliente_nombre,
+            'cliente_ruc'    => $datos['n_ruc'] ?? $venta->cliente_ruc,
+        ]);
+
+        return back()->with('mensaje', "Comprobante {$venta->n_seri}-{$venta->n_comp} actualizado.");
+    }
+
+    /** El original borra la venta; aquí se conserva el detalle asociado. */
+    public function destroy(Venta $venta): RedirectResponse
+    {
+        $comprobante = "{$venta->n_seri}-{$venta->n_comp}";
+
+        DB::transaction(function () use ($venta) {
+            $venta->detalles()->delete();
+            $venta->delete();
+        });
+
+        return back()->with('mensaje', "Comprobante {$comprobante} eliminado.");
+    }
+
+    /** Vista imprimible del comprobante. */
+    /** Vista imprimible del comprobante, con el desglose de productos y el monto en letras. */
+    public function comprobante(Venta $venta, NumeroALetras $numeroALetras): View
+    {
+        $venta->load(['detalles.producto:id,presentacion', 'guias']);
+
+        $moneda = $venta->moneda === 'USD' ? 'DÓLARES AMERICANOS' : 'SOLES';
+
+        return view('admin.ventas.comprobante', [
+            'venta' => $venta,
+            'tipos' => self::TIPOS,
+            'montoLetras' => $numeroALetras->convertir((float) $venta->total, $moneda),
+            'diasCredito' => $venta->fecha && $venta->fecha_vencimiento
+                ? $venta->fecha->diffInDays($venta->fecha_vencimiento)
+                : null,
+        ]);
+    }
+
+    public function show(Venta $venta): View
+    {
+        $venta->load('detalles');
+
+        return view('admin.ventas.show', ['venta' => $venta, 'tipos' => self::TIPOS]);
+    }
+
+    /**
+     * Reparte los importes según el tipo de operación: solo uno de los tres
+     * conceptos lleva monto, y el IGV únicamente aplica a la operación gravada.
+     */
+    private function conImportes(array $datos): array
+    {
+        $monto = (float) ($datos['monto'] ?? 0);
+
+        $datos['baseimp']   = 0.0;
+        $datos['igv']       = 0.0;
+        $datos['exonerado'] = 0.0;
+        $datos['inafecto']  = 0.0;
+
+        if ($datos['tipo_operacion'] === 'gravada') {
+            $datos['baseimp'] = round($monto, 2);
+            $datos['igv']     = round($monto * config('rentaltech.igv'), 2);
+        } elseif ($datos['tipo_operacion'] === 'exonerada') {
+            $datos['exonerado'] = round($monto, 2);
+        } else {
+            $datos['inafecto'] = round($monto, 2);
+        }
+
+        $datos['total'] = round($datos['baseimp'] + $datos['igv'] + $datos['exonerado'] + $datos['inafecto'], 2);
+
+        unset($datos['monto'], $datos['tipo_operacion']);
+
+        return $datos;
+    }
+
+    private function aniosDisponibles(): array
+    {
+        $anios = Venta::selectRaw('DISTINCT YEAR(fecha) AS anio')->orderByDesc('anio')->pluck('anio')->all();
+
+        return $anios ?: [now()->year];
+    }
+
+    /**
+     * Ficha del módulo Clientes a la que pertenece el comprobante.
+     *
+     * Si el usuario eligió un cliente del buscador viene ya resuelto; si escribió
+     * el documento a mano se busca por ahí, y en último caso por razón social.
+     * Así el comprobante nace enlazado y no hace falta vincularlo después.
+     */
+    private function fichaDelCliente(array $datos): ?int
+    {
+        if (! empty($datos['cliente_id'])) {
+            return (int) $datos['cliente_id'];
+        }
+
+        $documento = preg_replace('/\D/', '', (string) ($datos['n_ruc'] ?? ''));
+
+        if ($documento !== '') {
+            $porDoc = Cliente::whereRaw("REGEXP_REPLACE(numero_documento, '[^0-9]', '') = ?", [$documento])->value('id');
+
+            if ($porDoc) {
+                return (int) $porDoc;
+            }
+        }
+
+        $nombre = trim((string) ($datos['razonsocial'] ?? ''));
+
+        if ($nombre === '') {
+            return null;
+        }
+
+        return Cliente::whereRaw('LOWER(TRIM(nombres)) = ?', [mb_strtolower($nombre)])->value('id');
+    }
+
+    private function validar(Request $request): array
+    {
+        return $request->validate([
+            'fecha'          => ['required', 'date'],
+            'tipcomp'        => ['required', Rule::in(array_keys(self::TIPOS))],
+            'n_seri'         => ['required', 'string', 'max:10'],
+            'n_comp'         => ['required', 'string', 'max:20'],
+            'n_ruc'          => ['nullable', 'string', 'max:20'],
+            'razonsocial'    => ['nullable', 'string', 'max:300'],
+            'cliente_id'     => ['nullable', 'integer', 'exists:clientes,id'],
+            'tipo_operacion' => ['required', Rule::in(['gravada', 'exonerada', 'inafecta'])],
+            'monto'          => ['required', 'numeric', 'min:0.01'],
+            'tipcambio'      => ['nullable', 'numeric', 'min:0'],
+        ]);
+    }
+
+    /**
+     * Sin `items` obligatorio: el usuario puede optar por un monto único
+     * (`monto` + `tipo_operacion`) en vez de detallar productos. `storeFactura()`
+     * exige que venga uno de los dos.
+     */
+    private function validarFactura(Request $request): array
+    {
+        return $request->validate([
+            'fecha'                        => ['required', 'date'],
+            'fecha_vencimiento'            => ['required', 'date', 'after_or_equal:fecha'],
+            'tipcomp'                      => ['required', Rule::in(array_keys(self::TIPOS))],
+            'n_seri'                       => ['required', 'string', 'max:10'],
+            'n_comp'                       => ['required', 'string', 'max:20'],
+            'n_ruc'                        => ['nullable', 'string', 'max:20'],
+            'razonsocial'                  => ['required', 'string', 'max:300'],
+            'cliente_id'                   => ['nullable', 'integer', 'exists:clientes,id'],
+            'condicion_pago'               => ['nullable', 'string', 'max:100'],
+            'monto'                        => ['nullable', 'numeric', 'min:0'],
+            'tipo_operacion'               => ['nullable', Rule::in(['gravada', 'exonerada', 'inafecta'])],
+            'items'                        => ['nullable', 'array'],
+            'items.*.producto_codigo'      => ['nullable', 'string', 'max:50'],
+            'items.*.producto_nombre'      => ['nullable', 'string', 'max:255'],
+            'items.*.cantidad'             => ['nullable', 'integer', 'min:0'],
+            'items.*.precio_unitario'      => ['nullable', 'numeric', 'min:0'],
+        ]);
+    }
+
+    /** Descarta filas vacías o sin cantidad, y normaliza tipos. */
+    private function itemsValidos(array $items): array
+    {
+        $validos = [];
+
+        foreach ($items as $item) {
+            $nombre = trim((string) ($item['producto_nombre'] ?? ''));
+            $cantidad = (int) ($item['cantidad'] ?? 0);
+
+            if ($nombre === '' || $cantidad <= 0) {
+                continue;
+            }
+
+            $validos[] = [
+                'producto_codigo' => trim((string) ($item['producto_codigo'] ?? '')) ?: null,
+                'producto_nombre' => $nombre,
+                'cantidad' => $cantidad,
+                'precio_unitario' => (float) ($item['precio_unitario'] ?? 0),
+            ];
+        }
+
+        return $validos;
+    }
+}

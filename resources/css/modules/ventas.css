@@ -1,0 +1,487 @@
+/* ═══════════════════════════════════════════════════════
+   Ventas — modal de registro de comprobantes
+   Migrado desde administrador/ventas.php
+   ═══════════════════════════════════════════════════════ */
+
+.ven-modal-overlay {
+    --vn-verde:  var(--brand);
+    --vn-verde-2: var(--brand-2);
+    --vn-borde:  rgba(180,160,140,.18);
+    --vn-texto:  var(--ink);
+    --vn-mudo:   var(--ink-3);
+    --vn-sup:    var(--surface);
+    --vn-sup-2:  var(--surface-2);
+
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    padding: 16px;
+    background: rgba(0,0,0,.7);
+    backdrop-filter: blur(3px);
+    align-items: center;
+    justify-content: center;
+}
+.ven-modal-overlay.active { display: flex; }
+
+.ven-modal {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 640px;
+    max-height: 92vh;
+    background: var(--vn-sup);
+    border: 1px solid var(--vn-borde);
+    border-radius: 12px;
+    animation: venSubir .2s ease;
+}
+@keyframes venSubir {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.ven-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 22px;
+    background: var(--side);
+    border-top: 2px solid var(--vn-verde);
+    border-bottom: 1px solid var(--vn-borde);
+    border-radius: 12px 12px 0 0;
+}
+.ven-modal-header h3 { margin: 0; font-size: 17px; font-weight: 700; color: var(--surface-2); }
+.ven-modal-header p  { margin: 2px 0 0; font-size: 11px; color: rgba(240,237,232,.4); }
+
+.ven-modal-close {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 6px;
+    background: transparent;
+    color: rgba(240,237,232,.5);
+    font-size: 17px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all .2s;
+}
+.ven-modal-close:hover { background: rgba(217, 203, 22,.3); color: #fff; }
+
+.ven-modal-body { flex: 1; padding: 22px; overflow-y: auto; }
+.ven-modal-body::-webkit-scrollbar { width: 4px; }
+.ven-modal-body::-webkit-scrollbar-thumb { background: rgba(217, 203, 22,.2); border-radius: 4px; }
+
+.ven-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 9px;
+    padding: 14px 22px;
+    background: var(--vn-sup-2);
+    border-top: 1px solid var(--vn-borde);
+    border-radius: 0 0 12px 12px;
+}
+
+/* ── Formulario ──────────────────────────────────────── */
+.ven-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+.ven-full { grid-column: 1/-1; }
+.ven-group { display: flex; flex-direction: column; gap: 4px; }
+
+.ven-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--vn-mudo);
+    text-transform: uppercase;
+    letter-spacing: .14em;
+}
+.ven-label span { color: var(--vn-verde); }
+
+.ven-control {
+    padding: 9px 11px;
+    border: 1px solid var(--vn-borde);
+    border-radius: 7px;
+    background: var(--vn-sup-2);
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--vn-texto);
+    transition: border-color .2s;
+}
+.ven-control:focus {
+    outline: none;
+    border-color: rgba(217, 203, 22,.4);
+    background: var(--surface);
+    box-shadow: 0 0 0 3px rgba(217, 203, 22,.06);
+}
+/* Los campos calculados no se editan: se distinguen del resto. */
+.ven-control.calc {
+    background: rgba(217, 203, 22,.05);
+    border-color: rgba(217, 203, 22,.3);
+    font-weight: 700;
+    color: var(--vn-verde);
+}
+
+/* ── Tipo de operación ───────────────────────────────── */
+.tipo-op-tabs {
+    display: flex;
+    border: 1px solid var(--vn-borde);
+    border-radius: 8px;
+    overflow: hidden;
+}
+.tipo-op-tab {
+    flex: 1;
+    padding: 9px 6px;
+    border: none;
+    background: var(--vn-sup-2);
+    color: var(--vn-mudo);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+    transition: all .2s;
+}
+.tipo-op-tab:not(:last-child) { border-right: 1px solid var(--vn-borde); }
+.tipo-op-tab.active { background: var(--vn-verde); color: var(--on-brand); }
+
+/* ── Botones del pie ─────────────────────────────────── */
+.btn-cancel-modal {
+    padding: 9px 16px;
+    border: 1px solid var(--vn-borde);
+    border-radius: 7px;
+    background: var(--vn-sup);
+    color: var(--vn-mudo);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+}
+.btn-cancel-modal:hover { background: var(--vn-sup-2); }
+
+.btn-save-modal {
+    padding: 9px 20px;
+    border: none;
+    border-radius: 7px;
+    background: var(--vn-verde);
+    color: var(--on-brand);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .2s;
+}
+.btn-save-modal:hover { background: var(--vn-verde-2); }
+
+/* ═══════════════════════════════════════════════════════
+   Listado de ventas
+   ═══════════════════════════════════════════════════════ */
+.ven-wrapper {
+    --vn-verde:   var(--brand);
+    --vn-verde-2: var(--brand-2);
+    --vn-borde:   rgba(180,160,140,.18);
+    --vn-texto:   var(--ink);
+    --vn-mudo:   var(--ink-3);
+    --vn-sup:     var(--surface);
+    --vn-sup-2:   var(--surface-2);
+    color: var(--vn-texto);
+}
+
+/* ── Cabecera ────────────────────────────────────────── */
+.ven-header {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 24px;
+    padding: 22px 26px;
+    background: var(--brand);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+}
+.ven-header-left h2 { margin: 0 0 2px; font-family: var(--font-display); font-size: 19px; font-weight: 400; letter-spacing: .01em; color: var(--on-brand); }
+.ven-header-left p  { margin: 0; font-size: 12px; letter-spacing: .04em; color: var(--on-brand); opacity: .72; }
+.ven-header-right   { position: relative; z-index: 1; display: flex; align-items: center; gap: 9px; }
+
+.btn-add-ven {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 18px;
+    border: 1px solid var(--on-brand);
+    border-radius: 7px;
+    background: var(--on-brand);
+    color: var(--brand);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+}
+.btn-add-ven:hover { background: #000; border-color: #000; }
+
+/* ── Indicadores ─────────────────────────────────────── */
+.ven-kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+    gap: 11px;
+    margin-bottom: 18px;
+}
+.ven-kpi {
+    padding: 16px 18px;
+    background: var(--vn-sup);
+    border: 1px solid var(--vn-borde);
+    border-top: 2px solid var(--vn-verde);
+    border-radius: 10px;
+}
+.ven-kpi-label {
+    margin-bottom: 5px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--vn-mudo);
+    text-transform: uppercase;
+    letter-spacing: .16em;
+}
+.ven-kpi-val { font-size: 22px; font-weight: 700; line-height: 1.1; color: var(--vn-texto); }
+.ven-kpi-sub { margin-top: 3px; font-size: 11px; color: var(--vn-mudo); }
+.ven-kpi.kpi-igv   .ven-kpi-val { color: var(--vn-verde); }
+.ven-kpi.kpi-total .ven-kpi-val { color: var(--vn-verde); font-size: 26px; }
+
+/* ── Tarjeta del listado ─────────────────────────────── */
+.ven-card {
+    margin-bottom: 20px;
+    background: var(--vn-sup);
+    border: 1px solid var(--vn-borde);
+    border-radius: 10px;
+    overflow: hidden;
+}
+.ven-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 13px 18px;
+    background: var(--vn-sup-2);
+    border-bottom: 1px solid var(--vn-borde);
+}
+.ven-search {
+    min-width: 260px;
+    padding: 7px 12px 7px 32px;
+    border: 1px solid var(--vn-borde);
+    border-radius: 7px;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--vn-texto);
+    background-color: var(--vn-sup);
+    background-repeat: no-repeat;
+    background-position: 9px center;
+    background-size: 14px 14px;
+    /* Lupa embebida para no depender de un archivo externo. */
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23aaaaaa' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='M21 21l-4.35-4.35'/%3E%3C/svg%3E");
+}
+.ven-search:focus { outline: none; border-color: rgba(217, 203, 22,.35); box-shadow: 0 0 0 3px rgba(217, 203, 22,.06); }
+
+/* ── Barra de mes y fechas ───────────────────────────── */
+.filtro-mes-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 9px 18px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--vn-borde);
+}
+.filtro-mes-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--vn-mudo);
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    white-space: nowrap;
+}
+.filtro-mini { font-size: 11px; color: var(--vn-mudo); }
+.filtro-sep  { width: 1px; height: 24px; margin: 0 4px; background: var(--vn-borde); flex-shrink: 0; }
+
+.mes-pill {
+    padding: 4px 13px;
+    border: 1.5px solid var(--line);
+    border-radius: var(--r-lg);
+    background: var(--surface);
+    color: var(--ink-3);
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all .2s;
+}
+.mes-pill:hover  { border-color: var(--vn-verde); color: var(--vn-verde); }
+.mes-pill.active { background: var(--vn-verde); border-color: var(--vn-verde); color: var(--on-brand); }
+
+.fecha-input {
+    padding: 4px 8px;
+    border: 1.5px solid var(--line);
+    border-radius: 7px;
+    background: var(--surface);
+    font-size: 12px;
+    font-family: inherit;
+    color: var(--vn-texto);
+    outline: none;
+    transition: border-color .2s;
+}
+.fecha-input:focus, .fecha-input.activo { border-color: var(--vn-verde); }
+
+.btn-limpiar-f {
+    padding: 4px 11px;
+    border: 1.5px solid var(--line);
+    border-radius: var(--r-lg);
+    background: var(--surface);
+    color: var(--ink-3);
+    font-size: 11px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all .2s;
+}
+.btn-limpiar-f:hover { border-color: var(--vn-verde); color: var(--vn-verde); }
+
+/* ── Tabla ───────────────────────────────────────────── */
+.ven-table-wrap { overflow-x: auto; scroll-behavior: smooth; }
+.ven-table-wrap::-webkit-scrollbar { height: 7px; }
+.ven-table-wrap::-webkit-scrollbar-thumb { background: var(--vn-verde); border-radius: 4px; }
+
+.ven-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ven-table thead tr { background: var(--vn-sup-2); }
+.ven-table th {
+    padding: 9px 12px;
+    text-align: left;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--vn-mudo);
+    text-transform: uppercase;
+    letter-spacing: .14em;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--vn-borde);
+}
+.ven-table td { padding: 10px 12px; border-bottom: 1px solid rgba(180,160,140,.07); vertical-align: middle; }
+.ven-table tbody tr:hover td { background: var(--surface-2); }
+.ven-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Encabezado de cada mes */
+.ven-table tr.grupo-header td {
+    padding: 7px 12px;
+    background: var(--side);
+    color: rgba(240,237,232,.65);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    border-bottom: 1px solid rgba(217, 203, 22,.15);
+}
+.ven-table tr.grupo-header td strong { color: var(--surface-2); }
+.gh-conteo { margin-left: 10px; font-size: 10px; opacity: .6; }
+.gh-total  { margin-left: 12px; font-size: 11px; font-weight: 700; color: var(--vn-verde); }
+
+/* Celdas con formato propio */
+.celda-fecha { white-space: nowrap; font-size: 12px; color: var(--vn-mudo); }
+.celda-serie { font-family: monospace; font-size: 12px; font-weight: 700; color: var(--vn-verde); }
+.celda-comp  { font-family: monospace; font-size: 12px; font-weight: 700; }
+.celda-ruc   { font-family: monospace; font-size: 12px; color: var(--vn-mudo); }
+.celda-razon { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.celda-tc    { font-size: 12px; color: var(--vn-mudo); }
+.celda-acciones { white-space: nowrap; text-align: right; }
+
+/* Distintivo por tipo de comprobante */
+.badge-tc {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .06em;
+    white-space: nowrap;
+}
+.tc-01 { background: rgba(217, 203, 22,.12); color: var(--vn-verde); border: 1px solid rgba(217, 203, 22,.2); }
+.tc-03 { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.tc-07 { background: #fef9c3; color: #854d0e; border: 1px solid #fde68a; }
+.tc-08 { background: #fce7f3; color: #9d174d; border: 1px solid #fbcfe8; }
+.tc-09 { background: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; }
+
+/* Importes: los ceros se atenúan */
+.importe-pos  { font-weight: 700; color: var(--vn-texto); }
+.importe-cero { color: rgba(26,23,20,.2); }
+.total-bold   { font-weight: 700; font-size: 14px; color: var(--vn-texto); }
+
+/* Acciones por fila */
+.btn-edit-v, .btn-del-v {
+    width: 26px;
+    height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--vn-borde);
+    border-radius: 5px;
+    background: var(--vn-sup-2);
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all .2s;
+}
+.btn-edit-v:hover { background: var(--info-bg); border-color: #90cdf4; color: #2b6cb0; }
+.btn-del-v:hover  { background: var(--vn-verde); border-color: var(--vn-verde); color: var(--on-brand); }
+.form-eliminar { display: inline; }
+
+/* Pie con los totales */
+.ven-table tfoot td { padding: 11px 12px; background: var(--side); color: rgba(240,237,232,.7); font-weight: 700; }
+.tfoot-label { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: rgba(240,237,232,.4); }
+.tfoot-count { margin-left: 8px; font-size: 15px; color: var(--surface-2); }
+.tfoot-igv   { font-size: 14px; font-weight: 700; color: var(--vn-verde); }
+.tfoot-total { font-size: 15px; font-weight: 700; color: var(--surface-2); }
+
+.ven-vacio { padding: 36px; text-align: center; color: var(--vn-mudo); }
+.ven-vacio-icono { margin-bottom: 8px; font-size: 28px; }
+
+@media (max-width: 560px) {
+    .ven-grid { grid-template-columns: 1fr; }
+    .tipo-op-tabs { flex-direction: column; }
+    .tipo-op-tab:not(:last-child) { border-right: none; border-bottom: 1px solid var(--vn-borde); }
+}
+
+/* ── Buscador de clientes dentro del modal ───────────── */
+.ven-busca { position: relative; }
+.ven-sugerencias {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 60;
+    margin-top: 5px;
+    max-height: 220px;
+    overflow-y: auto;
+    border: 2px solid var(--brand);
+    border-radius: 11px;
+    background: var(--surface);
+    box-shadow: 0 10px 26px rgba(20,22,27,.16);
+}
+.ven-sugerencias.is-visible { display: block; }
+.ven-sugerencia {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--surface-2);
+    cursor: pointer;
+}
+.ven-sugerencia:last-child { border-bottom: none; }
+.ven-sugerencia:hover { background: rgba(217, 203, 22,.09); }
+.ven-sugerencia b { font-size: 13.5px; font-weight: 600; line-height: 1.3; }
+.ven-sugerencia span {
+    flex-shrink: 0;
+    font-size: 12px;
+    color: var(--ink-3);
+    font-variant-numeric: lining-nums tabular-nums;
+}

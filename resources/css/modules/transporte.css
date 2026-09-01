@@ -1,0 +1,202 @@
+/* ═══════════════════════════════════════════════════════
+   Transporte — "el recorrido"
+
+   Las tarifas no son una tabla cualquiera: el precio sube
+   con la distancia, así que los destinos se dibujan como
+   paradas de una ruta, de la más barata a la más cara.
+   ═══════════════════════════════════════════════════════ */
+.tr-wrap {
+    --tr-ink:     var(--ink);
+    --tr-muted:   var(--ink-3);
+    --tr-suave:   var(--ink-4);
+    --tr-linea:   var(--line);
+    --tr-verde:   var(--brand);
+    --tr-verde-d: var(--brand-2);
+    --tr-ambar:   var(--warn);
+}
+
+/* ── Resumen en una línea ────────────────────────────── */
+.tr-resumen { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+.tr-pill {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 7px;
+    padding: 7px 14px;
+    border: 1px solid var(--tr-linea);
+    border-radius: var(--r-lg);
+    background: var(--surface);
+    font-size: 12.5px;
+    color: var(--tr-muted);
+}
+.tr-pill b {
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--tr-ink);
+}
+
+/* ── Título de sección ───────────────────────────────── */
+.tr-seccion {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin: 0 0 16px;
+}
+.tr-seccion h3 { margin: 0; font-size: 17px; font-weight: 800; color: var(--tr-ink); letter-spacing: -.2px; }
+.tr-seccion p { margin: 0; font-size: 12.5px; color: var(--tr-suave); }
+.tr-seccion .tr-rule { flex: 1; height: 1px; background: var(--tr-linea); }
+
+/* ── La ruta ─────────────────────────────────────────── */
+.tr-ruta { position: relative; margin: 0 0 30px; padding-left: 26px; }
+.tr-ruta::before {
+    content: '';
+    position: absolute;
+    top: 12px;
+    bottom: 12px;
+    left: 7px;
+    width: 2px;
+    background: linear-gradient(180deg, var(--tr-verde), var(--tr-ambar));
+    border-radius: 2px;
+}
+
+.tr-parada { position: relative; margin-bottom: 12px; }
+.tr-parada::before {
+    content: '';
+    position: absolute;
+    top: 26px;
+    left: -24px;
+    width: 12px;
+    height: 12px;
+    border: 2.5px solid #fff;
+    border-radius: 50%;
+    background: var(--tr-ink);
+    box-shadow: 0 0 0 2px var(--tr-linea);
+}
+
+.tr-tarjeta {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 18px;
+    padding: 16px 20px;
+    border: 1px solid var(--tr-linea);
+    border-radius: 14px;
+    background: var(--surface);
+    transition: border-color .2s, box-shadow .2s, transform .2s;
+}
+.tr-tarjeta:hover {
+    border-color: var(--line);
+    box-shadow: 0 8px 24px rgba(17,24,39,.08);
+    transform: translateX(2px);
+}
+
+.tr-destino { font-size: 16px; font-weight: 800; color: var(--tr-ink); letter-spacing: -.2px; }
+.tr-empresa-chip {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 2px 9px;
+    border-radius: var(--r-lg);
+    background: var(--surface-2);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--tr-muted);
+}
+.tr-barra { margin-top: 8px; width: 130px; height: 4px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.tr-barra i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--tr-verde), var(--tr-ambar)); }
+
+.tr-precios { display: flex; gap: 10px; }
+.tr-precio {
+    min-width: 92px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    text-align: center;
+}
+.tr-precio-lbl {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--tr-suave);
+    text-transform: uppercase;
+    letter-spacing: .7px;
+}
+.tr-precio-val {
+    margin-top: 3px;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--tr-ink);
+}
+.tr-precio.cilindro { background: rgba(217,119,6,.08); }
+.tr-precio.cilindro .tr-precio-val { color: var(--warn); }
+
+.tr-acciones { display: flex; gap: 8px; }
+
+/* ── Empresas ────────────────────────────────────────── */
+.tr-empresas { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.tr-emp {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 18px;
+    border: 1px solid var(--tr-linea);
+    border-radius: 14px;
+    background: var(--surface);
+}
+.tr-emp-inicial {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 42px;
+    height: 42px;
+    border-radius: 11px;
+    background: linear-gradient(135deg, var(--ink), var(--ink));
+    color: #fff;
+    font-size: 15px;
+    font-weight: 800;
+}
+.tr-emp-info { min-width: 0; flex: 1; }
+.tr-emp-nombre {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--tr-ink);
+    line-height: 1.3;
+}
+.tr-emp-meta { margin-top: 3px; font-size: 11.5px; color: var(--tr-suave); }
+.tr-emp-meta.sin { color: var(--tr-ambar); font-weight: 600; }
+.tr-emp-acciones { display: flex; flex-direction: column; gap: 6px; }
+
+/* ── Vacíos ──────────────────────────────────────────── */
+.tr-vacio {
+    padding: 40px 20px;
+    border: 1.5px dashed var(--tr-linea);
+    border-radius: 14px;
+    color: var(--tr-suave);
+    font-size: 13.5px;
+    text-align: center;
+}
+
+@media (max-width: 1000px) {
+    .tr-tarjeta { grid-template-columns: 1fr; gap: 14px; }
+    .tr-precios { flex-wrap: wrap; }
+}
+@media (max-width: 700px) {
+    .tr-precio { flex: 1; min-width: 0; }
+}
+
+/* ── Separador dentro del modal de empresa ───────────── */
+.tr-modal-sep {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin: 22px 0 14px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+}
+.tr-modal-sep span {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink);
+    text-transform: uppercase;
+    letter-spacing: .6px;
+}
+.tr-modal-sep small { font-size: 11.5px; color: var(--ink-4); }

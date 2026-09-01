@@ -1,0 +1,1636 @@
+/* ═══════════════════════════════════════════════════════
+   Órdenes de Compra — transcrito de administrador/ordenes_compra.php
+   Todo cuelga de .oc-wrapper para no chocar con los estilos
+   compartidos del panel (.badge, .table, .btn…).
+   ═══════════════════════════════════════════════════════ */
+.oc-wrapper {
+    --oc-primary:  var(--brand);
+    --oc-primary-d:var(--brand-2);
+    --oc-danger:   var(--neg);
+    --oc-white:    var(--surface);
+    --oc-border:   var(--line);
+    --oc-text:     var(--ink);
+    --oc-muted:    var(--ink-3);
+    --oc-shadow:   0 4px 20px rgba(0,0,0,.08);
+}
+
+/* ── Botón flotante ──────────────────────────────────── */
+.fab-nueva-oc {
+    position: fixed;
+    right: 32px;
+    bottom: 32px;
+    z-index: 900;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 15px 24px;
+    border: none;
+    border-radius: var(--r-lg);
+    background: var(--brand);
+    color: var(--on-brand);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    box-shadow: 0 8px 28px rgba(217, 203, 22,.5);
+    transition: all .3s cubic-bezier(.175,.885,.32,1.275);
+}
+.fab-nueva-oc:hover { transform: translateY(-4px) scale(1.04); box-shadow: 0 14px 36px rgba(217, 203, 22,.6); }
+.fab-nueva-oc svg   { flex-shrink: 0; }
+
+/* ── Cabecera ────────────────────────────────────────── */
+.oc-header {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 24px;
+    padding: 22px 26px;
+    border-radius: var(--r-lg);
+    background: var(--brand);
+    overflow: hidden;
+}
+.oc-header-left  { position: relative; z-index: 1; }
+.oc-header-left h2 { margin: 0 0 5px; font-family: var(--font-display); font-size: 19px; font-weight: 400; letter-spacing: .01em; color: var(--on-brand); }
+.oc-header-left p  { margin: 0; font-size: 13.5px; color: var(--on-brand); opacity: .72; }
+.oc-header-right { position: relative; z-index: 1; display: flex; align-items: center; gap: 12px; }
+
+.btn-oc {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 22px;
+    border: none;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all .25s ease;
+}
+.btn-primary-oc { background: var(--on-brand); color: var(--brand); }
+.btn-primary-oc:hover { background: #000; }
+.btn-outline-oc { background: rgba(26,26,24,.08); color: var(--on-brand); border: 1px solid rgba(26,26,24,.25); }
+.btn-outline-oc:hover { background: rgba(26,26,24,.16); }
+
+/* ── Banda del tipo de cambio ────────────────────────── */
+.tc-banner {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+    padding: 16px 24px;
+    border-radius: 14px;
+    background: var(--side);
+}
+.tc-label { font-size: 12px; font-weight: 600; color: var(--side-mute); text-transform: uppercase; letter-spacing: .5px; }
+.tc-value { font-size: 26px; font-weight: 800; color: var(--side-text); letter-spacing: -.5px; }
+.tc-value span { margin-left: 4px; font-size: 14px; font-weight: 500; color: var(--side-mute); }
+.tc-fecha { font-size: 12px; color: var(--side-mute); }
+.tc-fecha span { color: var(--side-text); }
+.tc-input-group { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+.tc-input-group label { font-size: 13px; color: var(--side-text); white-space: nowrap; }
+.tc-sufijo { font-size: 13px; color: var(--side-mute); }
+.tc-input {
+    width: 110px;
+    padding: 8px 14px;
+    border: 1px solid var(--side-line);
+    border-radius: 8px;
+    background: var(--side-2);
+    color: var(--side-text);
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 700;
+    text-align: center;
+}
+.tc-input:focus { outline: none; background: var(--side-2); border-color: var(--brand); }
+
+/* ── Indicadores ─────────────────────────────────────── */
+.oc-kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 18px;
+    margin-bottom: 28px;
+}
+.kpi-card {
+    position: relative;
+    padding: 22px 24px;
+    border: 1px solid var(--oc-border);
+    border-radius: 14px;
+    background: var(--oc-white);
+    box-shadow: var(--oc-shadow);
+    overflow: hidden;
+    transition: transform .2s ease;
+}
+.kpi-card:hover { transform: translateY(-3px); }
+/* Todas las tarjetas comparten el verde corporativo, como en el original. */
+.kpi-card::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    border-radius: 0 0 14px 14px;
+    background: var(--brand);
+}
+.kpi-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    margin-bottom: 14px;
+    border-radius: 12px;
+    background: rgba(217, 203, 22,.12);
+    color: var(--brand);
+}
+.kpi-label { margin-bottom: 4px; font-size: 11px; font-weight: 600; color: var(--oc-muted); text-transform: uppercase; letter-spacing: .5px; }
+.kpi-val   { font-size: 24px; font-weight: 800; color: var(--oc-text); letter-spacing: -.5px; }
+.kpi-sub   { margin-top: 4px; font-size: 11px; color: var(--oc-muted); }
+
+/* ── Pestañas ────────────────────────────────────────── */
+.oc-tabs {
+    display: flex;
+    gap: 4px;
+    width: fit-content;
+    margin-bottom: 24px;
+    padding: 4px;
+    border-radius: 10px;
+    background: var(--surface-2);
+}
+.oc-tab {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--oc-muted);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s ease;
+}
+.oc-tab.active { background: var(--surface); color: var(--oc-primary); box-shadow: var(--shadow-sm); }
+.oc-tab-pedidos.active { background: linear-gradient(135deg,var(--warn),var(--warn)); color: #fff; }
+
+/* ── Filtros ─────────────────────────────────────────── */
+.oc-filters { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+.filter-select {
+    padding: 8px 14px;
+    border: 1.5px solid var(--oc-border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--oc-text);
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+.search-oc {
+    min-width: 220px;
+    padding: 8px 14px 8px 36px;
+    border: 1.5px solid var(--oc-border);
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    background-color: var(--surface);
+    background-repeat: no-repeat;
+    background-position: 10px center;
+    background-size: 14px 14px;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+}
+.search-oc:focus, .filter-select:focus { outline: none; border-color: var(--oc-primary); }
+.btn-limpiar-oc {
+    padding: 8px 14px;
+    border: 1.5px solid var(--oc-border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--oc-muted);
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+}
+.btn-limpiar-oc:hover { border-color: var(--oc-primary); color: var(--oc-primary); }
+
+/* ── Tarjeta del listado ─────────────────────────────── */
+.oc-card {
+    margin-bottom: 24px;
+    border: 1px solid var(--oc-border);
+    border-radius: 14px;
+    background: var(--oc-white);
+    box-shadow: var(--oc-shadow);
+    overflow: hidden;
+}
+.oc-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--oc-border);
+}
+.oc-card-title { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 700; color: var(--oc-text); }
+.oc-card-title .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--brand); flex-shrink: 0; }
+.oc-card-body { padding: 24px; }
+.oc-contador { font-size: 12px; color: var(--oc-muted); }
+
+/* ── Grupo por día ───────────────────────────────────── */
+.dia-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 20px;
+    border-bottom: 2px solid var(--oc-border);
+    background: linear-gradient(135deg, var(--surface-2), var(--surface-2));
+    cursor: pointer;
+    user-select: none;
+    transition: background .2s;
+}
+.dia-header:hover { background: linear-gradient(135deg, var(--surface-2), var(--surface-2)); }
+.dia-header-left { display: flex; align-items: center; gap: 12px; flex: 1; }
+.dia-fecha-badge {
+    padding: 6px 14px;
+    border-radius: 10px;
+    background: var(--side);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: -.3px;
+    white-space: nowrap;
+}
+.dia-fecha-badge.hoy  { background: var(--brand); box-shadow: 0 3px 10px rgba(217, 203, 22,.3); }
+.dia-fecha-badge.ayer { background: var(--brand); }
+.dia-label    { font-size: 13px; font-weight: 700; color: var(--oc-text); text-transform: capitalize; }
+.dia-sublabel { margin-top: 1px; font-size: 11px; color: var(--oc-muted); }
+.dia-stats    { display: flex; align-items: center; gap: 16px; }
+.dia-stat     { text-align: right; }
+.dia-stat-val { font-size: 14px; font-weight: 800; color: var(--oc-text); }
+.dia-stat-val.soles { color: var(--brand); }
+.dia-stat-lbl { font-size: 10px; color: var(--oc-muted); text-transform: uppercase; letter-spacing: .3px; }
+.dia-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: rgba(0,0,0,.06);
+    font-size: 14px;
+    flex-shrink: 0;
+    transition: transform .25s;
+}
+.dia-toggle.collapsed { transform: rotate(-90deg); }
+
+.btn-excel-dia {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 13px;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #217346, #185a38);
+    color: #fff;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: opacity .2s;
+}
+.btn-excel-dia:hover { opacity: .85; }
+
+.dia-body { overflow-x: auto; overflow-y: hidden; transition: max-height .3s ease; }
+.dia-body.collapsed { max-height: 0 !important; }
+.dia-body::-webkit-scrollbar { height: 6px; }
+.dia-body::-webkit-scrollbar-track { background: var(--surface-2); border-radius: 3px; }
+.dia-body::-webkit-scrollbar-thumb { background: var(--brand); border-radius: 3px; }
+.dia-divider { height: 1px; margin: 0 20px; background: linear-gradient(90deg, transparent, var(--oc-border), transparent); }
+
+/* ── Tabla ───────────────────────────────────────────── */
+.oc-table { width: 100%; min-width: 900px; border-collapse: collapse; font-size: 13px; }
+.oc-table thead tr { background: var(--surface-2); }
+.oc-table th {
+    padding: 12px 16px;
+    border-bottom: 2px solid var(--oc-border);
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--oc-muted);
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    white-space: nowrap;
+}
+.oc-table td { padding: 14px 16px; border-bottom: 1px solid var(--surface-2); vertical-align: middle; color: var(--oc-text); }
+.oc-table tbody tr:hover td { background: var(--surface-2); }
+.oc-num-orden { font-family: 'Courier New', monospace; font-weight: 700; }
+
+.cliente-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: var(--warn-bg);
+    color: var(--warn);
+    font-size: 12px;
+    font-weight: 700;
+}
+.cliente-vacio { color: #ccc; font-size: 12px; }
+
+.rent-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: var(--r-lg);
+    font-size: 12px;
+    font-weight: 700;
+}
+.rent-pill-up   { background: rgba(217, 203, 22,.12); color: var(--brand-2); }
+.rent-pill-down { background: rgba(239,68,68,.12);  color: var(--neg); }
+
+/* ── Factura y guía editables en línea ───────────────── */
+.factura-cell { display: flex; align-items: center; gap: 6px; min-width: 160px; }
+.doc-view, .doc-edit { display: flex; align-items: center; gap: 6px; }
+.doc-edit { display: none; }
+.factura-badge-pendiente {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border: 1px dashed rgba(217, 203, 22,.4);
+    border-radius: 6px;
+    background: rgba(217, 203, 22,.1);
+    color: var(--brand-2);
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.factura-badge-ok {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border: 1px solid rgba(217, 203, 22,.25);
+    border-radius: 6px;
+    background: rgba(217, 203, 22,.08);
+    color: var(--brand-2);
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.btn-factura-edit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 6px;
+    background: rgba(217, 203, 22,.1);
+    color: var(--brand);
+    font-size: 11px;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: all .2s;
+}
+.btn-factura-edit:hover { background: rgba(217, 203, 22,.2); }
+.factura-edit-input {
+    width: 140px;
+    padding: 4px 10px;
+    border: 1.5px solid var(--brand);
+    border-radius: 6px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--oc-text);
+    outline: none;
+}
+.btn-factura-ok, .btn-factura-cancel {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+}
+.btn-factura-ok     { background: var(--brand); color: var(--on-brand); }
+.btn-factura-cancel { background: var(--surface-2); color: var(--ink-3); }
+
+/* ── Acciones por fila ───────────────────────────────── */
+.oc-acciones { display: flex; align-items: center; gap: 4px; }
+.btn-excel-oc, .btn-email-oc, .btn-del-oc {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all .2s ease;
+}
+.btn-excel-oc { background: linear-gradient(135deg,#217346,#185a38); box-shadow: 0 2px 6px rgba(33,115,70,.4); }
+.btn-email-oc { background: var(--brand-2); color: var(--on-brand); box-shadow: 0 2px 6px rgba(184,172,19,.4); }
+.btn-del-oc   { background: var(--neg); }
+.btn-excel-oc:hover, .btn-email-oc:hover { transform: translateY(-1px); }
+.btn-del-oc:hover { background: var(--neg); }
+.form-eliminar-oc { display: inline; }
+
+/* ── Selección de varias órdenes ─────────────────────── */
+.oc-th-check, .oc-td-check { width: 34px; padding-right: 0; text-align: center; }
+.oc-check, .oc-check-dia {
+    width: 15px;
+    height: 15px;
+    accent-color: #217346;
+    cursor: pointer;
+    vertical-align: middle;
+}
+.oc-table tbody tr.fila-elegida td { background: var(--brand-bg); }
+.oc-table tbody tr.fila-elegida td:first-child { box-shadow: inset 3px 0 0 #217346; }
+
+.oc-seleccion {
+    position: fixed;
+    left: 50%;
+    bottom: 26px;
+    z-index: 950;
+    display: none;
+    align-items: center;
+    gap: 16px;
+    padding: 11px 16px;
+    border: 1.5px solid var(--line);
+    border-radius: 14px;
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+    transform: translateX(-50%);
+}
+.oc-seleccion.visible { display: flex; animation: menuExcelEntra .15s ease; }
+body.oc-seleccionando .fab-nueva-oc { display: none; }
+.oc-seleccion-info { display: flex; flex-direction: column; line-height: 1.35; }
+.oc-seleccion-info strong { font-size: 13px; color: var(--oc-text); }
+.oc-seleccion-info small  { font-size: 11px; color: var(--oc-muted); }
+.oc-seleccion .btn-excel-dia { padding: 9px 16px; font-size: 12px; }
+.oc-seleccion .btn-excel-dia:disabled { opacity: .45; cursor: not-allowed; }
+.oc-sel-limpiar {
+    border: none;
+    background: none;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--oc-muted);
+    cursor: pointer;
+}
+.oc-sel-limpiar:hover { color: var(--neg); }
+
+@media (max-width: 640px) {
+    .oc-seleccion { left: 12px; right: 12px; transform: none; gap: 10px; }
+    .oc-seleccion-info small { display: none; }
+}
+
+/* ── Menú de tipo de Excel ───────────────────────────── */
+.menu-excel {
+    position: fixed;
+    z-index: 9999;
+    min-width: 240px;
+    padding: 6px 0;
+    border: 1.5px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    animation: menuExcelEntra .15s ease;
+}
+@keyframes menuExcelEntra {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.menu-excel-titulo {
+    padding: 6px 14px 4px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--ink-4);
+    text-transform: uppercase;
+    letter-spacing: .5px;
+}
+.menu-excel button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 9px 14px;
+    border: none;
+    background: none;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    text-align: left;
+    cursor: pointer;
+}
+.menu-excel button:hover { background: var(--brand-bg); }
+.menu-excel button span  { display: flex; flex-direction: column; }
+.menu-excel button small { font-size: 10px; font-weight: 400; color: var(--ink-3); }
+
+/* ── Estado vacío ────────────────────────────────────── */
+.oc-empty { padding: 60px 20px; text-align: center; }
+.oc-empty-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 20px;
+    border-radius: 50%;
+    background: var(--surface-2);
+    font-size: 32px;
+}
+.oc-empty h3 { margin: 0 0 8px; font-size: 16px; font-weight: 700; color: var(--oc-text); }
+.oc-empty p  { margin: 0 0 20px; font-size: 13px; color: var(--oc-muted); }
+
+/* ── Pedidos de clientes ─────────────────────────────── */
+.ped-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+.ped-title  { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 800; color: var(--oc-text); }
+.ped-title-badge {
+    padding: 4px 12px;
+    border-radius: var(--r-lg);
+    background: linear-gradient(135deg,var(--warn),var(--warn));
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+}
+.ped-table-wrap { overflow-x: auto; }
+.ped-table { width: 100%; border-collapse: collapse; }
+.ped-table th {
+    padding: 11px 14px;
+    background: #1a1a2e;
+    color: #fff;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    white-space: nowrap;
+}
+.ped-table td { padding: 12px 14px; border-bottom: 1px solid var(--oc-border); font-size: 13px; vertical-align: middle; }
+.ped-table tbody tr:hover td { background: var(--surface-2); }
+.ped-badge { display: inline-block; padding: 3px 10px; border-radius: var(--r-lg); font-size: 11px; font-weight: 700; }
+.ped-badge-pendiente { background: var(--warn-bg); color: var(--warn); }
+.ped-badge-proceso   { background: var(--info-bg); color: var(--info); }
+.ped-badge-entregado { background: var(--pos-bg); color: var(--pos); }
+.ped-badge-cancelado { background: var(--neg-bg); color: var(--neg); }
+.ped-empty { padding: 60px 20px; text-align: center; color: var(--oc-muted); }
+.ped-empty-icon { margin-bottom: 14px; font-size: 48px; }
+.ped-empty h3 { margin: 0 0 8px; font-size: 16px; font-weight: 700; color: var(--oc-text); }
+.ped-empty p  { margin: 0; font-size: 13px; }
+
+/* ═══════════════════════════════════════════════════════
+   Nueva orden de compra
+   ═══════════════════════════════════════════════════════ */
+.oc-nueva { max-width: 860px; margin: 0 auto; padding: 8px 0 40px; }
+
+.oc-nueva-head { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
+.btn-volver-oc {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border: 1.5px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface-2);
+    color: var(--ink-2);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background .2s;
+}
+.btn-volver-oc:hover { background: var(--line); }
+.oc-nueva-head h2 { margin: 0; font-size: 22px; font-weight: 800; color: var(--ink); }
+.oc-nueva-head p  { margin: 2px 0 0; font-size: 12px; color: var(--ink-3); }
+
+.oc-panel { padding: 28px 32px; border: 1.5px solid var(--line); border-radius: var(--r-lg); background: var(--surface); }
+
+/* ── Rejilla y campos ────────────────────────────────── */
+.oc-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.oc-form-full { grid-column: 1 / -1; }
+.oc-campo     { display: flex; flex-direction: column; gap: 6px; }
+.oc-label     { font-size: 12px; font-weight: 600; color: var(--ink-3); text-transform: uppercase; letter-spacing: .4px; }
+.oc-input {
+    padding: 10px 14px;
+    border: 1.5px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface-2);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 14px;
+    transition: all .2s ease;
+}
+.oc-input:focus { outline: none; border-color: var(--brand); background: var(--surface); box-shadow: 0 0 0 3px rgba(217, 203, 22,.08); }
+.oc-input.mono  { font-family: 'Courier New', monospace; font-weight: 700; font-size: 15px; }
+.oc-input.ref   { font-size: 16px; letter-spacing: 2px; }
+.oc-input.correlativo { font-size: 16px; font-weight: 800; color: var(--brand); letter-spacing: 1px; }
+.oc-hint  { font-size: 11px; color: var(--ink-3); }
+
+.oc-divisor {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 24px 0 16px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink-3);
+    text-transform: uppercase;
+    letter-spacing: .8px;
+}
+.oc-divisor::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+
+.oc-opcional {
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: rgba(217, 203, 22,.12);
+    color: var(--brand-2);
+    font-size: 10px;
+    font-weight: 700;
+}
+
+/* ── Bloque del cliente ──────────────────────────────── */
+.oc-bloque-cliente {
+    padding: 14px 16px;
+    border: 1.5px solid var(--warn);
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--warn-bg), var(--warn-bg));
+}
+.oc-bloque-cliente .oc-label { color: var(--warn); }
+.oc-bloque-cliente .oc-hint  { color: var(--warn); }
+.oc-bloque-cliente .oc-input { border-color: var(--warn); background: var(--surface); }
+
+/* ── Peso calculado ──────────────────────────────────── */
+.oc-peso-caja {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border: 1.5px solid #a5d6cf;
+    border-radius: 10px;
+    background: var(--brand-bg);
+}
+.oc-peso-valor { font-size: 15px; font-weight: 800; color: var(--ink-4); }
+.oc-peso-valor.lleno { color: var(--pos); }
+.oc-peso-nota  { font-size: 11px; color: var(--ink-3); }
+
+/* ── Buscador de productos ───────────────────────────── */
+.oc-buscador { position: relative; }
+.oc-buscador .lupa { position: absolute; top: 50%; left: 12px; transform: translateY(-50%); font-size: 15px; pointer-events: none; }
+.oc-buscador .oc-input { width: 100%; padding-left: 38px; box-sizing: border-box; }
+
+.oc-ejemplos { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.oc-ejemplos-lbl { font-size: 10px; font-weight: 600; color: var(--ink-4); text-transform: uppercase; letter-spacing: .3px; }
+.oc-ejemplo {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    background: var(--surface-2);
+    color: var(--ink-2);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+}
+.oc-ejemplo:hover { border-color: var(--brand); background: var(--brand-bg); color: var(--brand-2); }
+
+.oc-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    left: 0;
+    z-index: 999;
+    max-height: 300px;
+    border: 1.5px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+    overflow-y: auto;
+    display: none;
+}
+.oc-dropdown.abierto { display: block; }
+.oc-item { padding: 10px 14px; border-bottom: 1px solid var(--surface-2); cursor: pointer; transition: background .15s; }
+.oc-item:last-child { border-bottom: none; }
+.oc-item:hover, .oc-item.activo { background: var(--brand-bg); }
+.oc-item-top  { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-bottom: 4px; }
+.oc-item-cod  { padding: 2px 7px; border-radius: 4px; background: rgba(217, 203, 22,.08); color: var(--brand); font-family: 'Courier New', monospace; font-size: 11px; font-weight: 700; }
+.oc-item-desc { font-size: 12px; font-weight: 500; color: var(--ink); }
+.oc-item-meta { display: flex; gap: 6px; flex-wrap: wrap; }
+.oc-chip      { padding: 1px 7px; border-radius: var(--r-lg); background: var(--brand-bg); color: var(--brand-2); font-size: 10px; font-weight: 700; }
+.oc-sin-resultados { padding: 20px; text-align: center; color: var(--ink-3); font-size: 13px; }
+
+/* ── Tarjeta del producto elegido ────────────────────── */
+.oc-prod-card {
+    display: none;
+    margin-bottom: 12px;
+    padding: 12px 16px;
+    border: 2px solid var(--brand);
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--brand-bg), var(--brand-bg));
+}
+.oc-prod-card.visible { display: block; }
+.oc-prod-fila { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.oc-prod-info { flex: 1; min-width: 0; }
+.oc-prod-cod  { display: inline-block; margin-bottom: 4px; padding: 2px 8px; border-radius: 4px; background: rgba(217, 203, 22,.2); color: var(--brand-2); font-family: monospace; font-size: 11px; font-weight: 700; }
+.oc-prod-desc { font-size: 13px; font-weight: 700; color: #064e3b; line-height: 1.3; }
+.oc-prod-meta { margin-top: 2px; font-size: 11px; color: var(--ink-3); }
+.oc-prod-acciones { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.oc-qty {
+    width: 80px;
+    padding: 10px;
+    border: 1.5px solid var(--brand);
+    border-radius: 8px;
+    background: var(--surface);
+    font-family: 'Courier New', monospace;
+    font-size: 20px;
+    font-weight: 900;
+    text-align: center;
+    outline: none;
+}
+.btn-agregar-prod {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 9px;
+    background: var(--brand);
+    color: var(--on-brand);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.btn-quitar-prod {
+    padding: 10px 12px;
+    border: 1.5px solid var(--brand);
+    border-radius: 9px;
+    background: transparent;
+    color: var(--brand-2);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+/* ── Lista de productos agregados ────────────────────── */
+.oc-lista-prods { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.oc-linea {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border: 1.5px solid var(--pos-bg);
+    border-radius: 10px;
+    background: var(--surface);
+}
+.oc-linea-num {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--brand);
+    color: var(--on-brand);
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+.oc-linea-info { flex: 1; min-width: 0; }
+.oc-linea-desc { font-size: 12px; font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.oc-linea-meta { display: flex; align-items: center; gap: 6px; margin-top: 2px; font-size: 11px; color: var(--ink-3); }
+.oc-linea-meta .cod { padding: 1px 5px; border-radius: 3px; background: var(--surface-2); font-family: monospace; }
+.oc-linea-meta .tipo { padding: 1px 7px; border-radius: 10px; background: var(--brand-bg); color: var(--brand-2); font-size: 10px; font-weight: 700; }
+.oc-linea-col { flex-shrink: 0; text-align: center; }
+.oc-linea-lbl { margin-bottom: 3px; font-size: 9px; font-weight: 700; color: var(--ink-4); text-transform: uppercase; }
+.oc-linea-total { min-width: 64px; text-align: right; }
+.oc-linea-total div:last-child { font-size: 14px; font-weight: 900; color: var(--info); }
+.oc-precio-input {
+    width: 84px;
+    padding: 4px 8px;
+    border: 1.5px solid var(--brand);
+    border-radius: 6px;
+    background: var(--brand-bg);
+    color: var(--brand-2);
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    font-weight: 800;
+    text-align: center;
+    outline: none;
+}
+.oc-cant-input {
+    width: 52px;
+    padding: 4px 6px;
+    border: 1.5px solid var(--brand-2);
+    border-radius: 6px;
+    background: var(--brand-bg);
+    color: var(--brand-2);
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    font-weight: 900;
+    text-align: center;
+    outline: none;
+}
+.oc-peso-input {
+    width: 62px;
+    padding: 4px 6px;
+    border: 1.5px solid var(--line-2);
+    border-radius: 6px;
+    background: var(--surface-2);
+    color: var(--ink-2);
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    text-align: center;
+    outline: none;
+}
+.btn-borrar-linea {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 7px;
+    background: rgba(239,68,68,.1);
+    color: var(--neg);
+    font-size: 14px;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+/* ── Resumen oscuro del total ────────────────────────── */
+.oc-resumen {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    padding: 14px 20px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--ink), var(--ink));
+}
+.oc-resumen.visible { display: flex; }
+.oc-resumen-lbl { font-size: 10px; font-weight: 700; color: rgba(255,255,255,.5); text-transform: uppercase; letter-spacing: .5px; }
+.oc-resumen-sub { margin-top: 2px; font-size: 11px; color: rgba(255,255,255,.6); }
+.oc-resumen-der { text-align: right; }
+.oc-resumen-moneda { margin-bottom: 4px; font-size: 10px; font-weight: 600; color: rgba(255,255,255,.5); }
+.oc-resumen-fila { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.oc-resumen-fila > span { font-size: 20px; font-weight: 900; color: rgba(255,255,255,.7); }
+.oc-total-input {
+    width: 140px;
+    padding: 4px 10px;
+    border: 1.5px solid rgba(255,255,255,.25);
+    border-radius: 8px;
+    background: rgba(255,255,255,.1);
+    color: #fff;
+    font-family: inherit;
+    font-size: 24px;
+    font-weight: 900;
+    text-align: right;
+    outline: none;
+}
+
+/* ── Condición de pago ───────────────────────────────── */
+.oc-pago { display: flex; gap: 10px; margin-bottom: 10px; }
+.oc-pago-card {
+    flex: 1;
+    padding: 16px 12px;
+    border: 2px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface);
+    font-family: inherit;
+    text-align: center;
+    cursor: pointer;
+    transition: all .2s;
+}
+.oc-pago-card.activa { border-color: var(--brand); background: var(--brand-bg); }
+.oc-pago-icono { margin-bottom: 6px; font-size: 24px; }
+.oc-pago-nombre { font-size: 14px; font-weight: 700; color: var(--ink-2); }
+.oc-pago-total  { margin-top: 6px; font-size: 12px; font-weight: 600; color: var(--ink-4); }
+.oc-pago-total.lleno { color: var(--brand-2); }
+.oc-dias { display: none; }
+.oc-dias.visible { display: block; }
+
+/* ── Resumen de costo ────────────────────────────────── */
+.oc-costo-panel {
+    display: none;
+    margin-top: 16px;
+    padding: 18px;
+    border-radius: 12px;
+    background: linear-gradient(145deg, var(--ink), var(--ink));
+    color: #fff;
+}
+.oc-costo-panel.visible { display: block; }
+.oc-costo-titulo { margin-bottom: 20px; font-size: 13px; font-weight: 700; color: rgba(255,255,255,.5); text-transform: uppercase; letter-spacing: .8px; }
+.oc-costo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; text-align: center; }
+.oc-costo-lbl { font-size: 10px; color: rgba(255,255,255,.5); text-transform: uppercase; }
+.oc-costo-val { font-size: 22px; font-weight: 800; color: var(--brand); }
+
+/* ── Aviso de número duplicado ───────────────────────── */
+.oc-duplicado {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 6px;
+    padding: 10px 14px;
+    border: 1.5px solid var(--neg);
+    border-radius: 10px;
+    background: var(--neg-bg);
+    color: var(--neg);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.5;
+}
+.oc-duplicado strong { display: block; margin-bottom: 2px; font-size: 13px; }
+.oc-duplicado button {
+    flex-shrink: 0;
+    padding: 5px 12px;
+    border: none;
+    border-radius: 7px;
+    background: var(--neg);
+    color: #fff;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+/* ── Pie del formulario ──────────────────────────────── */
+.oc-acciones-form { display: flex; gap: 12px; margin-top: 8px; }
+.oc-acciones-form .btn-oc { padding: 14px; }
+.btn-guardar-oc { flex: 1; justify-content: center; }
+.btn-cancelar-oc {
+    display: inline-flex;
+    align-items: center;
+    padding: 14px 22px;
+    border: none;
+    border-radius: 10px;
+    background: var(--surface-2);
+    color: var(--ink-2);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+@media (max-width: 768px) {
+    .oc-kpis      { grid-template-columns: 1fr 1fr; }
+    .oc-header    { flex-direction: column; align-items: flex-start; }
+    .tc-input-group { margin-left: 0; }
+    .oc-form-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+    .fab-nueva-oc { right: 20px; bottom: 20px; padding: 14px 18px; font-size: 13px; }
+}
+
+/* ═══════════════════════════════════════════════════════
+   Nueva orden — "la hoja"
+
+   El formulario deja de parecer un formulario y pasa a
+   verse como el documento que se está emitiendo: membrete
+   arriba con el número de orden, secciones numeradas por
+   las que se baja en orden, y el recuadro de totales al
+   pie como en cualquier orden impresa. Una barra fija
+   abajo repite el total y el botón de guardar.
+   ═══════════════════════════════════════════════════════ */
+.oc-hoja-wrap { max-width: 1000px; margin: 0 auto; padding: 8px 0 120px; }
+
+.oc-hoja {
+    border: 1px solid var(--surface-2);
+    border-radius: var(--r-lg);
+    background: var(--surface);
+    box-shadow: 0 18px 50px rgba(17,24,39,.09), 0 2px 6px rgba(17,24,39,.04);
+    overflow: hidden;
+}
+
+/* ── Membrete ────────────────────────────────────────── */
+.ocd-membrete {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 24px;
+    padding: 26px 34px;
+    background:
+        radial-gradient(900px 220px at 100% 0%, rgba(217, 203, 22,.22), transparent 62%),
+        linear-gradient(180deg, #17191d 0%, #0d0e11 100%);
+    color: var(--surface-2);
+}
+.ocd-emisor-nombre {
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: -.2px;
+    color: #fff;
+}
+.ocd-emisor-dato {
+    margin-top: 3px;
+    font-size: 11.5px;
+    color: var(--ink-3);
+    letter-spacing: .2px;
+}
+.ocd-tipo {
+    display: inline-block;
+    margin-bottom: 10px;
+    padding: 4px 10px;
+    border: 1px solid rgba(255,255,255,.16);
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #a7dbd1;
+    text-transform: uppercase;
+    letter-spacing: 1.4px;
+}
+.ocd-membrete-der { text-align: right; }
+.ocd-numero {
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 34px;
+    font-weight: 800;
+    line-height: 1;
+    color: #fff;
+    letter-spacing: -1px;
+}
+.ocd-fecha { margin-top: 6px; font-size: 12px; color: var(--ink-3); }
+
+.ocd-membrete-pie {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 26px;
+    margin-top: 6px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255,255,255,.1);
+}
+.ocd-pie-dato { font-size: 12px; color: var(--ink-3); }
+.ocd-pie-dato strong { margin-left: 8px; font-weight: 600; color: var(--surface-2); }
+
+/* ── Cuerpo y secciones numeradas ────────────────────── */
+.ocd-cuerpo { padding: 8px 34px 34px; }
+
+.ocd-seccion {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    margin: 34px 0 18px;
+    padding-top: 22px;
+    border-top: 1px solid var(--surface-2);
+}
+.ocd-seccion:first-child { border-top: 0; }
+.ocd-num {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    background: var(--side);
+    color: #fff;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 14px;
+    font-weight: 700;
+}
+.ocd-num.opcional { background: var(--surface-2); color: var(--ink-4); }
+.ocd-tit { font-size: 15.5px; font-weight: 800; color: var(--ink); letter-spacing: -.2px; }
+.ocd-sub { margin-top: 1px; font-size: 12px; color: var(--ink-4); }
+.ocd-etiqueta {
+    margin-left: auto;
+    padding: 3px 9px;
+    border-radius: var(--r-lg);
+    background: var(--surface-2);
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--ink-4);
+    text-transform: uppercase;
+    letter-spacing: .6px;
+}
+
+/* ── Recuadro de totales, al pie del documento ───────── */
+.ocd-cierre {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 26px;
+    margin-top: 34px;
+    padding-top: 24px;
+    border-top: 2px solid var(--ink);
+}
+.ocd-lleva-tit {
+    margin-bottom: 10px;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--ink-4);
+    text-transform: uppercase;
+    letter-spacing: .8px;
+}
+.ocd-lleva-item {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px dashed var(--surface-2);
+    font-size: 13px;
+    color: var(--ink-3);
+}
+.ocd-lleva-punto {
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--line-2);
+}
+.ocd-lleva-item.lleno .ocd-lleva-punto { background: var(--oc-primary); }
+.ocd-lleva-item.lleno.merch .ocd-lleva-punto { background: var(--warn); }
+.ocd-lleva-item.lleno { color: var(--ink); }
+.ocd-lleva-nombre { font-weight: 600; }
+.ocd-lleva-det { margin-left: auto; text-align: right; }
+.ocd-lleva-monto {
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--ink);
+}
+.ocd-lleva-sub { font-size: 11px; color: var(--ink-4); }
+
+.ocd-totales { align-self: start; padding: 18px 20px; border-radius: 13px; background: var(--surface-2); }
+.ocd-tfila {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 5px 0;
+    font-size: 12.5px;
+    color: var(--ink-3);
+}
+.ocd-tfila strong { font-family: 'Geist Mono', ui-monospace, monospace; font-weight: 700; color: var(--ink); }
+.ocd-tgran {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 10px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+}
+.ocd-tgran span { font-size: 12.5px; font-weight: 700; color: var(--ink); }
+.ocd-tgran b {
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 24px;
+    font-weight: 900;
+    color: var(--ink);
+    letter-spacing: -.8px;
+}
+.ocd-nota {
+    margin-top: 12px;
+    padding: 9px 11px;
+    border-left: 3px solid var(--warn);
+    border-radius: 0 7px 7px 0;
+    background: rgba(217,119,6,.08);
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--warn);
+}
+.ocd-nota.oculta { display: none; }
+
+/* ── Barra fija de acción ────────────────────────────── */
+.ocd-barra {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 850;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 13px 30px;
+    border-top: 1px solid var(--surface-2);
+    background: rgba(255,255,255,.94);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 -6px 24px rgba(17,24,39,.07);
+}
+/* Arriba de 1024px el menú lateral es visible: la barra empieza donde termina. */
+@media (min-width: 1025px) { .ocd-barra { left: var(--sidebar-w); } }
+
+.ocd-barra-info { min-width: 0; }
+.ocd-barra-lbl {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--ink-4);
+    text-transform: uppercase;
+    letter-spacing: .8px;
+}
+.ocd-barra-total {
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 21px;
+    font-weight: 900;
+    color: var(--ink);
+    letter-spacing: -.6px;
+}
+.ocd-barra-usd {
+    margin-left: 9px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink-3);
+    letter-spacing: -.2px;
+}
+.ocd-barra-det { font-size: 11.5px; color: var(--ink-4); }
+.ocd-barra-acciones { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+
+.ocd-aviso {
+    padding: 8px 13px;
+    border-radius: 8px;
+    background: var(--warn-bg);
+    color: var(--warn);
+    font-size: 11.5px;
+    font-weight: 600;
+}
+/* Utilidades del asistente: el JS solo pone y quita estas clases. */
+.oculto, .oculta { display: none !important; }
+.ocd-aviso.oculto { display: none; }
+
+.ocd-guardar {
+    padding: 13px 30px;
+    border: none;
+    border-radius: 11px;
+    background: var(--brand);
+    color: var(--on-brand);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(217, 203, 22,.35);
+    transition: transform .2s, box-shadow .2s, opacity .2s;
+}
+.ocd-guardar:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(217, 203, 22,.45); }
+.ocd-guardar:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
+.ocd-cancelar { color: var(--ink-4); font-size: 13px; text-decoration: none; }
+.ocd-cancelar:hover { color: var(--ink-3); }
+
+/* ── ¿Registrar otra orden? ──────────────────────────── */
+.oc-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(17,24,39,.55);
+    backdrop-filter: blur(2px);
+}
+.oc-modal.abierto { display: flex; }
+.oc-modal-caja {
+    width: 100%;
+    max-width: 440px;
+    padding: 26px 26px 20px;
+    border-radius: var(--r-lg);
+    background: var(--surface);
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+    animation: menuExcelEntra .18s ease;
+}
+.oc-modal-icono { font-size: 34px; line-height: 1; }
+.oc-modal-tit   { margin-top: 10px; font-size: 15px; font-weight: 700; color: var(--oc-muted); }
+.oc-modal-tit strong { font-family: 'Courier New', monospace; color: var(--oc-text); }
+.oc-modal-cifra {
+    margin-top: 4px;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 24px;
+    font-weight: 900;
+    color: var(--ink);
+    letter-spacing: -.5px;
+}
+.oc-modal-txt  { margin-top: 16px; font-size: 15px; font-weight: 700; color: var(--oc-text); }
+.oc-modal-nota { margin-top: 6px; font-size: 12px; line-height: 1.5; color: var(--oc-muted); }
+.oc-modal-acciones { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+.oc-modal-si, .oc-modal-no {
+    flex: 1 1 160px;
+    padding: 13px 16px;
+    border-radius: 11px;
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: transform .2s, opacity .2s, background .2s;
+}
+.oc-modal-si {
+    border: none;
+    background: var(--brand);
+    color: var(--on-brand);
+    box-shadow: 0 6px 18px rgba(217, 203, 22,.35);
+}
+.oc-modal-no {
+    border: 1.5px solid var(--line-2);
+    background: var(--surface);
+    color: var(--ink-2);
+}
+.oc-modal-si:hover:not(:disabled) { transform: translateY(-2px); }
+.oc-modal-no:hover:not(:disabled) { background: var(--surface-2); }
+.oc-modal-si:disabled, .oc-modal-no:disabled { opacity: .5; cursor: not-allowed; }
+.oc-modal-volver {
+    margin-top: 14px;
+    border: none;
+    background: none;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-4);
+    cursor: pointer;
+}
+.oc-modal-volver:hover:not(:disabled) { color: var(--ink-3); }
+
+/* ── Tanda de órdenes registradas seguidas ───────────── */
+.oc-lote {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 18px;
+    margin-bottom: 16px;
+    padding: 13px 18px;
+    border: 1.5px solid var(--brand-bg);
+    border-left: 4px solid var(--brand);
+    border-radius: 12px;
+    background: var(--brand-bg);
+}
+.oc-lote-cab { display: flex; flex-direction: column; line-height: 1.4; }
+.oc-lote-cab strong { font-size: 13.5px; color: #1f5f55; }
+.oc-lote-cab small  { font-size: 11.5px; color: var(--ink-3); }
+.oc-lote-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.oc-lote-chip {
+    display: flex;
+    flex-direction: column;
+    padding: 6px 12px;
+    border: 1px solid var(--brand-bg);
+    border-radius: 9px;
+    background: var(--surface);
+    font-family: 'Courier New', monospace;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--oc-text);
+    line-height: 1.35;
+}
+.oc-lote-chip b     { font-family: inherit; font-size: 10px; color: var(--brand); text-transform: uppercase; letter-spacing: .5px; }
+.oc-lote-chip small { font-family: inherit; font-size: 10.5px; font-weight: 400; color: var(--oc-muted); }
+.oc-lote-chip.pendiente { border-style: dashed; background: var(--surface-2); color: var(--oc-muted); }
+.oc-lote-cerrar {
+    margin-left: auto;
+    padding: 9px 15px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #217346, #185a38);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+}
+.oc-lote-cerrar:hover { opacity: .88; }
+
+@media (max-width: 900px) {
+    .oc-lote-cerrar { margin-left: 0; }
+    .ocd-membrete { grid-template-columns: 1fr; }
+    .ocd-membrete-der { text-align: left; }
+    .ocd-cierre { grid-template-columns: 1fr; }
+    .ocd-cuerpo { padding: 8px 20px 26px; }
+    .ocd-barra { left: 0; padding: 11px 16px; }
+    .ocd-barra-det { display: none; }
+    .ocd-barra-usd { font-size: 11.5px; margin-left: 6px; }
+}
+
+/* ═════════════════════════════════════════════════════
+   Piezas compartidas por el documento
+
+   Las usan el detalle, el formulario de edición y el
+   asistente de nueva orden. El listado tiene su propio
+   diseño, más arriba en esta hoja.
+   ═════════════════════════════════════════════════════ */
+.ocm {
+    --ocm-ink:    var(--ink);
+    --ocm-muted:  var(--ink-3);
+    --ocm-suave:  var(--ink-4);
+    --ocm-linea:  var(--line);
+    --ocm-fondo:  var(--surface-2);
+    --ocm-verde:  var(--brand);
+    --ocm-ambar:  var(--warn);
+    --ocm-rojo:   var(--neg);
+    max-width: 1240px;
+    margin: 0 auto;
+    padding-bottom: 40px;
+}
+.ocm-mono { font-family: 'Geist Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+/* ── Estado de la orden ────────────────────── */
+.ocm-estado {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: var(--r-lg);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+}
+.ocm-estado.pendiente { background: var(--warn-bg); color: var(--warn); }
+.ocm-estado.transito  { background: var(--info-bg); color: var(--info); }
+.ocm-estado.recibido  { background: rgba(217, 203, 22,.14); color: var(--brand-2); }
+.ocm-estado.cancelado { background: var(--surface-2); color: var(--ink-4); }
+
+/* ── Botones del documento ─────────────────── */
+.ocm-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 12px;
+    border: 1px solid var(--ocm-linea, var(--line));
+    border-radius: 9px;
+    background: var(--surface);
+    color: var(--ocm-muted, var(--ink-3));
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color .15s, color .15s, background .15s;
+}
+.ocm-btn:hover { border-color: var(--line); background: var(--surface-2); color: var(--ink); }
+.ocm-btn.peligro:hover { border-color: var(--neg); background: var(--neg-bg); color: var(--neg); }
+.ocm-btn.oscuro { border-color: var(--ink); background: var(--side); color: #fff; }
+.ocm-btn.oscuro:hover { background: #2b2e36; color: #fff; }
+.ocm-btn.verde {
+    border-color: transparent;
+    background: var(--brand);
+    color: var(--on-brand);
+    box-shadow: 0 4px 14px rgba(217, 203, 22,.3);
+}
+.ocm-btn.verde:hover { color: #fff; transform: translateY(-1px); }
+
+/* ── Tabla del documento ──────────────────── */
+.ocm-tabla { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ocm-tabla thead th {
+    padding: 9px 12px;
+    border-bottom: 1.5px solid var(--ink);
+    color: var(--ink-3);
+    font-size: 10.5px;
+    font-weight: 700;
+    text-align: left;
+    text-transform: uppercase;
+    letter-spacing: .7px;
+}
+.ocm-tabla tbody td { padding: 11px 12px; border-bottom: 1px solid var(--line); color: var(--ink); }
+.ocm-tabla tbody tr:last-child td { border-bottom: 0; }
+.ocm-tabla .num { font-family: 'Geist Mono', ui-monospace, monospace; text-align: right; }
+.ocm-tabla .idx { width: 36px; color: var(--ink-4); font-family: 'Geist Mono', ui-monospace, monospace; }
+
+/* ── Datos del detalle ────────────────────── */
+.ocm-datos { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 18px 26px; }
+.ocm-dato-lbl {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--ink-4);
+    text-transform: uppercase;
+    letter-spacing: .7px;
+}
+.ocm-dato-val { margin-top: 4px; font-size: 14px; font-weight: 600; color: var(--ink); }
+.ocm-dato-val.vacio { color: var(--ink-4); font-weight: 400; }
+
+/* ═══════════════════════════════════════════════════════
+   Nueva orden — pasos guiados
+
+   La orden se llena en tres tramos: qué se compra, para
+   quién es y con qué costos se cierra. Solo se ve el
+   tramo en curso, así la pantalla nunca abruma.
+   ═══════════════════════════════════════════════════════ */
+.ocp-pasos {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin: 4px 0 26px;
+    padding: 18px 0 0;
+}
+.ocp-riel {
+    position: absolute;
+    top: 32px;
+    right: 14%;
+    left: 14%;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--surface-2);
+}
+.ocp-riel i {
+    display: block;
+    width: 0;
+    height: 100%;
+    border-radius: 2px;
+    background: var(--brand);
+    transition: width .35s ease;
+}
+
+.ocp-paso-btn {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font-family: inherit;
+    cursor: pointer;
+    text-align: center;
+}
+.ocp-bolita {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border: 3px solid #fff;
+    border-radius: 50%;
+    background: var(--surface-2);
+    color: var(--ink-4);
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 13px;
+    font-weight: 800;
+    box-shadow: 0 0 0 2px var(--surface-2);
+    transition: background .25s, color .25s, box-shadow .25s;
+}
+.ocp-paso-btn.hecho .ocp-bolita {
+    background: var(--brand);
+    color: var(--on-brand);
+    box-shadow: 0 0 0 2px rgba(217, 203, 22,.3);
+}
+.ocp-paso-btn.activo .ocp-bolita {
+    background: var(--side);
+    color: #fff;
+    box-shadow: 0 0 0 3px rgba(20,22,27,.14);
+}
+.ocp-txt b {
+    display: block;
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--ink-4);
+    letter-spacing: -.1px;
+    transition: color .25s;
+}
+.ocp-txt small { display: block; margin-top: 1px; font-size: 11px; color: #b6b9bf; }
+.ocp-paso-btn.activo .ocp-txt b,
+.ocp-paso-btn.hecho .ocp-txt b { color: var(--ink); }
+
+/* El tramo en curso */
+.ocp-paso { animation: ocp-entra .28s ease; }
+.ocp-paso.oculto { display: none; }
+@keyframes ocp-entra {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: none; }
+}
+
+.ocp-titulo { margin: 0 0 4px; font-size: 21px; font-weight: 800; color: var(--ink); letter-spacing: -.4px; }
+.ocp-ayuda  { margin: 0 0 22px; font-size: 13px; color: var(--ink-4); }
+
+.ocd-barra-acciones .ocm-btn { padding: 12px 20px; }
+
+@media (max-width: 700px) {
+    .ocp-txt small { display: none; }
+    .ocp-txt b { font-size: 11.5px; }
+    .ocp-riel { right: 10%; left: 10%; }
+}
+
+/* ── Alta de merch dentro de la orden ────────────────── */
+/* Una sola fila: artículo, cantidad, costo y el botón, todos
+   alineados por abajo. Antes caían en la rejilla de dos
+   columnas del formulario y quedaban en 2×2, con el botón
+   suelto al costado del costo. */
+.oc-merch-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 120px 160px auto;
+    align-items: end;
+    gap: 12px;
+}
+.oc-merch-form .oc-campo { min-width: 0; }
+.oc-merch-form .btn-agregar-prod {
+    height: 46px;
+    padding: 0 22px;
+    white-space: nowrap;
+}
+.oc-merch-nota { margin: 10px 0 0; line-height: 1.5; }
+
+@media (max-width: 900px) {
+    .oc-merch-form { grid-template-columns: 1fr 1fr; }
+    .oc-merch-form .oc-campo:first-child { grid-column: 1 / -1; }
+    .oc-merch-form .btn-agregar-prod { grid-column: 1 / -1; width: 100%; }
+}
