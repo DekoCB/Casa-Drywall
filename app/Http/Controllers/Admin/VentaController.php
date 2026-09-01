@@ -10,9 +10,12 @@ use App\Models\Venta;
 use App\Models\VentaDetalle;
 use App\Services\GeneradorCorrelativo;
 use App\Services\NumeroALetras;
+use App\Services\Sunat\ApiGoEmisionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -40,7 +43,10 @@ class VentaController extends Controller
         '07' => 'NC',
     ];
 
-    public function __construct(private readonly GeneradorCorrelativo $correlativo) {}
+    public function __construct(
+        private readonly GeneradorCorrelativo $correlativo,
+        private readonly ApiGoEmisionService $emisionSunat,
+    ) {}
 
     /** Página de alta de comprobante: monto único o detalle de productos. */
     public function createFactura(): View
@@ -221,9 +227,49 @@ class VentaController extends Controller
             return $venta;
         });
 
+        // Registro en el sistema de facturación electrónica (API-GO). Va
+        // fuera de la transacción y protegido por try/catch: si el servicio
+        // está caído la venta ya quedó guardada y no debe bloquearse por esto.
+        try {
+            $this->emisionSunat->crearComprobante($venta);
+        } catch (\Throwable $e) {
+            Log::warning('Fallo al registrar el comprobante en API-GO', [
+                'venta_id' => $venta->id,
+                'mensaje' => $e->getMessage(),
+            ]);
+        }
+
         // Se abre el comprobante recién generado, listo para imprimir o enviar.
         return redirect()->route('admin.ventas.comprobante', $venta)
             ->with('mensaje', "Comprobante {$venta->n_seri}-{$venta->n_comp} generado para {$venta->cliente_nombre}.");
+    }
+
+    /** Envía a SUNAT (real, vía API-GO) el comprobante ya registrado. */
+    public function enviarSunat(Venta $venta): RedirectResponse
+    {
+        $enviado = $this->emisionSunat->enviarSunat($venta);
+
+        return back()->with(
+            $enviado ? 'mensaje' : 'error',
+            $enviado
+                ? 'Comprobante enviado y aceptado por SUNAT.'
+                : 'SUNAT rechazó el comprobante o no se pudo enviar. Revisa el detalle abajo.'
+        );
+    }
+
+    /** Descarga el PDF oficial (firmado, generado por API-GO) del comprobante. */
+    public function pdfSunat(Venta $venta): Response|RedirectResponse
+    {
+        $pdf = $this->emisionSunat->obtenerPdf($venta);
+
+        if ($pdf === null) {
+            return back()->with('error', 'No se pudo obtener el PDF oficial. Intenta enviarlo a SUNAT primero.');
+        }
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.($venta->numero_sunat ?: $venta->numero_venta).'.pdf"',
+        ]);
     }
 
     public function update(Request $request, Venta $venta): RedirectResponse

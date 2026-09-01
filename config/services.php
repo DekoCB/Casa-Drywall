@@ -50,4 +50,15 @@ return [
         'token' => env('APISPERU_TOKEN'),
     ],
 
+    /*
+    | API-GO — facturación electrónica real (SUNAT, vía Greenter). Servicio
+    | Laravel independiente, corre aparte de este proyecto.
+    */
+    'api_go' => [
+        'base_url' => env('API_GO_BASE_URL', 'http://127.0.0.1:8001/api/v1'),
+        'token' => env('API_GO_TOKEN'),
+        'company_id' => env('API_GO_COMPANY_ID', 1),
+        'branch_id' => env('API_GO_BRANCH_ID', 1),
+    ],
+
 ];

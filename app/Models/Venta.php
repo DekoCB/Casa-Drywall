@@ -24,6 +24,9 @@ class Venta extends Model
         // Lado de cobranza del mismo comprobante.
         'fecha_vencimiento', 'monto_pagado', 'monto_pendiente', 'estado_cobro',
         'fecha_pago', 'notas_cobranza', 'cobranza_id',
+        // Seguimiento del comprobante ante SUNAT vía API-GO (facturación electrónica).
+        'estado_factura', 'numero_sunat', 'nota_contadora',
+        'api_go_document_id', 'api_go_document_type', 'api_go_pdf_path',
     ];
 
     protected function casts(): array

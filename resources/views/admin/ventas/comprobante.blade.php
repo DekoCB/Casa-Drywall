@@ -27,6 +27,22 @@
         }
         .barra .primario { border-color:#3d9b8c; background:#3d9b8c; color:#fff; }
 
+        .estado-sunat {
+            display:inline-flex; align-items:center; gap:6px;
+            padding:8px 14px; border-radius:6px; font-size:11px; font-weight:bold;
+            letter-spacing:.03em; text-transform:uppercase; white-space:nowrap;
+        }
+        .estado-sunat.pendiente  { background:#f1f0eb; color:#6b6560; }
+        .estado-sunat.registrado { background:#e8f0fb; color:#2563eb; }
+        .estado-sunat.aceptado   { background:#e8f5f3; color:#1f6b5e; }
+        .estado-sunat.rechazado, .estado-sunat.error { background:#fbeaea; color:#a12b2b; }
+        .barra .enviar { border-color:#2563eb; background:#2563eb; color:#fff; }
+        .nota-sunat {
+            width:940px; max-width:100%; margin:0 auto 12px; padding:9px 14px;
+            border:1px solid #f0c9c9; border-radius:6px; background:#fbeaea;
+            color:#a12b2b; font-size:11.5px;
+        }
+
         /* ── Cabecera ── */
         .cab { display:table; width:100%; margin-bottom:14px; }
         .cab-izq, .cab-der { display:table-cell; vertical-align:top; }
@@ -94,7 +110,7 @@
         @media print {
             body { background:#fff; padding:0; }
             .hoja { box-shadow:none; padding:0; width:auto; }
-            .barra { display:none; }
+            .barra, .nota-sunat { display:none; }
         }
     </style>
 </head>
@@ -104,10 +120,43 @@
     @if (session('mensaje'))
         <div class="ok">✅ {{ session('mensaje') }}</div>
     @endif
+    @if (session('error'))
+        <div class="ok" style="background:#fbeaea;border-color:#f0c9c9;color:#a12b2b;">⚠️ {{ session('error') }}</div>
+    @endif
+
+    @if (in_array($venta->tipcomp, ['01', '03']))
+        @php
+            $estadosSunat = [
+                'pendiente'  => 'Pendiente de registro',
+                'registrado' => 'Registrado, falta enviar',
+                'aceptado'   => 'Aceptado por SUNAT',
+                'rechazado'  => 'Rechazado por SUNAT',
+                'error'      => 'Error al enviar',
+            ];
+            $estado = $venta->estado_factura ?: 'pendiente';
+        @endphp
+        <span class="estado-sunat {{ $estado }}">SUNAT: {{ $estadosSunat[$estado] ?? $estado }}</span>
+
+        @if ($estado === 'registrado' || $estado === 'rechazado' || $estado === 'error')
+            <form method="POST" action="{{ route('admin.ventas.enviar-sunat', $venta) }}" style="display:contents;">
+                @csrf
+                <button type="submit" class="enviar">Enviar a SUNAT</button>
+            </form>
+        @endif
+
+        @if ($estado === 'aceptado')
+            <a href="{{ route('admin.ventas.pdf-sunat', $venta) }}" target="_blank" class="primario">Descargar PDF oficial</a>
+        @endif
+    @endif
+
     <a href="{{ route('admin.ventas.index') }}">← Ventas</a>
     <a href="{{ route('admin.ventas.factura.create') }}">＋ Nueva venta</a>
-    <button type="button" class="primario" onclick="window.print()">Imprimir / Guardar PDF</button>
+    <button type="button" onclick="window.print()">Imprimir / Guardar PDF</button>
 </div>
+
+@if (in_array($venta->tipcomp, ['01', '03']) && in_array($venta->estado_factura, ['rechazado', 'error']) && $venta->nota_contadora)
+    <div class="nota-sunat"><b>Motivo:</b> {{ $venta->nota_contadora }}</div>
+@endif
 
 <div class="hoja">
 
@@ -293,7 +342,12 @@
     <div class="aviso">
         Documento interno de {{ config('rentaltech.empresa.razon_social') }} emitido el
         {{ now()->translatedFormat('d \d\e F \d\e Y, H:i') }}.
-        No constituye comprobante de pago electrónico validado ante SUNAT.
+        @if ($venta->estado_factura === 'aceptado')
+            Vista previa interna — el comprobante electrónico oficial validado ante SUNAT
+            se descarga con el botón "Descargar PDF oficial".
+        @else
+            No constituye comprobante de pago electrónico validado ante SUNAT.
+        @endif
     </div>
 
 </div>

@@ -1,0 +1,40 @@
+*.log
+.DS_Store
+.env
+.env.backup
+.env.production
+.phpactor.json
+.phpunit.result.cache
+/.fleet
+/.idea
+/.nova
+/.phpunit.cache
+/.vscode
+/.zed
+/auth.json
+/node_modules
+/public/build
+/public/hot
+/public/storage
+/storage/*.key
+/storage/pail
+/storage/app/private/certificado/*.pem
+/storage/app/private/certificado/*.pfx
+/storage/app/private/certificado/*.p12
+/storage/app/public/certificado/*.pem
+/storage/app/public/certificado/*.pfx
+/storage/app/public/certificado/*.p12
+/storage/app/temp/certificados/
+
+# Datos generados en tiempo de ejecución por empresa: certificados digitales
+# reales (.pem/.pfx/.p12) y los PDF/XML/CDR de comprobantes ya emitidos.
+# Nunca deben ir al repositorio — la ruta real de guardado por empresa es
+# storage/app/public/empresas/{ruc}/..., distinta de los patrones de arriba
+# (que apuntan a una carpeta plana "certificado/" que ya no se usa).
+/storage/app/public/empresas/
+/storage/app/private/empresas/
+
+/vendor
+Homestead.json
+Homestead.yaml
+Thumbs.db
