@@ -81,10 +81,8 @@
   </div>
 
   <div class="hero-right">
-    <div style="display:flex;align-items:center;justify-content:space-between;">
-      <div class="hero-clock"><span class="pulse"></span> EN VIVO · LIMA, PE</div>
-      <div class="hero-clock" id="reloj-live"></div>
-    </div>
+    <div class="hero-clock"><span class="pulse"></span> EN VIVO · LIMA, PE</div>
+    <div class="hero-time" id="reloj-live"></div>
     <div>
       <div class="hero-bigdate">{{ now()->format('d') }}<em>·</em>{{ now()->translatedFormat('M') }}<em>·</em>{{ now()->format('y') }}</div>
       <div class="hero-datesub">{{ now()->translatedFormat('l') }} · Semana {{ now()->format('W') }} · Q{{ ceil(now()->month / 3) }}</div>
