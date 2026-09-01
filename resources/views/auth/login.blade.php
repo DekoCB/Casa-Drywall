@@ -16,9 +16,18 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    @vite(['resources/css/auth.css'])
+    @vite(['resources/css/auth.css', 'resources/js/glow-cursor.js'])
 </head>
 <body>
+
+<div class="login-video-bg" aria-hidden="true">
+    <video autoplay muted loop playsinline preload="auto">
+        <source src="{{ asset('videos/login-bg.mp4') }}" type="video/mp4">
+    </video>
+    <div class="login-video-overlay"></div>
+</div>
+
+<div class="glow-cursor-layer" data-glow-cursor aria-hidden="true"></div>
 
 <button type="button" class="theme-toggle theme-toggle-login" id="themeToggle" title="Cambiar tema" aria-label="Cambiar tema">
     <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>

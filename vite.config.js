@@ -18,6 +18,7 @@ export default defineConfig({
                 'resources/css/modules/historial-pagos.css',
                 'resources/css/modules/transporte.css',
                 'resources/js/app.js',
+                'resources/js/glow-cursor.js',
             ],
             refresh: true,
         }),

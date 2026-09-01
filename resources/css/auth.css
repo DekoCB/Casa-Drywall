@@ -10,15 +10,62 @@ body {
     justify-content: center;
     padding: 32px 20px;
     min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* Video de fondo en loop + degradado oscuro para que el texto (tagline,
+   footer) mantenga contraste sobre cualquier escena del video. Mismo
+   z-index:0 que .glow-cursor-layer: al pintarse antes en el DOM, queda
+   debajo de él sin necesitar niveles de z-index adicionales. */
+.login-video-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+}
+.login-video-bg video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.login-video-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(18,17,14,.6), rgba(18,17,14,.8));
+}
+
+/* Rastro luminoso amarillo que sigue al cursor por toda la pantalla de
+   login (WebGL, ver resources/js/glow-cursor.js). pointer-events:none
+   para que nunca bloquee clics; el resto del contenido se sube encima
+   con z-index propio porque, al ser position:fixed con z-index explícito,
+   pintaría por delante de elementos estáticos si no se lo forzamos. */
+.glow-cursor-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+.glow-cursor-layer .glow-cursor__canvas {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
 }
 
 .theme-toggle-login {
     position: fixed;
     top: 20px;
     right: 20px;
+    z-index: 1;
 }
 
 .login-wrapper {
+    position: relative;
+    z-index: 1;
     width: 100%;
     max-width: 400px;
 }
@@ -41,10 +88,11 @@ body {
 .brand-tagline {
     font-size: 11px;
     letter-spacing: .12em;
-    color: var(--ink-3);
+    color: #fff;
     text-transform: uppercase;
     font-weight: 500;
     margin-top: 5px;
+    text-shadow: 0 1px 4px rgba(0,0,0,.5);
 }
 
 /* ── Card ── */
@@ -199,9 +247,10 @@ body {
     text-align: center;
     margin-top: 20px;
     font-size: 12px;
-    color: var(--ink-4);
+    color: rgba(255,255,255,.65);
+    text-shadow: 0 1px 4px rgba(0,0,0,.5);
 }
-.login-footer span { color: var(--ink-3); }
+.login-footer span { color: #fff; }
 
 @media (max-width: 480px) {
     .login-card { padding: 26px 20px 24px; }
