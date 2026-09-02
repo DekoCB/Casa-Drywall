@@ -1,0 +1,38 @@
+# Denegar acceso a archivos sensibles desde el navegador
+
+# Proteger archivos de configuración
+<Files ".env">
+    Order allow,deny
+    Deny from all
+</Files>
+
+<FilesMatch "^\.env">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Proteger archivos de Composer
+<Files "composer.json">
+    Order allow,deny
+    Deny from all
+</Files>
+
+<Files "composer.lock">
+    Order allow,deny
+    Deny from all
+</Files>
+
+# Proteger archivos de Git
+<FilesMatch "^\.git">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Denegar acceso a directorios sensibles
+Options -Indexes
+
+# Redirigir todo el tráfico a la carpeta public/
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
