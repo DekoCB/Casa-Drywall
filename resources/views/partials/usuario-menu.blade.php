@@ -104,6 +104,21 @@
                 <button type="button" class="btn btn-secondary" id="cfgCancel">Cancelar</button>
             </div>
         </form>
+
+        @if (auth()->user()->esAdmin())
+            <div class="modal-body" style="padding-top:0;">
+                <div class="cfg-divider"><span>Accesos rápidos</span></div>
+                <div class="cfg-accesos-grid">
+                    <a href="{{ route('admin.categorias.index') }}" class="cfg-acceso">Categorías</a>
+                    <a href="{{ route('admin.marcas.index') }}" class="cfg-acceso">Marcas</a>
+                    <a href="{{ route('admin.productos.almacenes') }}" class="cfg-acceso">Almacenes</a>
+                    <a href="{{ route('admin.caja.index') }}" class="cfg-acceso">Cajas</a>
+                    <a href="{{ route('admin.personal.index') }}" class="cfg-acceso">Personal</a>
+                    <a href="{{ route('admin.galonaje.categorias.index') }}" class="cfg-acceso">Líneas Galonaje</a>
+                    <a href="{{ route('admin.galonaje.presentaciones.index') }}" class="cfg-acceso">Present. Galonaje</a>
+                </div>
+            </div>
+        @endif
     </div>
 </div>
 
