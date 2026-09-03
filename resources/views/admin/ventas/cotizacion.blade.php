@@ -14,32 +14,39 @@
     <style>
         *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
         body { font-family: Arial, Helvetica, sans-serif; font-size: 10px; color:#000; background:#EFEEE8; padding:24px 14px; }
-        .hoja { width: 760px; max-width: 100%; margin:0 auto; background:#fff; padding:26px 30px; box-shadow:0 8px 30px rgba(0,0,0,.10); }
+        .hoja { width: 760px; max-width: 100%; margin:0 auto; background:#fff; padding:30px 34px; box-shadow:0 8px 30px rgba(0,0,0,.10); }
 
-        .barra { width: 760px; max-width:100%; margin:0 auto 12px; display:flex; gap:10px; align-items:center; }
+        .barra { width: 760px; max-width:100%; margin:0 auto 12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
         .barra .ok {
-            flex:1; padding:9px 14px; border:1px solid #b7e0d6; border-radius:6px;
+            flex-basis:100%; padding:9px 14px; border:1px solid #b7e0d6; border-radius:6px;
             background:#e8f5f3; color:#1f6b5e; font-size:12px; font-weight:bold;
         }
         .barra button, .barra a {
             padding:8px 16px; border:1px solid #DCDAD2; border-radius:6px; background:#fff;
             font-family:inherit; font-size:12px; cursor:pointer; text-decoration:none; color:#14161B; white-space:nowrap;
         }
-        .barra .primario { border-color:#3d9b8c; background:#3d9b8c; color:#fff; margin-left:auto; }
+        .barra .primario { border-color:#3d9b8c; background:#3d9b8c; color:#fff; }
+        .barra .imprimir-grupo { display:inline-flex; border:1px solid #DCDAD2; border-radius:6px; overflow:hidden; margin-left:auto; }
+        .barra .imprimir-grupo button { border:none; border-radius:0; }
+        .barra .imprimir-grupo button + button { border-left:1px solid #DCDAD2; }
 
-        /* ── Cabecera ── */
-        .cab { display:table; width:100%; margin-bottom:14px; }
-        .cab-izq, .cab-der { display:table-cell; vertical-align:top; }
-        .cab-izq { width:60%; }
-        .cab-der { width:40%; padding-left:16px; }
-        .cab-logo img { max-height:56px; max-width:220px; object-fit:contain; }
-        .cab-emp { margin-top:6px; }
+        /* ── Cabecera: logo junto al bloque de la empresa, como en el
+           formato oficial ── */
+        .cab { display:table; width:100%; margin-bottom:16px; }
+        .cab-izq, .cab-der { display:table-cell; vertical-align:middle; }
+        .cab-izq { width:62%; }
+        .cab-der { width:38%; padding-left:16px; }
+
+        .cab-marca { display:table; width:100%; }
+        .cab-logo-cel { display:table-cell; width:64px; vertical-align:top; }
+        .cab-logo-cel img { width:54px; height:54px; object-fit:contain; }
+        .cab-emp-cel { display:table-cell; vertical-align:top; padding-left:12px; text-align:center; }
         .cab-emp b { font-size:12px; }
-        .cab-emp p { font-size:9px; line-height:1.5; margin-top:2px; }
+        .cab-emp p { font-size:8.7px; line-height:1.55; margin-top:1px; }
 
-        .caja-doc { border:1px solid #000; border-radius:4px; padding:12px 10px; text-align:center; height:100%; }
-        .caja-doc .tipo { font-size:13px; font-weight:bold; letter-spacing:.04em; }
-        .caja-doc .num { font-size:13px; font-weight:bold; margin-top:10px; }
+        .caja-doc { border:1px solid #000; padding:12px 14px; text-align:center; }
+        .caja-doc .tipo { font-size:12px; letter-spacing:.03em; }
+        .caja-doc .num { font-size:17px; font-weight:bold; margin-top:8px; letter-spacing:.01em; }
 
         /* ── Datos del cliente ── */
         .datos { width:100%; margin-bottom:12px; }
@@ -49,12 +56,14 @@
         .datos-fecha .k { display:block; font-weight:bold; }
         .datos-fecha .v { font-size:11px; }
 
-        /* ── Ítems ── */
-        .items { width:100%; border-collapse:collapse; margin-bottom:6px; }
-        .items th { border:1px solid #000; background:#e9e9e9; padding:6px 6px; font-size:9.5px; text-align:left; }
-        .items td { border-left:1px solid #000; border-right:1px solid #000; padding:5px 6px; font-size:9.5px; }
-        .items tbody tr:last-child td { border-bottom:1px solid #000; }
-        .items thead th:first-child, .items tbody td:first-child { border-left:1px solid #000; }
+        /* ── Ítems: filas separadas por línea punteada, sin grilla pesada ── */
+        .items { width:100%; border-collapse:collapse; margin-bottom:4px; }
+        .items th {
+            border-bottom:1.5px solid #000; padding:5px 6px; font-size:9px;
+            font-weight:bold; text-align:left; white-space:nowrap;
+        }
+        .items td { padding:5px 6px; font-size:9.5px; border-bottom:1px dotted #999; }
+        .items tbody tr:last-child td { border-bottom:1.5px solid #000; }
         .r { text-align:right; }
         .c { text-align:center; }
 
@@ -86,6 +95,19 @@
             .hoja { box-shadow:none; padding:0; width:auto; }
             .barra { display:none; }
         }
+
+        /* ── Formato 80mm (ticket térmico) ── */
+        body.formato-80mm .hoja { width:80mm; padding:6px 8px; font-size:9px; }
+        body.formato-80mm .cab, body.formato-80mm .cab-izq, body.formato-80mm .cab-der { display:block; width:100%; }
+        body.formato-80mm .cab-der { padding-left:0; margin-top:8px; }
+        body.formato-80mm .cab-marca, body.formato-80mm .cab-logo-cel, body.formato-80mm .cab-emp-cel { display:block; width:100%; text-align:center; padding-left:0; }
+        body.formato-80mm .cab-logo-cel img { margin:0 auto; }
+        body.formato-80mm .datos .k { width:auto; display:inline-block; }
+        body.formato-80mm .datos-fecha { text-align:left; }
+        body.formato-80mm .items th, body.formato-80mm .items td { font-size:8px; padding:3px 4px; }
+        body.formato-80mm .items th:nth-child(3), body.formato-80mm .items td:nth-child(3) { display:none; }
+        body.formato-80mm .cb-grid { display:block; }
+        body.formato-80mm .cb-caja { display:block; width:auto; margin-bottom:8px; }
     </style>
 </head>
 <body>
@@ -100,7 +122,11 @@
 
     <a href="{{ route('admin.ventas.index') }}">← Ventas</a>
     <a href="{{ route('admin.ventas.factura.create') }}">＋ Nueva venta</a>
-    <button type="button" class="primario" onclick="window.print()">Imprimir / Guardar PDF</button>
+
+    <div class="imprimir-grupo">
+        <button type="button" onclick="imprimirComo('80mm')">Imprimir 80mm</button>
+        <button type="button" onclick="imprimirComo('a4')">Imprimir A4</button>
+    </div>
 </div>
 
 <div class="hoja">
@@ -108,23 +134,26 @@
     {{-- ══ Cabecera ══ --}}
     <div class="cab">
         <div class="cab-izq">
-            <div class="cab-logo">
-                <img src="{{ asset('img/logo.png') }}" alt="{{ config('rentaltech.empresa.razon_social') }}">
-            </div>
-            <div class="cab-emp">
-                <b>{{ config('rentaltech.empresa.razon_social') }}</b>
-                @if (config('rentaltech.empresa.ruc'))
-                    <p>RUC {{ config('rentaltech.empresa.ruc') }}</p>
-                @endif
-                @if (config('rentaltech.empresa.direccion'))
-                    <p>{{ config('rentaltech.empresa.direccion') }}</p>
-                @endif
-                @if (config('rentaltech.empresa.telefono'))
-                    <p>Central telefónica: {{ config('rentaltech.empresa.telefono') }}</p>
-                @endif
-                @if (config('rentaltech.empresa.email'))
-                    <p>Email: {{ config('rentaltech.empresa.email') }}</p>
-                @endif
+            <div class="cab-marca">
+                <div class="cab-logo-cel">
+                    <img src="{{ asset('img/Logo-docs.png') }}" alt="{{ config('rentaltech.empresa.razon_social') }}">
+                </div>
+                <div class="cab-emp-cel cab-emp">
+                    <b>{{ config('rentaltech.empresa.razon_social') }}</b>
+                    @if (config('rentaltech.empresa.ruc'))
+                        <p>RUC {{ config('rentaltech.empresa.ruc') }}</p>
+                    @endif
+                    @if (config('rentaltech.empresa.direccion'))
+                        <p>{{ config('rentaltech.empresa.direccion') }}</p>
+                        <p>D. Comercial: {{ config('rentaltech.empresa.direccion') }}</p>
+                    @endif
+                    @if (config('rentaltech.empresa.telefono'))
+                        <p>Central telefónica: {{ config('rentaltech.empresa.telefono') }}</p>
+                    @endif
+                    @if (config('rentaltech.empresa.email'))
+                        <p>Email: {{ config('rentaltech.empresa.email') }}</p>
+                    @endif
+                </div>
             </div>
         </div>
         <div class="cab-der">
@@ -154,7 +183,7 @@
             <td>{{ $venta->cliente_direccion ?: $venta->cliente_distrito ?: '—' }}</td>
         </tr>
         <tr>
-            <td class="k">F.Pago:</td>
+            <td class="k">T. Pago:</td>
             <td>{{ $venta->condicion_pago ?: 'Contado' }}</td>
         </tr>
         <tr>
@@ -235,6 +264,23 @@
     </div>
 
 </div>
+
+<script>
+function imprimirComo(formato) {
+    document.body.classList.toggle('formato-80mm', formato === '80mm');
+
+    const estilo = document.createElement('style');
+    estilo.id = 'estilo-pagina-impresion';
+    estilo.textContent = formato === '80mm'
+        ? '@page { size: 80mm auto; margin: 2mm; }'
+        : '@page { size: A4; margin: 15mm; }';
+    document.head.appendChild(estilo);
+
+    window.print();
+
+    setTimeout(() => estilo.remove(), 500);
+}
+</script>
 
 </body>
 </html>

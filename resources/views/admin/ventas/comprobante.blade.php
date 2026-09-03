@@ -1,7 +1,7 @@
 @php
-    $numero   = $venta->n_seri && $venta->n_comp ? $venta->n_seri.' - '.$venta->n_comp : $venta->numero_venta;
+    $numero   = $venta->n_seri && $venta->n_comp ? $venta->n_seri.'-'.$venta->n_comp : $venta->numero_venta;
     $simbolo  = $venta->moneda === 'USD' ? 'US$' : 'S/';
-    $monedaTexto = $venta->moneda === 'USD' ? 'Dólares' : 'S/ Soles';
+    $monedaTexto = $venta->moneda === 'USD' ? 'Dólares' : 'Soles';
     // mb_strtoupper: strtoupper() no convierte acentos («Crédito» quedaba «CRéDITO»).
     $etiqueta = mb_strtoupper($tipos[$venta->tipcomp]['nombre'] ?? 'Comprobante');
     // «01 — Factura» viene con el código delante; en la cabecera va sólo el nombre.
@@ -23,7 +23,7 @@
     <style>
         *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
         body { font-family: Arial, Helvetica, sans-serif; font-size: 10px; color:#000; background:#EFEEE8; padding:24px 14px; }
-        .hoja { width: 760px; max-width: 100%; margin:0 auto; background:#fff; padding:26px 30px; box-shadow:0 8px 30px rgba(0,0,0,.10); }
+        .hoja { width: 760px; max-width: 100%; margin:0 auto; background:#fff; padding:30px 34px; box-shadow:0 8px 30px rgba(0,0,0,.10); }
 
         .barra { width: 760px; max-width:100%; margin:0 auto 12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
         .barra .ok {
@@ -55,60 +55,51 @@
             color:#a12b2b; font-size:11.5px;
         }
 
-        /* ── Cabecera ── */
-        .cab { display:table; width:100%; margin-bottom:14px; }
-        .cab-izq, .cab-der { display:table-cell; vertical-align:top; }
-        .cab-izq { width:60%; }
-        .cab-der { width:40%; padding-left:16px; }
-        .cab-logo img { max-height:56px; max-width:220px; object-fit:contain; }
-        .cab-emp { margin-top:6px; }
-        .cab-emp b { font-size:12px; }
-        .cab-emp p { font-size:9px; line-height:1.5; margin-top:2px; }
+        /* ── Cabecera: igual al formato oficial — logo junto al bloque de la
+           empresa a la izquierda, caja del tipo de documento a la derecha ── */
+        .cab { display:table; width:100%; margin-bottom:16px; }
+        .cab-izq, .cab-der { display:table-cell; vertical-align:middle; }
+        .cab-izq { width:62%; }
+        .cab-der { width:38%; padding-left:16px; }
 
-        .caja-doc { border:1px solid #000; border-radius:4px; padding:12px 10px; text-align:center; height:100%; }
-        .caja-doc .tipo { font-size:13px; font-weight:bold; letter-spacing:.04em; }
-        .caja-doc .num { font-size:13px; font-weight:bold; margin-top:10px; }
+        .cab-marca { display:table; width:100%; }
+        .cab-logo-cel { display:table-cell; width:64px; vertical-align:top; }
+        .cab-logo-cel img { width:54px; height:54px; object-fit:contain; }
+        .cab-emp-cel { display:table-cell; vertical-align:top; padding-left:12px; text-align:center; }
+        .cab-emp b { font-size:12px; }
+        .cab-emp p { font-size:8.7px; line-height:1.55; margin-top:1px; }
+
+        .caja-doc { border:1px solid #000; padding:12px 14px; text-align:center; }
+        .caja-doc .tipo { font-size:12px; letter-spacing:.03em; }
+        .caja-doc .num { font-size:17px; font-weight:bold; margin-top:8px; letter-spacing:.01em; }
 
         /* ── Datos del cliente ── */
-        .datos { width:100%; margin-bottom:12px; }
-        .datos td { padding:2px 0; font-size:10px; vertical-align:top; }
-        .datos .k { font-weight:bold; white-space:nowrap; width:170px; }
-        .datos-fecha { text-align:right; }
-        .datos-fecha .k { display:block; font-weight:bold; }
-        .datos-fecha .v { font-size:11px; }
+        .datos { width:100%; margin-bottom:14px; }
+        .datos td { padding:1.5px 0; font-size:9.5px; vertical-align:top; }
+        .datos .k { font-weight:bold; white-space:nowrap; width:160px; }
+        .datos-fecha { text-align:right; white-space:nowrap; }
+        .datos-fecha .k { font-weight:bold; }
 
-        /* ── Ítems ── */
-        .items { width:100%; border-collapse:collapse; margin-bottom:6px; }
-        .items th { border:1px solid #000; background:#e9e9e9; padding:6px 6px; font-size:9.5px; text-align:left; }
-        .items td { border-left:1px solid #000; border-right:1px solid #000; padding:5px 6px; font-size:9.5px; }
-        .items tbody tr:last-child td { border-bottom:1px solid #000; }
-        .items thead th:first-child, .items tbody td:first-child { border-left:1px solid #000; }
+        /* ── Ítems: filas separadas por línea punteada, sin grilla pesada ── */
+        .items { width:100%; border-collapse:collapse; margin-bottom:4px; }
+        .items th {
+            border-bottom:1.5px solid #000; padding:5px 6px; font-size:9px;
+            font-weight:bold; text-align:left; white-space:nowrap;
+        }
+        .items td { padding:5px 6px; font-size:9.5px; border-bottom:1px dotted #999; }
+        .items tbody tr:last-child td { border-bottom:1.5px solid #000; }
         .r { text-align:right; }
         .c { text-align:center; }
 
-        .son { font-size:9.5px; margin:8px 0 12px; }
-        .son .lbl { font-weight:bold; margin-right:8px; }
+        .total-pagar { text-align:right; font-size:12.5px; font-weight:bold; padding:9px 6px 18px; }
 
-        /* ── Cuotas + totales ── */
-        .inferior { display:table; width:100%; margin-bottom:18px; }
-        .inf-izq, .inf-der { display:table-cell; vertical-align:top; }
-        .inf-izq { width:52%; padding-right:16px; }
-        .inf-der { width:48%; }
+        /* ── Información adicional / saldo ── */
+        .adicional { margin-bottom:20px; }
+        .adicional .fila { font-size:9.5px; padding:1.5px 0; }
+        .adicional .lbl { font-weight:bold; margin-right:6px; }
+        .adicional .saldo { font-size:10.5px; font-weight:bold; }
 
-        .cuotas { width:100%; border-collapse:collapse; }
-        .cuotas th { padding:3px 6px; font-size:9px; text-align:left; border-bottom:1px solid #000; white-space:nowrap; }
-        .cuotas td { padding:4px 6px; font-size:9.5px; }
-
-        .totales { width:100%; border:1px solid #000; border-radius:4px; overflow:hidden; border-collapse:collapse; }
-        .totales td { padding:5px 10px; font-size:9.5px; border-top:1px solid #eee; }
-        .totales tr:first-child td { border-top:none; }
-        .totales .lbl { font-weight:bold; }
-        .totales .val { text-align:right; white-space:nowrap; }
-        .totales tr.final td { font-weight:bold; font-size:13px; background:#f4f3ef; border-top:1px solid #000; }
-
-        /* ── Pie: condiciones y cuentas bancarias ── */
-        .legal { border:1px solid #000; padding:7px 9px; font-size:8px; font-weight:bold; line-height:1.5; margin-bottom:18px; }
-
+        /* ── Cuentas bancarias ── */
         .cb-tit { text-align:center; font-size:10.5px; font-weight:bold; letter-spacing:.05em; margin-bottom:10px; }
         .cb-grid { display:table; width:100%; border-collapse:separate; border-spacing:10px 0; }
         .cb-caja { display:table-cell; width:50%; border:1px solid #DCDAD2; border-radius:8px; padding:10px 12px; vertical-align:middle; }
@@ -131,19 +122,14 @@
 
         /* ── Formato 80mm (ticket térmico): todo apilado en una sola columna ── */
         body.formato-80mm .hoja { width:80mm; padding:6px 8px; font-size:9px; }
-        body.formato-80mm .cab, body.formato-80mm .cab-izq, body.formato-80mm .cab-der,
-        body.formato-80mm .inferior, body.formato-80mm .inf-izq, body.formato-80mm .inf-der,
-        body.formato-80mm .pie { display:block; width:100%; }
+        body.formato-80mm .cab, body.formato-80mm .cab-izq, body.formato-80mm .cab-der { display:block; width:100%; }
         body.formato-80mm .cab-der { padding-left:0; margin-top:8px; }
-        body.formato-80mm .cab-logo { text-align:center; }
-        body.formato-80mm .cab-logo img { max-height:40px; }
-        body.formato-80mm .cab-emp { text-align:center; }
-        body.formato-80mm .caja-doc { border-style:dashed; }
+        body.formato-80mm .cab-marca, body.formato-80mm .cab-logo-cel, body.formato-80mm .cab-emp-cel { display:block; width:100%; text-align:center; padding-left:0; }
+        body.formato-80mm .cab-logo-cel img { margin:0 auto; }
         body.formato-80mm .datos .k { width:auto; display:inline-block; }
         body.formato-80mm .datos-fecha { text-align:left; }
         body.formato-80mm .items th, body.formato-80mm .items td { font-size:8px; padding:3px 4px; }
         body.formato-80mm .items th:nth-child(3), body.formato-80mm .items td:nth-child(3) { display:none; } /* UND: se omite, no cabe */
-        body.formato-80mm .inf-izq { padding-right:0; margin-bottom:10px; }
         body.formato-80mm .cb-grid { display:block; }
         body.formato-80mm .cb-caja { display:block; width:auto; margin-bottom:8px; }
     </style>
@@ -205,29 +191,32 @@
     {{-- ══ Cabecera ══ --}}
     <div class="cab">
         <div class="cab-izq">
-            <div class="cab-logo">
-                <img src="{{ asset('img/logo.png') }}" alt="{{ config('rentaltech.empresa.razon_social') }}">
-            </div>
-            <div class="cab-emp">
-                <b>{{ config('rentaltech.empresa.razon_social') }}</b>
-                @if (config('rentaltech.empresa.ruc'))
-                    <p>RUC {{ config('rentaltech.empresa.ruc') }}</p>
-                @endif
-                @if (config('rentaltech.empresa.direccion'))
-                    <p>{{ config('rentaltech.empresa.direccion') }}</p>
-                @endif
-                @if (config('rentaltech.empresa.telefono'))
-                    <p>Central telefónica: {{ config('rentaltech.empresa.telefono') }}</p>
-                @endif
-                @if (config('rentaltech.empresa.email'))
-                    <p>Email: {{ config('rentaltech.empresa.email') }}</p>
-                @endif
+            <div class="cab-marca">
+                <div class="cab-logo-cel">
+                    <img src="{{ asset('img/Logo-docs.png') }}" alt="{{ config('rentaltech.empresa.razon_social') }}">
+                </div>
+                <div class="cab-emp-cel cab-emp">
+                    <b>{{ config('rentaltech.empresa.razon_social') }}</b>
+                    @if (config('rentaltech.empresa.ruc'))
+                        <p>RUC {{ config('rentaltech.empresa.ruc') }}</p>
+                    @endif
+                    @if (config('rentaltech.empresa.direccion'))
+                        <p>{{ config('rentaltech.empresa.direccion') }}</p>
+                        <p>D. Comercial: {{ config('rentaltech.empresa.direccion') }}</p>
+                    @endif
+                    @if (config('rentaltech.empresa.telefono'))
+                        <p>Central telefónica: {{ config('rentaltech.empresa.telefono') }}</p>
+                    @endif
+                    @if (config('rentaltech.empresa.email'))
+                        <p>Email: {{ config('rentaltech.empresa.email') }}</p>
+                    @endif
+                </div>
             </div>
         </div>
         <div class="cab-der">
             <div class="caja-doc">
                 <div class="tipo">{{ $etiqueta }}</div>
-                <div class="num">N° {{ $numero }}</div>
+                <div class="num">{{ $numero }}</div>
             </div>
         </div>
     </div>
@@ -235,32 +224,32 @@
     {{-- ══ Datos del cliente y condiciones ══ --}}
     <table class="datos">
         <tr>
-            <td class="k">Señores:</td>
+            <td class="k">Cliente:</td>
             <td>{{ $venta->cliente_nombre ?: $venta->razonsocial ?: '—' }}</td>
-            <td rowspan="7" class="datos-fecha">
-                <span class="k">Fecha de emisión</span>
-                <span class="v">{{ $venta->fecha?->format('Y-m-d') }}</span>
+            <td rowspan="{{ ($venta->ventaOrigen || $venta->guias->isNotEmpty()) ? 7 : 6 }}" class="datos-fecha">
+                <span class="k">Fecha de emisión:</span>
+                {{ $venta->fecha?->format('Y-m-d') }}
             </td>
         </tr>
         <tr>
-            <td class="k">RUC / DNI:</td>
+            <td class="k">Doc.trib.no.dom.sin.ruc:</td>
             <td>{{ $venta->cliente_ruc ?: $venta->n_ruc ?: '—' }}</td>
         </tr>
         <tr>
             <td class="k">Dirección:</td>
-            <td>{{ $venta->cliente_direccion ?: '—' }}</td>
+            <td>{{ $venta->cliente_direccion ?: $venta->cliente_distrito ?: '—' }}</td>
         </tr>
         <tr>
-            <td class="k">Forma de pago:</td>
-            <td>{{ $venta->condicion_pago ?: 'Contado' }} — MONEDA: {{ $monedaTexto }}</td>
+            <td class="k">T. Pago:</td>
+            <td>{{ $venta->condicion_pago ?: 'Contado' }}</td>
+        </tr>
+        <tr>
+            <td class="k">MONEDA:</td>
+            <td>{{ $monedaTexto }}</td>
         </tr>
         <tr>
             <td class="k">Vendedor:</td>
             <td>{{ $venta->vendedor ?: $venta->usuario?->username ?: '—' }}</td>
-        </tr>
-        <tr>
-            <td class="k">N° de Venta:</td>
-            <td>{{ $venta->numero_venta ?: '—' }} @if ($venta->guias->isNotEmpty()) — N° Guía: {{ $venta->guias->pluck('numero_guia')->filter()->implode(', ') }} @endif</td>
         </tr>
         @if ($venta->ventaOrigen)
             <tr>
@@ -270,8 +259,11 @@
                     {{ $venta->tipcomp === '07' ? \App\Models\Venta::MOTIVOS_CREDITO[$venta->cod_motivo] ?? '—' : \App\Models\Venta::MOTIVOS_DEBITO[$venta->cod_motivo] ?? '—' }}
                 </td>
             </tr>
-        @else
-            <tr><td colspan="2"></td></tr>
+        @elseif ($venta->guias->isNotEmpty())
+            <tr>
+                <td class="k">N° de Guía:</td>
+                <td>{{ $venta->guias->pluck('numero_guia')->filter()->implode(', ') }}</td>
+            </tr>
         @endif
     </table>
 
@@ -293,7 +285,7 @@
             <tr>
                 <td>{{ $detalle->prod_codigo ?: '—' }}</td>
                 <td class="r">{{ number_format($detalle->cantidad, 2) }}</td>
-                <td class="c">{{ $detalle->producto?->presentacion ?: '' }}</td>
+                <td class="c">{{ $detalle->producto?->presentacion ?: 'UND' }}</td>
                 <td>{{ $detalle->prod_nombre }}</td>
                 <td class="r">{{ number_format($detalle->precio_unitario, 2) }}</td>
                 <td class="r">0.00</td>
@@ -308,73 +300,13 @@
         </tbody>
     </table>
 
-    {{-- ══ Monto en letras ══ --}}
-    <div class="son">
-        <span class="lbl">SON:</span>{{ $montoLetras }}
-    </div>
+    <div class="total-pagar">TOTAL A PAGAR: {{ $simbolo }} {{ number_format($venta->total, 2) }}</div>
 
-    {{-- ══ Cuotas + totales ══ --}}
-    <div class="inferior">
-        <div class="inf-izq">
-            <table class="cuotas">
-                <thead>
-                    <tr>
-                        <th>N° CUOTA</th>
-                        <th class="r">MONTO CUOTA</th>
-                        <th class="c">FECHA VCTO</th>
-                        <th>OBSERVACION</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td class="c">1</td>
-                        <td class="r">{{ number_format($venta->total, 2) }}</td>
-                        <td class="c">{{ $venta->fecha_vencimiento?->format('d/m/Y') ?: '—' }}</td>
-                        <td></td>
-                    </tr>
-                </tbody>
-            </table>
-            @if ($pagado > 0)
-                <div style="margin-top:10px;font-size:9.5px;">
-                    <div><b>PAGOS:</b> {{ $simbolo }} {{ number_format($pagado, 2) }}</div>
-                    <div><b>SALDO:</b> {{ $simbolo }} {{ number_format($saldo, 2) }}</div>
-                </div>
-            @endif
-        </div>
-
-        <div class="inf-der">
-            <table class="totales">
-                <tr>
-                    <td class="lbl">Total Ope. Gravadas</td>
-                    <td class="val">{{ $simbolo }} {{ number_format($venta->baseimp, 2) }}</td>
-                </tr>
-                <tr>
-                    <td class="lbl">Total Ope. Inafectas</td>
-                    <td class="val">{{ $simbolo }} {{ number_format($venta->inafecto, 2) }}</td>
-                </tr>
-                <tr>
-                    <td class="lbl">Total Ope. Exoneradas</td>
-                    <td class="val">{{ $simbolo }} {{ number_format($venta->exonerado, 2) }}</td>
-                </tr>
-                <tr>
-                    <td class="lbl">Total IGV</td>
-                    <td class="val">{{ $simbolo }} {{ number_format($venta->igv, 2) }}</td>
-                </tr>
-                <tr class="final">
-                    <td class="lbl">TOTAL A PAGAR</td>
-                    <td class="val">{{ $simbolo }} {{ number_format($venta->total, 2) }}</td>
-                </tr>
-            </table>
-        </div>
-    </div>
-
-    {{-- ══ Condiciones ══ --}}
-    <div class="legal">
-        1.- SI EL PRESENTE COMPROBANTE NO ES CANCELADO A SU VENCIMIENTO GENERARÁ INTERESES
-        MORATORIOS Y COMPENSATORIOS.<br>
-        2.- SÍRVASE GIRAR EL CHEQUE NO NEGOCIABLE A NOMBRE DE {{ strtoupper(config('rentaltech.empresa.razon_social')) }}.<br>
-        3.- EL PAGO SE REALIZARÁ EN NUESTRAS OFICINAS O BANCOS, EN NINGÚN CASO A PERSONAL NO
-        AUTORIZADO.
+    {{-- ══ Información adicional y saldo ══ --}}
+    <div class="adicional">
+        <div class="fila"><span class="lbl">Información adicional:</span>{{ $venta->observaciones ?: '' }}</div>
+        <div class="fila"><span class="lbl">PAGOS:</span>{{ $simbolo }} {{ number_format($pagado, 2) }}</div>
+        <div class="fila saldo"><span class="lbl">SALDO:</span>{{ $simbolo }} {{ number_format($saldo, 2) }}</div>
     </div>
 
     {{-- ══ Cuentas bancarias ══ --}}
