@@ -246,7 +246,7 @@
                     <div class="ven-group">
                         <label class="ven-label" for="v-tipcomp">Tipo Comprobante <span>*</span></label>
                         <select class="ven-control" id="v-tipcomp" name="tipcomp" required>
-                            @foreach (array_intersect_key($tipos, array_flip(['NV', '01', '03'])) as $codigo => $tipo)
+                            @foreach (array_intersect_key($tipos, array_flip(['COT', 'NV', '01', '03'])) as $codigo => $tipo)
                                 <option value="{{ $codigo }}" data-serie="{{ $tipo['serie'] }}">{{ $tipo['nombre'] }}</option>
                             @endforeach
                         </select>
@@ -387,9 +387,13 @@ let operacionActual = 'gravada';
 const campoTipo  = document.getElementById('v-tipcomp');
 const campoSerie = document.getElementById('v-n-seri');
 
+// Igual que en el formulario de Nueva Venta: solo deja de re-sugerir cuando
+// el usuario ya escribió su propia serie a mano (no solo "si está vacío").
+let campoSerieEditada = false;
+campoSerie.addEventListener('input', () => { campoSerieEditada = true; });
+
 function sugerirSerieVenta() {
-    // Solo se sugiere si el usuario aún no escribió una serie propia.
-    if (!campoSerie.value) {
+    if (!campoSerieEditada) {
         campoSerie.value = campoTipo.selectedOptions[0]?.dataset.serie || '';
     }
 }
@@ -549,6 +553,7 @@ document.querySelectorAll('.btn-editar').forEach((boton) => {
         document.getElementById('v-fecha').value       = d.fecha || '';
         document.getElementById('v-tipcomp').value     = d.tipcomp || '01';
         document.getElementById('v-n-seri').value      = d.nSeri || '';
+        campoSerieEditada = true; // Serie real del registro — no debe pisarla la sugerencia automática.
         document.getElementById('v-n-comp').value      = d.nComp || '';
         document.getElementById('v-n-ruc').value       = d.nRuc || '';
         document.getElementById('v-razonsocial').value = d.razonsocial || '';

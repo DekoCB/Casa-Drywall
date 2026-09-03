@@ -98,7 +98,7 @@
             <div class="form-group">
                 <label for="f-tipcomp">Tipo Comprobante <span>*</span></label>
                 <select id="f-tipcomp" name="tipcomp" required>
-                    @foreach (array_intersect_key($tipos, array_flip(['NV', '01', '03'])) as $codigo => $tipo)
+                    @foreach (array_intersect_key($tipos, array_flip(['COT', 'NV', '01', '03'])) as $codigo => $tipo)
                         <option value="{{ $codigo }}" data-serie="{{ $tipo['serie'] }}" @selected(old('tipcomp', 'NV') === $codigo)>{{ $tipo['nombre'] }}</option>
                     @endforeach
                 </select>
@@ -241,8 +241,14 @@ const IGV_VENTAS = {{ config('rentaltech.igv') }};
 const fTipcomp = document.getElementById('f-tipcomp');
 const fNSeri   = document.getElementById('f-n-seri');
 
+// Se sugiere de nuevo cada vez que cambia el tipo, salvo que el usuario ya
+// haya escrito su propia serie a mano (si solo se chequeara "está vacío",
+// dejaría de re-sugerir después del primer autocompletado).
+let fSerieEditada = false;
+fNSeri.addEventListener('input', () => { fSerieEditada = true; });
+
 function sugerirSerieFactura() {
-    if (!fNSeri.value) {
+    if (!fSerieEditada) {
         fNSeri.value = fTipcomp.selectedOptions[0]?.dataset.serie || '';
     }
 }

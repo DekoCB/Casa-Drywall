@@ -30,12 +30,14 @@ use Illuminate\View\View;
 class VentaController extends Controller
 {
     /**
-     * Códigos de comprobante con su serie sugerida. `NV` (Nota de Venta) no
-     * es un código SUNAT — es un documento interno para ventas que todavía
-     * no necesitan un comprobante fiscal, y por eso nunca se registra en
-     * API-GO (`crearComprobante()` solo reconoce los códigos numéricos).
+     * Códigos de comprobante con su serie sugerida. `COT` (Cotización) y
+     * `NV` (Nota de Venta) no son códigos SUNAT — son documentos internos
+     * (una todavía no es una venta confirmada, la otra no necesita un
+     * comprobante fiscal) y por eso nunca se registran en API-GO
+     * (`crearComprobante()` solo reconoce los códigos numéricos).
      */
     public const TIPOS = [
+        'COT' => ['nombre' => 'Cotización',           'serie' => 'CT01'],
         'NV' => ['nombre' => 'Nota de Venta',         'serie' => 'NV01'],
         '01' => ['nombre' => '01 — Factura',          'serie' => 'F001'],
         '03' => ['nombre' => '03 — Boleta de Venta',  'serie' => 'B001'],
@@ -562,7 +564,7 @@ class VentaController extends Controller
             'fecha'          => ['required', 'date'],
             // Nota de Crédito/Débito (07/08) se genera solo desde `storeNota()`,
             // que exige un comprobante origen ya aceptado — no desde este alta genérica.
-            'tipcomp'        => ['required', Rule::in(['NV', '01', '03'])],
+            'tipcomp'        => ['required', Rule::in(['COT', 'NV', '01', '03'])],
             'n_seri'         => ['required', 'string', 'max:4'],
             'n_comp'         => ['required', 'string', 'max:20'],
             'n_ruc'          => ['nullable', 'string', 'max:20'],
@@ -584,7 +586,7 @@ class VentaController extends Controller
         return $request->validate([
             'fecha'                        => ['required', 'date'],
             'fecha_vencimiento'            => ['required', 'date', 'after_or_equal:fecha'],
-            'tipcomp'                      => ['required', Rule::in(['NV', '01', '03'])],
+            'tipcomp'                      => ['required', Rule::in(['COT', 'NV', '01', '03'])],
             'n_seri'                       => ['required', 'string', 'max:4'],
             'n_comp'                       => ['required', 'string', 'max:20'],
             'n_ruc'                        => ['nullable', 'string', 'max:20'],
