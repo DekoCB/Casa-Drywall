@@ -103,7 +103,7 @@
                     @foreach (array_intersect_key($tipos, array_flip(['COT', 'NV', '01', '03'])) as $codigo => $tipo)
                         <option value="{{ $codigo }}" data-serie="{{ $tipo['serie'] }}"
                                 data-comp="{{ $correlativosInternos[$codigo] ?? '' }}"
-                                @selected(old('tipcomp', 'NV') === $codigo)>{{ $tipo['nombre'] }}</option>
+                                @selected(old('tipcomp', 'COT') === $codigo)>{{ $tipo['nombre'] }}</option>
                     @endforeach
                 </select>
             </div>
@@ -282,7 +282,7 @@ function sugerirSerieFactura() {
 }
 
 fTipcomp.addEventListener('change', sugerirSerieFactura);
-sugerirSerieFactura(); // "Nota de Venta" viene preseleccionada: sin esto, nunca se dispara el "change".
+sugerirSerieFactura(); // El tipo por defecto viene preseleccionado: sin esto, nunca se dispara el "change".
 
 // ── Buscador de cliente (mismo estilo que el de productos) ───────────────
 const CLIENTES = @json($clientes->map(fn ($c) => ['id' => $c->id, 'nombre' => $c->nombres, 'doc' => $c->numero_documento])->values());
