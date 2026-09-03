@@ -10,6 +10,7 @@ use App\Models\Venta;
 use App\Models\VentaDetalle;
 use App\Services\GeneradorCorrelativo;
 use App\Services\NumeroALetras;
+use App\Services\PrecioCalculador;
 use App\Services\Sunat\ApiGoEmisionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -55,6 +56,7 @@ class VentaController extends Controller
     public function __construct(
         private readonly GeneradorCorrelativo $correlativo,
         private readonly ApiGoEmisionService $emisionSunat,
+        private readonly PrecioCalculador $precios,
     ) {}
 
     /** Página de alta de comprobante: monto único o detalle de productos. */
@@ -184,7 +186,7 @@ class VentaController extends Controller
             $subtotalItems = collect($items)->sum(
                 fn (array $item) => (float) $item['cantidad'] * (float) $item['precio_unitario']
             );
-            $desglose = $this->desglosarImporte($subtotalItems, ! empty($datos['precios_incluyen_igv']));
+            $desglose = $this->precios->desglosarImporte($subtotalItems, ! empty($datos['precios_incluyen_igv']));
             $importes = [
                 'baseimp' => $desglose['base'],
                 'igv' => $desglose['igv'],
@@ -326,7 +328,7 @@ class VentaController extends Controller
             $subtotalItems = collect($items)->sum(
                 fn (array $item) => (float) $item['cantidad'] * (float) $item['precio_unitario']
             );
-            $desglose = $this->desglosarImporte($subtotalItems, ! empty($datos['precios_incluyen_igv']));
+            $desglose = $this->precios->desglosarImporte($subtotalItems, ! empty($datos['precios_incluyen_igv']));
             $importes = [
                 'baseimp' => $desglose['base'],
                 'igv' => $desglose['igv'],
@@ -529,7 +531,7 @@ class VentaController extends Controller
         $datos['inafecto']  = 0.0;
 
         if ($datos['tipo_operacion'] === 'gravada') {
-            $desglose = $this->desglosarImporte($monto, $incluyeIgv);
+            $desglose = $this->precios->desglosarImporte($monto, $incluyeIgv);
             $datos['baseimp'] = $desglose['base'];
             $datos['igv']     = $desglose['igv'];
         } elseif ($datos['tipo_operacion'] === 'exonerada') {
@@ -543,23 +545,6 @@ class VentaController extends Controller
         unset($datos['monto'], $datos['tipo_operacion'], $datos['precios_incluyen_igv']);
 
         return $datos;
-    }
-
-    /**
-     * Separa un monto gravado en base imponible + IGV. Si el precio ya trae
-     * el IGV incluido (precio de venta al público, lo normal en el catálogo
-     * de productos), se extrae en vez de sumarse encima — de lo contrario se
-     * estaría cobrando el IGV dos veces.
-     */
-    private function desglosarImporte(float $monto, bool $incluyeIgv): array
-    {
-        if ($incluyeIgv) {
-            $base = round($monto / (1 + config('rentaltech.igv')), 2);
-
-            return ['base' => $base, 'igv' => round($monto - $base, 2)];
-        }
-
-        return ['base' => round($monto, 2), 'igv' => round($monto * config('rentaltech.igv'), 2)];
     }
 
     /**

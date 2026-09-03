@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AlmacenController;
+use App\Http\Controllers\Admin\CajaController;
 use App\Http\Controllers\Admin\CategoriaController;
 use App\Http\Controllers\Admin\ClienteController;
 use App\Http\Controllers\Admin\CobranzaController;
@@ -16,6 +17,7 @@ use App\Http\Controllers\Admin\MarcaController;
 use App\Http\Controllers\Admin\MerchController;
 use App\Http\Controllers\Admin\OrdenCompraController;
 use App\Http\Controllers\Admin\PersonalController;
+use App\Http\Controllers\Admin\PosController;
 use App\Http\Controllers\Admin\ProductoController;
 use App\Http\Controllers\Admin\ProveedorController;
 use App\Http\Controllers\Admin\ReporteController;
@@ -192,6 +194,37 @@ Route::middleware(['auth', 'rol:admin'])
             Route::delete('presentaciones/{codigo}', [GalonajeController::class, 'eliminarPresentacion'])->name('presentaciones.destroy');
             Route::post('metas', [GalonajeController::class, 'guardarMeta'])->name('metas.store');
             Route::post('metas/anio', [GalonajeController::class, 'guardarMetas'])->name('metas.anio');
+        });
+
+        // Catálogo de cajas físicas (crear "Caja 01", etc.) — solo admin.
+        // Abrir/cerrar sesión de una caja ya existente es de admin y secretaria
+        // por igual, ver el grupo aparte más abajo.
+        Route::post('caja', [CajaController::class, 'store'])->name('caja.store');
+    });
+
+/*
+|--------------------------------------------------------------------------
+| Punto de Venta y Caja — admin y secretaria
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'rol:admin,secretaria'])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+        Route::prefix('pos')->name('pos.')->group(function () {
+            Route::get('/', [PosController::class, 'index'])->name('index');
+            Route::get('productos/buscar', [PosController::class, 'buscarProductos'])->name('productos.buscar');
+            Route::post('venta', [PosController::class, 'store'])->name('venta');
+            Route::post('suspender', [PosController::class, 'suspender'])->name('suspender');
+            Route::get('suspendidas', [PosController::class, 'listaSuspendidas'])->name('suspendidas.index');
+            Route::get('suspendidas/{ventaSuspendida}', [PosController::class, 'recuperar'])->name('suspendidas.recuperar');
+            Route::delete('suspendidas/{ventaSuspendida}', [PosController::class, 'eliminarSuspendida'])->name('suspendidas.destroy');
+        });
+
+        Route::prefix('caja')->name('caja.')->group(function () {
+            Route::get('/', [CajaController::class, 'index'])->name('index');
+            Route::post('{caja}/abrir', [CajaController::class, 'abrir'])->name('abrir');
+            Route::post('sesiones/{sesionCaja}/cerrar', [CajaController::class, 'cerrar'])->name('cerrar');
         });
     });
 

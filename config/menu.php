@@ -23,6 +23,7 @@ $iconos = [
     'regalo' => $icon('<path d="M20 12v9H4v-9"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>'),
     'camion' => $icon('<rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>'),
     'grafico' => $icon('<path d="M3 3v18h18"/><rect x="7" y="13" width="3" height="5"/><rect x="12" y="9" width="3" height="9"/><rect x="17" y="5" width="3" height="13"/>'),
+    'pos' => $icon('<rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>'),
 ];
 
 return [
@@ -35,6 +36,7 @@ return [
             ['route' => 'admin.clientes.index',     'label' => 'Clientes',     'icon' => $iconos['usuarios']],
             ['route' => 'admin.proveedores.index',  'label' => 'Proveedores',  'icon' => $iconos['proveedores']],
             ['route' => 'admin.ventas.index',       'label' => 'Ventas',       'icon' => $iconos['carrito']],
+            ['route' => 'admin.pos.index',          'label' => 'Punto de Venta', 'icon' => $iconos['pos']],
         ],
 
         'Compras & Documentos' => [
@@ -47,6 +49,7 @@ return [
             ['route' => 'admin.historial-pagos.index', 'label' => 'Historial de Pagos', 'icon' => $iconos['calendario']],
             ['route' => 'admin.ingresos.index',        'label' => 'Ingresos',           'icon' => $iconos['subida']],
             ['route' => 'admin.egresos.index',         'label' => 'Egresos',            'icon' => $iconos['bajada']],
+            ['route' => 'admin.caja.index',            'label' => 'Cajas',              'icon' => $iconos['caja']],
         ],
 
         'Inventario' => [

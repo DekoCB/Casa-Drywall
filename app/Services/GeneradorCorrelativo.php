@@ -72,17 +72,26 @@ class GeneradorCorrelativo
     }
 
     /**
-     * Correlativo de los documentos internos (Cotización, Nota de Venta):
-     * a diferencia de Factura/Boleta, aquí no hay un tercero (SUNAT/API-GO)
-     * que asigne el número, así que se calcula a partir del último usado
-     * para el mismo tipo y serie. Reemplaza siempre lo que haya escrito el
-     * usuario, para que nunca deje de ser correlativo.
+     * Correlativo de los documentos internos (Cotización, Nota de Venta, y
+     * Boleta/Factura emitidas desde el POS): a diferencia del número real
+     * que asigna SUNAT/API-GO de forma asíncrona, este es un número local
+     * calculado a partir del último usado para el mismo tipo y serie.
+     * Reemplaza siempre lo que haya escrito el usuario, para que nunca deje
+     * de ser correlativo.
+     *
+     * `lockForUpdate()` serializa llamadas concurrentes sobre el mismo
+     * tipcomp+serie (dos cajeros del POS cobrando casi al mismo tiempo): la
+     * fila más alta que coincide con el WHERE queda bloqueada hasta que la
+     * transacción que la generó termina, así la siguiente lectura ya ve el
+     * número recién usado en vez de repetirlo. Para que el lock realmente
+     * proteja algo, este método debe llamarse dentro de un `DB::transaction()`.
      */
     public function documentoInterno(string $tipcomp, string $serie): string
     {
         $ultimo = (int) DB::table('ventas')
             ->where('tipcomp', $tipcomp)
             ->where('n_seri', $serie)
+            ->lockForUpdate()
             ->max(DB::raw('CAST(n_comp AS UNSIGNED)'));
 
         return str_pad((string) ($ultimo + 1), 8, '0', STR_PAD_LEFT);

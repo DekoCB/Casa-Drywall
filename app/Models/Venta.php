@@ -56,6 +56,8 @@ class Venta extends Model
         'api_go_document_id', 'api_go_document_type', 'api_go_pdf_path',
         // Nota de Crédito/Débito: comprobante que corrige y motivo SUNAT.
         'venta_origen_id', 'cod_motivo',
+        // Punto de Venta.
+        'sesion_caja_id', 'canal', 'vuelto', 'descuento_total', 'pos_token',
     ];
 
     protected function casts(): array
@@ -77,12 +79,24 @@ class Venta extends Model
             'exonerado' => 'decimal:2',
             'inafecto' => 'decimal:2',
             'tipcambio' => 'decimal:4',
+            'vuelto' => 'decimal:2',
+            'descuento_total' => 'decimal:2',
         ];
     }
 
     public function detalles(): HasMany
     {
         return $this->hasMany(VentaDetalle::class, 'venta_id');
+    }
+
+    public function pagos(): HasMany
+    {
+        return $this->hasMany(VentaPago::class, 'venta_id');
+    }
+
+    public function sesionCaja(): BelongsTo
+    {
+        return $this->belongsTo(SesionCaja::class, 'sesion_caja_id');
     }
 
     public function guias(): HasMany

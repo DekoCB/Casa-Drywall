@@ -17,6 +17,7 @@ export default defineConfig({
                 'resources/css/modules/galonaje.css',
                 'resources/css/modules/historial-pagos.css',
                 'resources/css/modules/transporte.css',
+                'resources/css/modules/pos.css',
                 'resources/js/app.js',
                 'resources/js/glow-cursor.js',
             ],

@@ -13,7 +13,7 @@ class VentaDetalle extends Model
 
     protected $fillable = [
         'venta_id', 'producto_id', 'prod_codigo', 'prod_nombre',
-        'cantidad', 'precio_unitario', 'subtotal', 'galones',
+        'cantidad', 'precio_unitario', 'descuento_pct', 'subtotal', 'galones',
     ];
 
     protected function casts(): array
@@ -21,6 +21,7 @@ class VentaDetalle extends Model
         return [
             'cantidad' => 'integer',
             'precio_unitario' => 'decimal:2',
+            'descuento_pct' => 'decimal:2',
             'subtotal' => 'decimal:2',
             'galones' => 'decimal:3',
         ];
