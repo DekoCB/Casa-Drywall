@@ -101,7 +101,9 @@
                 <label for="f-tipcomp">Tipo Comprobante <span>*</span></label>
                 <select id="f-tipcomp" name="tipcomp" required>
                     @foreach (array_intersect_key($tipos, array_flip(['COT', 'NV', '01', '03'])) as $codigo => $tipo)
-                        <option value="{{ $codigo }}" data-serie="{{ $tipo['serie'] }}" @selected(old('tipcomp', 'NV') === $codigo)>{{ $tipo['nombre'] }}</option>
+                        <option value="{{ $codigo }}" data-serie="{{ $tipo['serie'] }}"
+                                data-comp="{{ $correlativosInternos[$codigo] ?? '' }}"
+                                @selected(old('tipcomp', 'NV') === $codigo)>{{ $tipo['nombre'] }}</option>
                     @endforeach
                 </select>
             </div>
@@ -118,6 +120,9 @@
                 <label for="f-n-comp">N° Comprobante <span>*</span></label>
                 <input type="text" id="f-n-comp" name="n_comp" required maxlength="20"
                        placeholder="0000000001" value="{{ old('n_comp') }}">
+                <small id="f-n-comp-hint" style="display:block; margin-top:4px; font-size:11px; color:#6b6f78;" hidden>
+                    Correlativo automático: no se puede editar.
+                </small>
             </div>
             <div class="form-group">
                 <label for="f-vencimiento">Fecha de vencimiento <span>*</span></label>
@@ -248,6 +253,8 @@ const IGV_VENTAS = {{ config('rentaltech.igv') }};
 // Serie sugerida según el tipo de comprobante.
 const fTipcomp = document.getElementById('f-tipcomp');
 const fNSeri   = document.getElementById('f-n-seri');
+const fNComp   = document.getElementById('f-n-comp');
+const fNCompHint = document.getElementById('f-n-comp-hint');
 
 // Se sugiere de nuevo cada vez que cambia el tipo, salvo que el usuario ya
 // haya escrito su propia serie a mano (si solo se chequeara "está vacío",
@@ -255,9 +262,22 @@ const fNSeri   = document.getElementById('f-n-seri');
 let fSerieEditada = false;
 fNSeri.addEventListener('input', () => { fSerieEditada = true; });
 
+// Cotización y Nota de Venta no admiten número libre: el servidor siempre
+// reemplaza lo que se escriba aquí por el siguiente correlativo, así que el
+// campo se bloquea y se muestra el número que realmente va a quedar.
 function sugerirSerieFactura() {
     if (!fSerieEditada) {
         fNSeri.value = fTipcomp.selectedOptions[0]?.dataset.serie || '';
+    }
+
+    const esInterno = ['COT', 'NV'].includes(fTipcomp.value);
+    const comp = fTipcomp.selectedOptions[0]?.dataset.comp || '';
+
+    fNComp.readOnly = esInterno;
+    fNCompHint.hidden = !esInterno;
+
+    if (esInterno) {
+        fNComp.value = comp;
     }
 }
 

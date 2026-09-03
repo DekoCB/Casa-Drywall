@@ -51,6 +51,28 @@ return [
     ],
 
     /*
+    | Cuentas bancarias que se muestran al pie de la Cotización, para que el
+    | cliente pueda depositar directamente. Datos fijos de la empresa, igual
+    | que `emisor_oc`.
+    */
+    'cuentas_bancarias' => [
+        [
+            'banco' => 'BBVA', 'abrev' => 'BBVA', 'moneda' => 'S/ Soles',
+            'titular' => 'BBVA - CASA DRYWALL E.I.R.L.',
+            'cuenta' => '0011-0241-0200859015-76',
+            'cci' => '011-241-000200859015-76',
+            'color' => '#0d47a1', 'bg' => '#e8f0fe',
+        ],
+        [
+            'banco' => 'INTERBANK', 'abrev' => 'IBK', 'moneda' => 'S/ Soles',
+            'titular' => 'INTERBANK - CASA DRYWALL E.I.R.L.',
+            'cuenta' => '404-3006076405-14',
+            'cci' => '003-404-003006076405-14',
+            'color' => '#1b5e20', 'bg' => '#f0faf4',
+        ],
+    ],
+
+    /*
     | API key de OpenRouter para el análisis de facturas con IA.
     */
     'openrouter_api_key' => env('OPENROUTER_API_KEY', ''),

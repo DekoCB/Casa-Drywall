@@ -70,4 +70,21 @@ class GeneradorCorrelativo
     {
         return $this->siguiente('guias_remision', 'numero_guia', 'GR');
     }
+
+    /**
+     * Correlativo de los documentos internos (Cotización, Nota de Venta):
+     * a diferencia de Factura/Boleta, aquí no hay un tercero (SUNAT/API-GO)
+     * que asigne el número, así que se calcula a partir del último usado
+     * para el mismo tipo y serie. Reemplaza siempre lo que haya escrito el
+     * usuario, para que nunca deje de ser correlativo.
+     */
+    public function documentoInterno(string $tipcomp, string $serie): string
+    {
+        $ultimo = (int) DB::table('ventas')
+            ->where('tipcomp', $tipcomp)
+            ->where('n_seri', $serie)
+            ->max(DB::raw('CAST(n_comp AS UNSIGNED)'));
+
+        return str_pad((string) ($ultimo + 1), 8, '0', STR_PAD_LEFT);
+    }
 }

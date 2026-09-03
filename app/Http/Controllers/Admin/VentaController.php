@@ -65,6 +65,12 @@ class VentaController extends Controller
             'clientes' => Cliente::orderBy('nombres')->get(['id', 'nombres', 'numero_documento']),
             'productos' => Producto::activos()->with(['categoria:id,nombre', 'marca:id,nombre'])->orderBy('nombre')
                 ->get(['id', 'codigo', 'nombre', 'presentacion', 'categoria_id', 'marca_id', 'precio_venta', 'stock']),
+            // Cotización y Nota de Venta no admiten número libre: se muestra
+            // de una vez el correlativo que le tocará al guardar.
+            'correlativosInternos' => [
+                'COT' => $this->correlativo->documentoInterno('COT', self::TIPOS['COT']['serie']),
+                'NV' => $this->correlativo->documentoInterno('NV', self::TIPOS['NV']['serie']),
+            ],
         ]);
     }
 
@@ -162,7 +168,7 @@ class VentaController extends Controller
      */
     public function storeFactura(Request $request): RedirectResponse
     {
-        $datos = $this->validarFactura($request);
+        $datos = $this->conNumeroInterno($this->validarFactura($request));
         $items = $this->itemsValidos($datos['items'] ?? []);
 
         $duplicado = Venta::where('tipcomp', $datos['tipcomp'])
@@ -477,7 +483,17 @@ class VentaController extends Controller
     /** Vista imprimible del comprobante, con el desglose de productos y el monto en letras. */
     public function comprobante(Venta $venta, NumeroALetras $numeroALetras): View
     {
-        $venta->load(['detalles.producto:id,presentacion', 'guias', 'ventaOrigen']);
+        $venta->load(['detalles.producto:id,presentacion', 'guias', 'ventaOrigen', 'usuario']);
+
+        // La Cotización no es un comprobante SUNAT: usa un formato propio,
+        // más simple, pensado para enviarse al cliente antes de la venta.
+        if ($venta->tipcomp === 'COT') {
+            return view('admin.ventas.cotizacion', [
+                'venta' => $venta,
+                'tipos' => self::TIPOS,
+                'cuentasBancarias' => config('rentaltech.cuentas_bancarias'),
+            ]);
+        }
 
         $moneda = $venta->moneda === 'USD' ? 'DÓLARES AMERICANOS' : 'SOLES';
 
@@ -544,6 +560,22 @@ class VentaController extends Controller
         }
 
         return ['base' => round($monto, 2), 'igv' => round($monto * config('rentaltech.igv'), 2)];
+    }
+
+    /**
+     * Cotización y Nota de Venta no llevan un número que el usuario elija a
+     * mano (a diferencia de Factura/Boleta, cuyo N° Comprobante puede venir
+     * de un talonario físico o de lo ya emitido en API-GO): se reemplaza
+     * siempre por el siguiente correlativo, sin importar lo que haya llegado
+     * en el formulario.
+     */
+    private function conNumeroInterno(array $datos): array
+    {
+        if (in_array($datos['tipcomp'], ['COT', 'NV'], true)) {
+            $datos['n_comp'] = $this->correlativo->documentoInterno($datos['tipcomp'], $datos['n_seri']);
+        }
+
+        return $datos;
     }
 
     private function aniosDisponibles(): array

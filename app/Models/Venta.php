@@ -96,6 +96,12 @@ class Venta extends Model
         return $this->belongsTo(self::class, 'venta_origen_id');
     }
 
+    /** Usuario que registró el comprobante — se muestra como "Vendedor" cuando no hay uno explícito. */
+    public function usuario(): BelongsTo
+    {
+        return $this->belongsTo(Usuario::class, 'usuario_id');
+    }
+
     /** Notas de Crédito/Débito emitidas contra este comprobante. */
     public function notas(): HasMany
     {
