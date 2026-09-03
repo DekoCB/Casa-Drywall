@@ -28,10 +28,10 @@
 
 @push('styles')
 <style>
-.nv-form .content-card { padding: 16px 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,.06); }
+.nv-form .content-card { padding: 16px 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,.2); }
 .nv-form .content-card + .content-card { margin-top: 14px; }
-.nv-form h3 { margin: 0 0 12px; font-size: 14px; font-weight: 700; letter-spacing: .03em; color: #1a1714; }
-.nv-form .nv-hint { margin: -8px 0 12px; font-size: 12px; color: #6b6f78; }
+.nv-form h3 { margin: 0 0 12px; font-size: 14px; font-weight: 700; letter-spacing: .03em; color: var(--ink); }
+.nv-form .nv-hint { margin: -8px 0 12px; font-size: 12px; color: var(--ink-3); }
 .nv-form .form-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 240px)); justify-content: start; gap: 12px; margin-bottom: 0; }
 .nv-form .form-group label { margin-bottom: 5px; font-size: 10.5px; letter-spacing: .04em; }
 .nv-form .form-group input,
@@ -39,33 +39,33 @@
 .nv-form .form-group textarea { padding: 8px 11px; font-size: 13px; border-radius: 8px; border-width: 1px; }
 .nv-form .table th { padding: 8px 10px; font-size: 10px; }
 .nv-form .table td { padding: 6px 10px; }
-.nv-form .table td input { padding: 6px 8px; font-size: 13px; border-radius: 6px; border: 1px solid #e8e8e8; width: 100%; }
-.nv-form .nv-totales { margin-top: 14px; padding-top: 12px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; }
-.nv-form .nv-totales-caja { min-width: 220px; font-size: 13px; }
+.nv-form .table td input { padding: 6px 8px; font-size: 13px; border-radius: 6px; border: 1px solid var(--line); width: 100%; color: var(--ink); background: var(--surface); }
+.nv-form .nv-totales { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); display: flex; justify-content: flex-end; }
+.nv-form .nv-totales-caja { min-width: 220px; font-size: 13px; color: var(--ink-2); }
 .nv-form .nv-totales-caja > div { display: flex; justify-content: space-between; padding: 4px 0; }
-.nv-form .nv-totales-caja .nv-total-final { padding-top: 8px; margin-top: 4px; border-top: 1px solid #eee; font-size: 16px; font-weight: 700; }
+.nv-form .nv-totales-caja .nv-total-final { padding-top: 8px; margin-top: 4px; border-top: 1px solid var(--line); font-size: 16px; font-weight: 700; color: var(--ink); }
 .nv-form .nv-productos-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.nv-igv-toggle { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; font-size: 13px; color: #3a362f; cursor: pointer; }
+.nv-igv-toggle { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; font-size: 13px; color: var(--ink-2); cursor: pointer; }
 .nv-igv-toggle input { width: 16px; height: 16px; cursor: pointer; }
 .nv-buscador { position: relative; }
 .nv-buscador .nv-lupa { position: absolute; top: 50%; left: 12px; transform: translateY(-50%); font-size: 15px; pointer-events: none; }
-.nv-buscar-input { width: 100%; padding: 10px 14px 10px 38px; border: 1.5px solid #e5e7eb; border-radius: 8px; background: #fafafa; color: #111827; font-family: inherit; font-size: 13.5px; box-sizing: border-box; transition: all .2s ease; }
-.nv-buscar-input:focus { outline: none; border-color: #3d9b8c; background: #fff; box-shadow: 0 0 0 3px rgba(61,155,140,.08); }
-.nv-dropdown { display: none; position: absolute; z-index: 999; top: calc(100% + 4px); left: 0; right: 0; max-height: 300px; border: 1.5px solid #e5e7eb; border-radius: 10px; background: #fff; box-shadow: 0 8px 30px rgba(0,0,0,.14); overflow-y: auto; }
+.nv-buscar-input { width: 100%; padding: 10px 14px 10px 38px; border: 1.5px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font-family: inherit; font-size: 13.5px; box-sizing: border-box; transition: all .2s ease; }
+.nv-buscar-input:focus { outline: none; border-color: var(--brand); background: var(--surface); box-shadow: 0 0 0 3px var(--brand-bg); }
+.nv-dropdown { display: none; position: absolute; z-index: 999; top: calc(100% + 4px); left: 0; right: 0; max-height: 300px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--surface-2); box-shadow: var(--shadow-lg); overflow-y: auto; }
 .nv-dropdown.activo { display: block; }
-.nv-item { padding: 10px 14px; border-bottom: 1px solid #f3f4f6; cursor: pointer; transition: background .15s; }
+.nv-item { padding: 10px 14px; border-bottom: 1px solid var(--line); cursor: pointer; transition: background .15s; }
 .nv-item:last-child { border-bottom: none; }
-.nv-item:hover, .nv-item.activo { background: #f0faf8; }
+.nv-item:hover, .nv-item.activo { background: var(--surface-hover); }
 .nv-item-top { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-bottom: 4px; }
-.nv-item-cod { padding: 2px 7px; border-radius: 4px; background: rgba(61,155,140,.08); color: #3d9b8c; font-family: 'Courier New', monospace; font-size: 11px; font-weight: 700; }
-.nv-item-desc { font-size: 12px; font-weight: 500; color: #111827; }
-.nv-sin-resultados { padding: 20px; text-align: center; color: #6b7280; font-size: 13px; }
+.nv-item-cod { padding: 2px 7px; border-radius: 4px; background: var(--brand-bg); color: var(--brand); font-family: 'Courier New', monospace; font-size: 11px; font-weight: 700; }
+.nv-item-desc { font-size: 12px; font-weight: 500; color: var(--ink); }
+.nv-sin-resultados { padding: 20px; text-align: center; color: var(--ink-3); font-size: 13px; }
 .nv-linea-manual { margin-top: 10px; }
-.nv-origen-panel { padding: 12px 14px; border-radius: 8px; background: #f7f7f5; border: 1px solid #eee; font-size: 13px; }
-.nv-origen-panel .vacio { color: #9ca3af; }
+.nv-origen-panel { padding: 12px 14px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--line); font-size: 13px; color: var(--ink-2); }
+.nv-origen-panel .vacio { color: var(--ink-3); }
 .nv-origen-panel dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; }
-.nv-origen-panel dt { font-weight: 700; color: #6b6f78; }
-.nv-origen-panel dd { margin: 0; }
+.nv-origen-panel dt { font-weight: 700; color: var(--ink-3); }
+.nv-origen-panel dd { margin: 0; color: var(--ink); }
 </style>
 @endpush
 
@@ -102,7 +102,7 @@
                     @endforeach
                 </select>
                 @if ($comprobantes->isEmpty())
-                    <small style="display:block;margin-top:4px;color:#a12b2b;">
+                    <small style="display:block;margin-top:4px;color:var(--neg);">
                         Todavía no hay ninguna Boleta o Factura aceptada por SUNAT para corregir.
                     </small>
                 @endif
@@ -391,7 +391,7 @@ let nvResultados = [];
 function nvResaltar(texto, termino) {
     const i = texto.toUpperCase().indexOf(termino.toUpperCase());
     if (i === -1) return texto;
-    return texto.slice(0, i) + '<strong style="color:#3d9b8c">' + texto.slice(i, i + termino.length) + '</strong>' + texto.slice(i + termino.length);
+    return texto.slice(0, i) + '<strong style="color:var(--brand)">' + texto.slice(i, i + termino.length) + '</strong>' + texto.slice(i + termino.length);
 }
 
 function nvCerrarBuscador() {
