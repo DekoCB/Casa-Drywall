@@ -363,7 +363,25 @@ function recalcularNota() {
 
 nMonto?.addEventListener('input', recalcularNota);
 nTipoOperacion?.addEventListener('change', recalcularNota);
-nIncluyeIgv?.addEventListener('change', recalcularNota);
+// Al desmarcar, se advierte: de ahí en más el sistema SUMA el IGV encima del
+// precio en vez de asumir que ya lo trae incluido.
+nIncluyeIgv?.addEventListener('change', () => {
+    if (!nIncluyeIgv.checked) {
+        const confirmado = confirm(
+            'Vas a desmarcar "Los precios ya incluyen IGV".\n\n' +
+            'Desde ahora el sistema SUMARÁ el IGV (18%) encima de los precios ingresados, ' +
+            'en vez de asumir que ya lo traen incluido.\n\n' +
+            '¿Confirmas que estos precios NO incluyen IGV?'
+        );
+
+        if (!confirmado) {
+            nIncluyeIgv.checked = true;
+            return;
+        }
+    }
+
+    recalcularNota();
+});
 
 // ── Buscador de productos ─────────────────────────────────────────────────
 const nvBuscar = document.getElementById('nv-buscar');

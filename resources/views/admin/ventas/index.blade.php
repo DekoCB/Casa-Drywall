@@ -24,7 +24,7 @@
     <div class="ven-header">
         <div class="ven-header-left">
             <h2>Registro de Ventas</h2>
-            <p>Comprobantes emitidos — Rental Tech SAC</p>
+            <p>Comprobantes emitidos — {{ config('rentaltech.empresa.razon_social') }}</p>
         </div>
         <div class="ven-header-right">
             <a href="{{ route('admin.ventas.notas.create') }}" class="btn-add-ven" style="text-decoration:none;background:#fff;color:#3d9b8c;border:1.5px solid #3d9b8c;">
@@ -223,7 +223,7 @@
         <div class="ven-modal-header">
             <div>
                 <h3 id="venModalTitle">Nueva Venta</h3>
-                <p>Rental Tech SAC — Registro de comprobantes</p>
+                <p>{{ config('rentaltech.empresa.razon_social') }} — Registro de comprobantes</p>
             </div>
             <button type="button" class="ven-modal-close" id="venCerrar" aria-label="Cerrar">×</button>
         </div>

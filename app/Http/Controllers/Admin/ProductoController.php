@@ -9,6 +9,7 @@ use App\Models\Marca;
 use App\Models\MovimientoAlmacen;
 use App\Models\Producto;
 use App\Models\StockAlmacen;
+use App\Services\LectorExcel;
 use App\Services\MatrizGalonaje;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -147,6 +148,151 @@ class ProductoController extends Controller
             'activos'    => $almacenes->where('activo', true)->count(),
             'unidades'   => (int) collect($resumen)->sum('unidades'),
             'valorTotal' => (float) collect($valores)->sum(),
+        ]);
+    }
+
+    // ── Importación desde Excel ─────────────────────────────────────────────
+
+    /** Alias de encabezado reconocidos por campo (comparados en mayúsculas, sin tildes). */
+    private const ALIAS_COLUMNAS = [
+        'codigo'        => ['CODIGO', 'COD. INTERNO', 'COD INTERNO', 'COD'],
+        'nombre'        => ['NOMBRE', 'PRODUCTO', 'DESCRIPCION'],
+        'precio_compra' => ['COSTO', 'PRECIO DE COMPRA', 'PRECIO COMPRA'],
+        'precio_venta'  => ['PRECIO DE VENTA', 'PRECIO VENTA', 'PRECIO'],
+        'stock'         => ['STOCK ACTUAL', 'STOCK'],
+        'stock_minimo'  => ['STOCK MINIMO', 'STOCK MIN'],
+    ];
+
+    public function formImportar(): View
+    {
+        return view('admin.productos.importar', [
+            'almacenes' => Almacen::where('activo', true)->orderBy('id')->get(),
+        ]);
+    }
+
+    /**
+     * Carga masiva de productos desde un .xlsx. Las columnas se identifican
+     * por el texto de su encabezado (no por posición fija), porque los
+     * inventarios reales del negocio no siempre traen las mismas columnas en
+     * el mismo orden. Si el código de un producto ya existe se actualiza
+     * (precio y stock); si no, se crea nuevo — nunca se empareja por nombre,
+     * solo por código, para no arriesgar mezclar productos parecidos pero
+     * distintos (ej. tornillos de tamaños distintos).
+     */
+    public function importar(Request $request, LectorExcel $lector): RedirectResponse
+    {
+        $datos = $request->validate([
+            'archivo' => ['required', 'file', 'mimes:xlsx'],
+            'almacen_id' => ['required', 'integer', 'exists:almacenes,id'],
+        ]);
+
+        $filas = $lector->leer($request->file('archivo')->getRealPath());
+
+        if (isset($filas['error'])) {
+            return back()->with('error', $filas['error']);
+        }
+
+        if (empty($filas)) {
+            return back()->with('error', 'El archivo no tiene filas.');
+        }
+
+        $indices = $this->indicesPorEncabezado($filas[0] ?? []);
+
+        if (! isset($indices['nombre'])) {
+            return back()->with('error', 'No se encontró una columna de nombre reconocible (ej. "Nombre", "Producto") en la primera fila del Excel.');
+        }
+
+        $nuevos = 0;
+        $actualizados = 0;
+        $omitidos = 0;
+
+        foreach (array_slice($filas, 1) as $fila) {
+            $nombre = trim((string) ($fila[$indices['nombre']] ?? ''));
+
+            if ($nombre === '') {
+                $omitidos++;
+
+                continue;
+            }
+
+            $codigo = trim((string) ($fila[$indices['codigo']] ?? ''));
+            $precioCompra = (float) str_replace(',', '.', (string) ($fila[$indices['precio_compra']] ?? 0));
+            $precioVenta = (float) str_replace(',', '.', (string) ($fila[$indices['precio_venta']] ?? 0));
+            $stockMinimo = isset($indices['stock_minimo'])
+                ? (int) ($fila[$indices['stock_minimo']] ?? 0)
+                : 0;
+
+            $producto = $codigo !== '' ? Producto::where('codigo', $codigo)->first() : null;
+
+            if ($producto) {
+                $producto->update([
+                    'nombre' => $nombre,
+                    'precio_compra' => $precioCompra,
+                    'precio_venta' => $precioVenta,
+                    'stock_minimo' => $stockMinimo,
+                ]);
+                $actualizados++;
+            } else {
+                $producto = Producto::create([
+                    'codigo' => $codigo !== '' ? $codigo : null,
+                    'nombre' => $nombre,
+                    'categoria_id' => null,
+                    'marca_id' => null,
+                    'precio_compra' => $precioCompra,
+                    'precio_venta' => $precioVenta,
+                    'stock_minimo' => $stockMinimo,
+                    'stock' => 0,
+                    'estado' => 'activo',
+                ]);
+                $nuevos++;
+            }
+
+            if (isset($indices['stock'])) {
+                $stockActual = (int) ($fila[$indices['stock']] ?? 0);
+
+                StockAlmacen::updateOrCreate(
+                    ['producto_id' => $producto->id, 'almacen_id' => $datos['almacen_id']],
+                    ['stock' => $stockActual]
+                );
+                $producto->recalcularStock();
+            }
+        }
+
+        return redirect()->route('admin.productos.index')->with(
+            'mensaje',
+            "Importación completada: {$nuevos} nuevos, {$actualizados} actualizados, {$omitidos} omitidos."
+        );
+    }
+
+    /** Mapa campo→índice de columna, buscando cada alias en la fila de encabezado. */
+    private function indicesPorEncabezado(array $encabezado): array
+    {
+        $normalizados = array_map(fn ($valor) => $this->normalizarTexto((string) $valor), $encabezado);
+
+        $indices = [];
+
+        foreach (self::ALIAS_COLUMNAS as $campo => $alias) {
+            foreach ($alias as $variante) {
+                $posicion = array_search($this->normalizarTexto($variante), $normalizados, true);
+
+                if ($posicion !== false) {
+                    $indices[$campo] = $posicion;
+
+                    break;
+                }
+            }
+        }
+
+        return $indices;
+    }
+
+    /** Mayúsculas y sin tildes, para comparar encabezados sin depender de cómo los tipeó cada quien. */
+    private function normalizarTexto(string $valor): string
+    {
+        $valor = mb_strtoupper(trim($valor));
+
+        return strtr($valor, [
+            'Á' => 'A', 'É' => 'E', 'Í' => 'I', 'Ó' => 'O', 'Ú' => 'U', 'Ñ' => 'N',
         ]);
     }
 

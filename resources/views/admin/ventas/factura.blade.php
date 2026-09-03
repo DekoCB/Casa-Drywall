@@ -548,7 +548,27 @@ function recalcularFactura() {
 
 fMonto?.addEventListener('input', recalcularFactura);
 fTipoOperacion?.addEventListener('change', recalcularFactura);
-fIncluyeIgv?.addEventListener('change', recalcularFactura);
+
+// Al desmarcar, se advierte: de ahí en más el sistema SUMA el IGV encima del
+// precio en vez de asumir que ya lo trae incluido — es fácil no notar el
+// cambio y terminar cobrando de más o de menos sin querer.
+fIncluyeIgv?.addEventListener('change', () => {
+    if (!fIncluyeIgv.checked) {
+        const confirmado = confirm(
+            'Vas a desmarcar "Los precios ya incluyen IGV".\n\n' +
+            'Desde ahora el sistema SUMARÁ el IGV (18%) encima de los precios ingresados, ' +
+            'en vez de asumir que ya lo traen incluido.\n\n' +
+            '¿Confirmas que estos precios NO incluyen IGV?'
+        );
+
+        if (!confirmado) {
+            fIncluyeIgv.checked = true;
+            return;
+        }
+    }
+
+    recalcularFactura();
+});
 
 document.getElementById('formFactura').addEventListener('submit', (e) => {
     const monto = parseFloat(fMonto?.value || 0);

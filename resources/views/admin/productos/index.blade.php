@@ -24,6 +24,9 @@
         <p>Productos Kendall, P66 y Royal Purple</p>
     </div>
     <div class="prod-hero-acciones">
+        <a href="{{ route('admin.productos.importar') }}" class="pbtn" style="background:#fff;color:#1f6b3a;">
+            Importar Excel
+        </a>
         <button type="button" class="pbtn pbtn-verde" data-modal="modalProducto">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="15" height="15">
                 <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>

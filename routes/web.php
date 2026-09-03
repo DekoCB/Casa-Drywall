@@ -140,6 +140,8 @@ Route::middleware(['auth', 'rol:admin'])
         Route::get('productos/categorias', [ProductoController::class, 'categorias'])->name('productos.categorias');
         Route::get('productos/presentaciones', [ProductoController::class, 'presentaciones'])->name('productos.presentaciones');
         Route::get('productos/almacenes', [ProductoController::class, 'almacenes'])->name('productos.almacenes');
+        Route::get('productos/importar', [ProductoController::class, 'formImportar'])->name('productos.importar');
+        Route::post('productos/importar', [ProductoController::class, 'importar']);
         Route::post('productos/{producto}/stock', [ProductoController::class, 'ajustarStock'])->name('productos.stock');
         Route::resource('productos', ProductoController::class)->except(['show', 'create', 'edit'])
             ->parameters(['productos' => 'producto']);
