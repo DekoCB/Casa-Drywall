@@ -17,21 +17,30 @@ use Illuminate\Support\Facades\Log;
  */
 class ApiGoEmisionService
 {
+    /** Tipo de documento API-GO (para `api_go_document_type`) según el código SUNAT de la Venta. */
+    private const TIPO_DOCUMENTO = [
+        '03' => 'boleta',
+        '01' => 'invoice',
+        '07' => 'credit_note',
+        '08' => 'debit_note',
+    ];
+
     /**
      * Registra localmente en API-GO (sin enviar a SUNAT todavía) el
-     * comprobante de una Venta recién guardada. Solo aplica a Boleta (03)
-     * y Factura (01).
+     * comprobante de una Venta recién guardada. Aplica a Boleta (03),
+     * Factura (01), Nota de Crédito (07) y Nota de Débito (08).
      */
     public function crearComprobante(Venta $venta): bool
     {
-        if (! in_array($venta->tipcomp, ['01', '03'], true)) {
+        if (! array_key_exists($venta->tipcomp, self::TIPO_DOCUMENTO)) {
             return false;
         }
 
-        $endpoint = $venta->tipcomp === '03' ? '/boletas' : '/invoices';
+        $tipo = self::TIPO_DOCUMENTO[$venta->tipcomp];
+        $endpoint = '/'.$this->recursoApiGo($tipo);
 
         // API-GO deduplica el Client internamente (por numero_documento) al
-        // crear la Boleta/Factura a partir de los datos embebidos — no hace
+        // crear el comprobante a partir de los datos embebidos — no hace
         // falta buscar/crear el cliente por separado antes de esta llamada.
         $payload = [
             'company_id' => config('services.api_go.company_id'),
@@ -44,8 +53,20 @@ class ApiGoEmisionService
             'detalles' => $this->datosDetalles($venta),
         ];
 
-        if ($venta->tipcomp === '01') {
+        if ($tipo === 'invoice') {
             $payload['forma_pago_tipo'] = $this->esCredito($venta) ? 'Credito' : 'Contado';
+        }
+
+        if (in_array($tipo, ['credit_note', 'debit_note'], true)) {
+            $origen = $venta->ventaOrigen;
+
+            unset($payload['metodo_envio']);
+            $payload['tipo_doc_afectado'] = $origen->tipcomp;
+            $payload['num_doc_afectado'] = "{$origen->n_seri}-{$origen->n_comp}";
+            $payload['cod_motivo'] = $venta->cod_motivo;
+            $payload['des_motivo'] = $tipo === 'credit_note'
+                ? (Venta::MOTIVOS_CREDITO[$venta->cod_motivo] ?? 'Sin especificar')
+                : (Venta::MOTIVOS_DEBITO[$venta->cod_motivo] ?? 'Sin especificar');
         }
 
         $respuesta = $this->peticion('post', $endpoint, $payload);
@@ -61,7 +82,7 @@ class ApiGoEmisionService
 
         $venta->update([
             'api_go_document_id' => $respuesta['data']['id'],
-            'api_go_document_type' => $venta->tipcomp === '03' ? 'boleta' : 'invoice',
+            'api_go_document_type' => $tipo,
             'estado_factura' => 'registrado',
             'numero_sunat' => $respuesta['data']['numero_completo'] ?? null,
         ]);
@@ -78,7 +99,7 @@ class ApiGoEmisionService
             return false;
         }
 
-        $recurso = $venta->api_go_document_type === 'boleta' ? 'boletas' : 'invoices';
+        $recurso = $this->recursoApiGo($venta->api_go_document_type);
 
         $respuesta = $this->peticion('post', "/{$recurso}/{$venta->api_go_document_id}/send-sunat");
 
@@ -113,7 +134,7 @@ class ApiGoEmisionService
             return null;
         }
 
-        $recurso = $venta->api_go_document_type === 'boleta' ? 'boletas' : 'invoices';
+        $recurso = $this->recursoApiGo($venta->api_go_document_type);
         $baseUrl = rtrim(config('services.api_go.base_url'), '/');
         $token = config('services.api_go.token');
 
@@ -142,6 +163,17 @@ class ApiGoEmisionService
         }
     }
 
+    /** Segmento de ruta en API-GO (`/{recurso}/...`) según `api_go_document_type`. */
+    private function recursoApiGo(string $tipo): string
+    {
+        return match ($tipo) {
+            'boleta' => 'boletas',
+            'credit_note' => 'credit-notes',
+            'debit_note' => 'debit-notes',
+            default => 'invoices',
+        };
+    }
+
     private function datosCliente(Venta $venta): array
     {
         $numero = $venta->cliente_ruc ?: $venta->n_ruc ?: '00000000';
@@ -151,6 +183,9 @@ class ApiGoEmisionService
             'numero_documento' => $numero,
             'razon_social' => $venta->razonsocial ?: $venta->cliente_nombre ?: 'CLIENTE VARIOS',
             'direccion' => $venta->cliente_direccion,
+            'distrito' => $venta->cliente_distrito,
+            'telefono' => $venta->cliente_telefono,
+            'email' => $venta->cliente_correo,
         ];
     }
 

@@ -90,6 +90,8 @@ Route::middleware(['auth', 'rol:admin'])
         Route::get('ventas/{venta}/comprobante', [VentaController::class, 'comprobante'])->name('ventas.comprobante');
         Route::get('ventas/factura/crear', [VentaController::class, 'createFactura'])->name('ventas.factura.create');
         Route::post('ventas/factura', [VentaController::class, 'storeFactura'])->name('ventas.factura.store');
+        Route::get('ventas/notas/crear/{origen?}', [VentaController::class, 'createNota'])->name('ventas.notas.create');
+        Route::post('ventas/notas', [VentaController::class, 'storeNota'])->name('ventas.notas.store');
         Route::post('ventas/{venta}/enviar-sunat', [VentaController::class, 'enviarSunat'])->name('ventas.enviar-sunat');
         Route::get('ventas/{venta}/pdf-sunat', [VentaController::class, 'pdfSunat'])->name('ventas.pdf-sunat');
         Route::resource('ventas', VentaController::class)

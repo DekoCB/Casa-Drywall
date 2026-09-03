@@ -27,6 +27,9 @@
             <p>Comprobantes emitidos — Rental Tech SAC</p>
         </div>
         <div class="ven-header-right">
+            <a href="{{ route('admin.ventas.notas.create') }}" class="btn-add-ven" style="text-decoration:none;background:#fff;color:#3d9b8c;border:1.5px solid #3d9b8c;">
+                Nota de Crédito / Débito
+            </a>
             <a href="{{ route('admin.ventas.factura.create') }}" class="btn-add-ven" style="text-decoration:none;">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                     <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
@@ -243,7 +246,7 @@
                     <div class="ven-group">
                         <label class="ven-label" for="v-tipcomp">Tipo Comprobante <span>*</span></label>
                         <select class="ven-control" id="v-tipcomp" name="tipcomp" required>
-                            @foreach ($tipos as $codigo => $tipo)
+                            @foreach (array_intersect_key($tipos, array_flip(['01', '03'])) as $codigo => $tipo)
                                 <option value="{{ $codigo }}" data-serie="{{ $tipo['serie'] }}">{{ $tipo['nombre'] }}</option>
                             @endforeach
                         </select>
@@ -252,7 +255,7 @@
                     <div class="ven-group">
                         <label class="ven-label" for="v-n-seri">N° Serie <span>*</span></label>
                         <input type="text" class="ven-control" id="v-n-seri" name="n_seri" required
-                               placeholder="FF01" maxlength="10">
+                               placeholder="B001" maxlength="4">
                     </div>
                     <div class="ven-group">
                         <label class="ven-label" for="v-n-comp">N° Comprobante <span>*</span></label>

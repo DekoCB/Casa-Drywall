@@ -98,7 +98,7 @@
             <div class="form-group">
                 <label for="f-tipcomp">Tipo Comprobante <span>*</span></label>
                 <select id="f-tipcomp" name="tipcomp" required>
-                    @foreach ($tipos as $codigo => $tipo)
+                    @foreach (array_intersect_key($tipos, array_flip(['01', '03'])) as $codigo => $tipo)
                         <option value="{{ $codigo }}" data-serie="{{ $tipo['serie'] }}" @selected(old('tipcomp') === $codigo)>{{ $tipo['nombre'] }}</option>
                     @endforeach
                 </select>
@@ -109,8 +109,8 @@
             </div>
             <div class="form-group">
                 <label for="f-n-seri">N° Serie <span>*</span></label>
-                <input type="text" id="f-n-seri" name="n_seri" required maxlength="10"
-                       placeholder="FF01" value="{{ old('n_seri', 'FF01') }}">
+                <input type="text" id="f-n-seri" name="n_seri" required maxlength="4"
+                       placeholder="F001" value="{{ old('n_seri') }}">
             </div>
             <div class="form-group">
                 <label for="f-n-comp">N° Comprobante <span>*</span></label>

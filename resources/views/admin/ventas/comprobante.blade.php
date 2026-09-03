@@ -1,9 +1,15 @@
 @php
     $numero   = $venta->n_seri && $venta->n_comp ? $venta->n_seri.' - '.$venta->n_comp : $venta->numero_venta;
     $simbolo  = $venta->moneda === 'USD' ? 'US$' : 'S/';
-    $etiqueta = strtoupper($tipos[$venta->tipcomp]['nombre'] ?? 'Comprobante');
+    // mb_strtoupper: strtoupper() no convierte acentos («Crédito» quedaba «CRéDITO»).
+    $etiqueta = mb_strtoupper($tipos[$venta->tipcomp]['nombre'] ?? 'Comprobante');
     // «01 — Factura» viene con el código delante; en la cabecera va sólo el nombre.
     $etiqueta = trim(preg_replace('/^\d+\s*—\s*/u', '', $etiqueta));
+    // Una Nota de Crédito/Débito solo pasa por el circuito SUNAT si corrige un
+    // comprobante real ya aceptado — las filas tipcomp=07 creadas por el
+    // importador de cobranzas (contabilidad interna) no tienen venta_origen_id.
+    $esComprobanteElectronico = in_array($venta->tipcomp, ['01', '03'], true)
+        || ($venta->venta_origen_id !== null && in_array($venta->tipcomp, ['07', '08'], true));
 @endphp
 <!DOCTYPE html>
 <html lang="es">
@@ -124,7 +130,7 @@
         <div class="ok" style="background:#fbeaea;border-color:#f0c9c9;color:#a12b2b;">⚠️ {{ session('error') }}</div>
     @endif
 
-    @if (in_array($venta->tipcomp, ['01', '03']))
+    @if ($esComprobanteElectronico)
         @php
             $estadosSunat = [
                 'pendiente'  => 'Pendiente de registro',
@@ -147,6 +153,10 @@
         @if ($estado === 'aceptado')
             <a href="{{ route('admin.ventas.pdf-sunat', $venta) }}" target="_blank" class="primario">Descargar PDF oficial</a>
         @endif
+
+        @if ($estado === 'aceptado' && in_array($venta->tipcomp, ['01', '03'], true))
+            <a href="{{ route('admin.ventas.notas.create', $venta) }}">Nota de Crédito / Débito</a>
+        @endif
     @endif
 
     <a href="{{ route('admin.ventas.index') }}">← Ventas</a>
@@ -154,7 +164,7 @@
     <button type="button" onclick="window.print()">Imprimir / Guardar PDF</button>
 </div>
 
-@if (in_array($venta->tipcomp, ['01', '03']) && in_array($venta->estado_factura, ['rechazado', 'error']) && $venta->nota_contadora)
+@if ($esComprobanteElectronico && in_array($venta->estado_factura, ['rechazado', 'error']) && $venta->nota_contadora)
     <div class="nota-sunat"><b>Motivo:</b> {{ $venta->nota_contadora }}</div>
 @endif
 
@@ -220,6 +230,16 @@
             <td class="k2">N° de Guia:</td>
             <td>{{ $venta->guias->pluck('numero_guia')->filter()->implode(', ') ?: '—' }}</td>
         </tr>
+        @if ($venta->ventaOrigen)
+            <tr>
+                <td class="k">Corresponde a:</td>
+                <td>{{ $venta->ventaOrigen->n_seri }}-{{ $venta->ventaOrigen->n_comp }}</td>
+                <td class="k2">Motivo:</td>
+                <td>
+                    {{ $venta->tipcomp === '07' ? \App\Models\Venta::MOTIVOS_CREDITO[$venta->cod_motivo] ?? '—' : \App\Models\Venta::MOTIVOS_DEBITO[$venta->cod_motivo] ?? '—' }}
+                </td>
+            </tr>
+        @endif
     </table>
 
     {{-- ══ Detalle ══ --}}
