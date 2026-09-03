@@ -96,7 +96,7 @@ document.querySelectorAll('.btn-eliminar').forEach((boton) => {
             ? `La línea ${boton.dataset.codigo} está usada por ${enUso} producto(s). ¿Eliminarla de todos modos?`
             : `¿Eliminar la línea ${boton.dataset.codigo}?`;
 
-        if (!window.confirm(mensaje)) return;
+        if (!await confirmar(mensaje)) return;
 
         const cuerpo = new FormData();
         cuerpo.append('forzar', enUso > 0 ? '1' : '0');

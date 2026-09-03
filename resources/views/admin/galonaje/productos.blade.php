@@ -141,7 +141,7 @@ document.getElementById('formProductoGl').addEventListener('submit', async funct
 
 document.querySelectorAll('.btn-eliminar').forEach((boton) => {
     boton.addEventListener('click', async () => {
-        if (!window.confirm('¿Eliminar ' + boton.dataset.codigo + ' de la matriz?')) return;
+        if (!await confirmar('¿Eliminar ' + boton.dataset.codigo + ' de la matriz?')) return;
 
         const respuesta = await fetch('{{ url('admin/galonaje/productos') }}/' + boton.dataset.codigo, {
             method: 'DELETE',

@@ -152,7 +152,7 @@ document.addEventListener('click', async (e) => {
         ? `«${codigo}» tiene ${enUso} producto(s) asignados. ¿Eliminarla igual?`
         : `¿Eliminar la categoría «${codigo}»?`;
 
-    if (!window.confirm(aviso)) return;
+    if (!await confirmar(aviso)) return;
 
     const url = '{{ url('admin/galonaje/categorias') }}/' + encodeURIComponent(codigo)
         + (enUso > 0 ? '?forzar=1' : '');

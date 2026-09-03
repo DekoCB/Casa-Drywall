@@ -365,9 +365,9 @@ nMonto?.addEventListener('input', recalcularNota);
 nTipoOperacion?.addEventListener('change', recalcularNota);
 // Al desmarcar, se advierte: de ahí en más el sistema SUMA el IGV encima del
 // precio en vez de asumir que ya lo trae incluido.
-nIncluyeIgv?.addEventListener('change', () => {
+nIncluyeIgv?.addEventListener('change', async () => {
     if (!nIncluyeIgv.checked) {
-        const confirmado = confirm(
+        const confirmado = await confirmar(
             'Vas a desmarcar "Los precios ya incluyen IGV".\n\n' +
             'Desde ahora el sistema SUMARÁ el IGV (18%) encima de los precios ingresados, ' +
             'en vez de asumir que ya lo traen incluido.\n\n' +

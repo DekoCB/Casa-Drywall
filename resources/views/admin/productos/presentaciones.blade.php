@@ -154,7 +154,7 @@ document.addEventListener('click', async (e) => {
         ? `«${codigo}» la usan ${enUso} producto(s) de la matriz. ¿Eliminarla igual?`
         : `¿Eliminar la presentación «${codigo}»?`;
 
-    if (!window.confirm(aviso)) return;
+    if (!await confirmar(aviso)) return;
 
     const respuesta = await fetch('{{ url('admin/galonaje/presentaciones') }}/' + encodeURIComponent(codigo), {
         method: 'DELETE',

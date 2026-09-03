@@ -91,7 +91,7 @@ document.getElementById('formPresentacion').addEventListener('submit', async fun
 
 document.querySelectorAll('.btn-eliminar').forEach((boton) => {
     boton.addEventListener('click', async () => {
-        if (!window.confirm('¿Eliminar la presentación ' + boton.dataset.codigo + '?')) return;
+        if (!await confirmar('¿Eliminar la presentación ' + boton.dataset.codigo + '?')) return;
 
         const respuesta = await fetch('{{ url('admin/galonaje/presentaciones') }}/' + boton.dataset.codigo, {
             method: 'DELETE',
