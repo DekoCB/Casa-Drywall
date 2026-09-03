@@ -82,13 +82,31 @@ class VentaController extends Controller
         $mes      = trim((string) $request->query('mes', ''));   // formato YYYY-MM
         $desde    = trim((string) $request->query('desde', ''));
         $hasta    = trim((string) $request->query('hasta', ''));
+        // Vistas rápidas del sidebar: "No enviados" (estado_factura=no_enviado)
+        // y "Anulaciones" (estado=cancelada) — ninguna reemplaza los filtros
+        // normales, se combinan con ellos.
+        $estadoFactura = trim((string) $request->query('estado_factura', ''));
+        $estadoFiltro  = trim((string) $request->query('estado', ''));
 
-        // Las canceladas y eliminadas quedan fuera del registro y de los totales,
-        // el mismo criterio de `administrador/ventas.php`.
         $filtrada = Venta::query()
-            ->where(function ($query) {
-                $query->whereNull('estado')
-                    ->orWhereNotIn('estado', ['cancelada', 'eliminada']);
+            ->when($estadoFiltro === 'cancelada', function ($query) {
+                $query->where('estado', 'cancelada');
+            }, function ($query) {
+                // Las canceladas y eliminadas quedan fuera del registro y de los
+                // totales por defecto, el mismo criterio de `administrador/ventas.php`.
+                $query->where(function ($q) {
+                    $q->whereNull('estado')
+                        ->orWhereNotIn('estado', ['cancelada', 'eliminada']);
+                });
+            })
+            ->when($estadoFactura === 'no_enviado', function ($query) {
+                // 'pendiente' es el valor por defecto de la columna: nunca se
+                // intentó registrar en API-GO. No confundir con 'registrado'
+                // (ya está en API-GO, solo falta enviarlo a SUNAT) — ambos
+                // técnicamente "no enviados", pero el segundo ya tiene un
+                // api_go_document_id y anularlo dejaría un registro huérfano
+                // allá, así que esta vista y `anular()` solo miran 'pendiente'.
+                $query->whereIn('tipcomp', ['01', '03'])->where('estado_factura', 'pendiente');
             })
             ->when($busqueda !== '', function ($query) use ($busqueda) {
                 $query->where(function ($q) use ($busqueda) {
@@ -122,6 +140,8 @@ class VentaController extends Controller
             'mesSel'     => $mes,
             'desde'      => $desde,
             'hasta'      => $hasta,
+            'estadoFactura' => $estadoFactura,
+            'estadoFiltro'  => $estadoFiltro,
             'tipos'      => self::TIPOS,
             'nVentas'    => $ventas->count(),
             'totalBase'  => (float) $ventas->sum(fn (Venta $v) => $signo($v) * (float) $v->baseimp),
@@ -437,6 +457,33 @@ class VentaController extends Controller
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="'.($venta->numero_sunat ?: $venta->numero_venta).'.pdf"',
         ]);
+    }
+
+    /**
+     * Anula un comprobante que nunca llegó a comprometerse con SUNAT:
+     * Cotización/Nota de Venta (documentos internos) o una Boleta/Factura
+     * que todavía no se envió. Un comprobante ya aceptado por SUNAT no se
+     * anula así — se corrige con una Nota de Crédito (motivo "01 —
+     * Anulación de la operación"), el único mecanismo válido ante SUNAT.
+     */
+    public function anular(Venta $venta): RedirectResponse
+    {
+        $esDocumentoInterno = in_array($venta->tipcomp, ['COT', 'NV'], true);
+        // 'pendiente' es el valor por defecto: nunca se intentó registrar en
+        // API-GO. Cualquier otro valor ('registrado', 'aceptado', 'rechazado')
+        // ya generó algún rastro allá o ante SUNAT y no se anula por aquí.
+        $noEnviadoAunSunat = in_array($venta->tipcomp, ['01', '03'], true) && $venta->estado_factura === 'pendiente';
+
+        if (! $esDocumentoInterno && ! $noEnviadoAunSunat) {
+            return back()->with('error',
+                'Este comprobante ya fue enviado a SUNAT: no se puede anular directamente. '.
+                'Genera una Nota de Crédito con motivo "Anulación de la operación" desde el listado.'
+            );
+        }
+
+        $venta->update(['estado' => 'cancelada']);
+
+        return back()->with('mensaje', "Comprobante {$venta->n_seri}-{$venta->n_comp} anulado.");
     }
 
     public function update(Request $request, Venta $venta): RedirectResponse

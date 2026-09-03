@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\IngresoController;
 use App\Http\Controllers\Admin\MarcaController;
 use App\Http\Controllers\Admin\MerchController;
 use App\Http\Controllers\Admin\OrdenCompraController;
+use App\Http\Controllers\Admin\PedidoController;
 use App\Http\Controllers\Admin\PersonalController;
 use App\Http\Controllers\Admin\PosController;
 use App\Http\Controllers\Admin\ProductoController;
@@ -95,10 +96,18 @@ Route::middleware(['auth', 'rol:admin'])
         Route::get('ventas/notas/crear/{origen?}', [VentaController::class, 'createNota'])->name('ventas.notas.create');
         Route::post('ventas/notas', [VentaController::class, 'storeNota'])->name('ventas.notas.store');
         Route::post('ventas/{venta}/enviar-sunat', [VentaController::class, 'enviarSunat'])->name('ventas.enviar-sunat');
+        Route::post('ventas/{venta}/anular', [VentaController::class, 'anular'])->name('ventas.anular');
         Route::get('ventas/{venta}/pdf-sunat', [VentaController::class, 'pdfSunat'])->name('ventas.pdf-sunat');
         Route::resource('ventas', VentaController::class)
             ->except(['create', 'edit'])
             ->parameters(['ventas' => 'venta']);
+
+        // Pedidos que hacen los clientes directamente (antes de convertirse en
+        // venta) — el modelo ya existía y se mostraba de solo lectura dentro
+        // de Órdenes de Compra; esto agrega el alta/edición real.
+        Route::resource('pedidos', PedidoController::class)
+            ->except(['show', 'create', 'edit'])
+            ->parameters(['pedidos' => 'pedido']);
 
         // ── Compras & documentos ────────────────────────────────────────────
         Route::get('ordenes-compra/excel', [OrdenCompraController::class, 'excel'])->name('ordenes-compra.excel');

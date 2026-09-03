@@ -66,9 +66,16 @@
                         </div>
                         <div class="mi-submenu">
                             @foreach ($item['submenu'] as $sub)
-                                <a href="{{ route($sub['route']) }}" class="mi mi-hijo @if($rutaActual === $sub['route']) active @endif">
-                                    <span>{{ $sub['label'] }}</span>
-                                </a>
+                                @if (isset($sub['divider']))
+                                    <div class="mi-divider">{{ $sub['divider'] }}</div>
+                                @else
+                                    <a href="{{ route($sub['route'], $sub['query'] ?? []) }}" class="mi mi-hijo @if($rutaActual === $sub['route']) active @endif">
+                                        <span>{{ $sub['label'] }}</span>
+                                        @if ($sub['crear'] ?? false)
+                                            <span class="mi-crear-pill">+ Crear</span>
+                                        @endif
+                                    </a>
+                                @endif
                             @endforeach
                         </div>
                     </div>

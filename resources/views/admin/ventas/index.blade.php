@@ -25,6 +25,15 @@
         <div class="ven-header-left">
             <h2>Registro de Ventas</h2>
             <p>Comprobantes emitidos — {{ config('rentaltech.empresa.razon_social') }}</p>
+            @if ($estadoFactura === 'no_enviado')
+                <span class="badge badge-warning" style="margin-top:6px;">Filtro: no enviados a SUNAT
+                    <a href="{{ route('admin.ventas.index') }}" style="margin-left:6px;color:inherit;">✕</a>
+                </span>
+            @elseif ($estadoFiltro === 'cancelada')
+                <span class="badge badge-danger" style="margin-top:6px;">Filtro: anulaciones
+                    <a href="{{ route('admin.ventas.index') }}" style="margin-left:6px;color:inherit;">✕</a>
+                </span>
+            @endif
         </div>
         <div class="ven-header-right">
             <a href="{{ route('admin.ventas.notas.create') }}" class="btn-add-ven" style="text-decoration:none;background:#fff;color:#3d9b8c;border:1.5px solid #3d9b8c;">
@@ -172,6 +181,14 @@
                                         data-inafecto="{{ $venta->inafecto }}"
                                         data-total="{{ $venta->total }}"
                                         data-tipcambio="{{ $venta->tipcambio }}">✏</button>
+
+                                @if (in_array($venta->tipcomp, ['COT', 'NV'], true) || (in_array($venta->tipcomp, ['01', '03'], true) && $venta->estado_factura === 'pendiente'))
+                                    <form method="POST" action="{{ route('admin.ventas.anular', $venta) }}"
+                                          data-confirmar="¿Anular el comprobante {{ $venta->n_seri }}-{{ $venta->n_comp }}? Esta acción no se puede deshacer.">
+                                        @csrf
+                                        <button type="submit" class="btn-edit-v" title="Anular">🚫</button>
+                                    </form>
+                                @endif
 
                                 <form method="POST" action="{{ route('admin.ventas.destroy', $venta) }}"
                                       class="form-eliminar"

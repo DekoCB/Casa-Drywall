@@ -103,7 +103,7 @@
                     @foreach (array_intersect_key($tipos, array_flip(['COT', 'NV', '01', '03'])) as $codigo => $tipo)
                         <option value="{{ $codigo }}" data-serie="{{ $tipo['serie'] }}"
                                 data-comp="{{ $correlativosInternos[$codigo] ?? '' }}"
-                                @selected(old('tipcomp', 'COT') === $codigo)>{{ $tipo['nombre'] }}</option>
+                                @selected(old('tipcomp', request('tipo', 'COT')) === $codigo)>{{ $tipo['nombre'] }}</option>
                     @endforeach
                 </select>
             </div>

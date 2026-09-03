@@ -38,8 +38,15 @@ return [
             [
                 'route' => 'admin.ventas.index', 'label' => 'Ventas', 'icon' => $iconos['carrito'],
                 'submenu' => [
+                    ['route' => 'admin.ventas.factura.create', 'query' => ['tipo' => '03'],  'label' => 'Boleta/Factura', 'crear' => true],
+                    ['route' => 'admin.ventas.factura.create', 'query' => ['tipo' => 'NV'],  'label' => 'Notas de Venta', 'crear' => true],
+                    ['route' => 'admin.ventas.factura.create', 'query' => ['tipo' => 'COT'], 'label' => 'Cotizaciones',   'crear' => true],
+                    ['route' => 'admin.pedidos.index', 'query' => ['crear' => 1], 'label' => 'Pedidos', 'crear' => true],
                     ['route' => 'admin.pos.index',  'label' => 'Punto de Venta'],
                     ['route' => 'admin.caja.index', 'label' => 'Cajas'],
+                    ['divider' => 'Gestión SUNAT'],
+                    ['route' => 'admin.ventas.index', 'query' => ['estado_factura' => 'no_enviado'], 'label' => 'No enviados'],
+                    ['route' => 'admin.ventas.index', 'query' => ['estado' => 'cancelada'], 'label' => 'Anulaciones'],
                 ],
             ],
         ],
