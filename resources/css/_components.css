@@ -79,26 +79,6 @@
 .content-card { background: var(--surface); padding: 22px; border: 1px solid var(--line); border-radius: var(--r-lg); }
 
 /* ══════════════════════════════
-   CONFIGURACIÓN — tarjetas de acceso
-   ══════════════════════════════ */
-.conf-seccion { margin-bottom: 26px; }
-.conf-seccion-titulo { font-family: var(--font-display); font-size: 11.5px; font-weight: 400; color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 12px; }
-.conf-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
-.conf-card {
-    display: flex; align-items: flex-start; gap: 14px;
-    background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg);
-    padding: 16px; text-decoration: none; transition: border-color .15s, transform .1s;
-}
-.conf-card:hover { border-color: var(--brand); transform: translateY(-2px); }
-.conf-card-icono {
-    width: 38px; height: 38px; border-radius: var(--r); background: var(--brand-bg); color: var(--brand);
-    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-}
-.conf-card-icono svg { width: 18px; height: 18px; }
-.conf-card-titulo { font-size: 13.5px; font-weight: 600; color: var(--ink); margin-bottom: 3px; }
-.conf-card-desc { font-size: 12px; color: var(--ink-3); line-height: 1.4; }
-
-/* ══════════════════════════════
    BADGES DE ESTADO — sistema canónico
    ══════════════════════════════ */
 .badge-success, .badge-warning, .badge-danger, .badge-info, .badge-neutral {
