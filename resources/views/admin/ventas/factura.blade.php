@@ -35,6 +35,8 @@
 .nv-form .nv-totales-caja > div { display: flex; justify-content: space-between; padding: 4px 0; }
 .nv-form .nv-totales-caja .nv-total-final { padding-top: 8px; margin-top: 4px; border-top: 1px solid #eee; font-size: 16px; font-weight: 700; }
 .nv-form .nv-productos-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.nv-igv-toggle { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; font-size: 13px; color: #3a362f; cursor: pointer; }
+.nv-igv-toggle input { width: 16px; height: 16px; cursor: pointer; }
 
 /* Buscador de productos, al estilo del de Órdenes de Compra. */
 .nv-buscador { position: relative; }
@@ -186,6 +188,12 @@
             <h3 style="margin:0;">Productos</h3>
         </div>
         <p class="nv-hint">Opcional — si agregas productos, se usan en vez del monto único.</p>
+
+        <label class="nv-igv-toggle">
+            <input type="checkbox" id="f-incluye-igv" name="precios_incluyen_igv" value="1"
+                   @checked(old('precios_incluyen_igv', true))>
+            Los precios ya incluyen IGV (no volver a sumarlo)
+        </label>
 
         <div class="nv-buscador" id="nv-buscador-producto">
             <span class="nv-lupa">🔍</span>
@@ -473,6 +481,17 @@ function itemsValidosFactura() {
 
 const fMonto = document.getElementById('f-monto');
 const fTipoOperacion = document.getElementById('f-tipo-operacion');
+const fIncluyeIgv = document.getElementById('f-incluye-igv');
+
+/** Si el monto ya trae IGV, se extrae en vez de sumarse encima. */
+function desglosarIgv(monto, incluyeIgv) {
+    if (incluyeIgv) {
+        const base = monto / (1 + IGV_VENTAS);
+        return { base, igv: monto - base };
+    }
+
+    return { base: monto, igv: monto * IGV_VENTAS };
+}
 
 function recalcularFactura() {
     let subtotalItems = 0;
@@ -487,14 +506,19 @@ function recalcularFactura() {
 
     let subtotal = 0;
     let igv = 0;
+    const incluyeIgv = !!fIncluyeIgv?.checked;
 
     if (itemsValidosFactura().length > 0) {
-        subtotal = subtotalItems;
-        igv = subtotal * IGV_VENTAS;
+        ({ base: subtotal, igv } = desglosarIgv(subtotalItems, incluyeIgv));
     } else {
         const monto = parseFloat(fMonto?.value || 0);
-        subtotal = monto;
-        igv = fTipoOperacion?.value === 'gravada' ? monto * IGV_VENTAS : 0;
+
+        if (fTipoOperacion?.value === 'gravada') {
+            ({ base: subtotal, igv } = desglosarIgv(monto, incluyeIgv));
+        } else {
+            subtotal = monto;
+            igv = 0;
+        }
     }
 
     document.getElementById('fTotSubtotal').textContent = 'S/ ' + subtotal.toFixed(2);
@@ -504,6 +528,7 @@ function recalcularFactura() {
 
 fMonto?.addEventListener('input', recalcularFactura);
 fTipoOperacion?.addEventListener('change', recalcularFactura);
+fIncluyeIgv?.addEventListener('change', recalcularFactura);
 
 document.getElementById('formFactura').addEventListener('submit', (e) => {
     const monto = parseFloat(fMonto?.value || 0);

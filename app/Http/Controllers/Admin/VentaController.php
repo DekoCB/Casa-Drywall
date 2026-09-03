@@ -175,19 +175,23 @@ class VentaController extends Controller
         }
 
         if ($items !== []) {
-            $subtotal = collect($items)->sum(
+            $subtotalItems = collect($items)->sum(
                 fn (array $item) => (float) $item['cantidad'] * (float) $item['precio_unitario']
             );
-            $igv = round($subtotal * config('rentaltech.igv'), 2);
+            $desglose = $this->desglosarImporte($subtotalItems, ! empty($datos['precios_incluyen_igv']));
             $importes = [
-                'baseimp' => round($subtotal, 2),
-                'igv' => $igv,
+                'baseimp' => $desglose['base'],
+                'igv' => $desglose['igv'],
                 'exonerado' => 0.0,
                 'inafecto' => 0.0,
-                'total' => round($subtotal + $igv, 2),
+                'total' => round($desglose['base'] + $desglose['igv'], 2),
             ];
         } elseif ((float) ($datos['monto'] ?? 0) > 0 && ! empty($datos['tipo_operacion'])) {
-            $importes = $this->conImportes(['monto' => $datos['monto'], 'tipo_operacion' => $datos['tipo_operacion']]);
+            $importes = $this->conImportes([
+                'monto' => $datos['monto'],
+                'tipo_operacion' => $datos['tipo_operacion'],
+                'precios_incluyen_igv' => $datos['precios_incluyen_igv'] ?? false,
+            ]);
         } else {
             return back()->withInput()->with('error', 'Ingresa un monto o agrega al menos un producto.');
         }
@@ -313,19 +317,23 @@ class VentaController extends Controller
         }
 
         if ($items !== []) {
-            $subtotal = collect($items)->sum(
+            $subtotalItems = collect($items)->sum(
                 fn (array $item) => (float) $item['cantidad'] * (float) $item['precio_unitario']
             );
-            $igv = round($subtotal * config('rentaltech.igv'), 2);
+            $desglose = $this->desglosarImporte($subtotalItems, ! empty($datos['precios_incluyen_igv']));
             $importes = [
-                'baseimp' => round($subtotal, 2),
-                'igv' => $igv,
+                'baseimp' => $desglose['base'],
+                'igv' => $desglose['igv'],
                 'exonerado' => 0.0,
                 'inafecto' => 0.0,
-                'total' => round($subtotal + $igv, 2),
+                'total' => round($desglose['base'] + $desglose['igv'], 2),
             ];
         } elseif ((float) ($datos['monto'] ?? 0) > 0 && ! empty($datos['tipo_operacion'])) {
-            $importes = $this->conImportes(['monto' => $datos['monto'], 'tipo_operacion' => $datos['tipo_operacion']]);
+            $importes = $this->conImportes([
+                'monto' => $datos['monto'],
+                'tipo_operacion' => $datos['tipo_operacion'],
+                'precios_incluyen_igv' => $datos['precios_incluyen_igv'] ?? false,
+            ]);
         } else {
             return back()->withInput()->with('error', 'Ingresa un monto o agrega al menos un producto.');
         }
@@ -497,6 +505,7 @@ class VentaController extends Controller
     private function conImportes(array $datos): array
     {
         $monto = (float) ($datos['monto'] ?? 0);
+        $incluyeIgv = ! empty($datos['precios_incluyen_igv']);
 
         $datos['baseimp']   = 0.0;
         $datos['igv']       = 0.0;
@@ -504,8 +513,9 @@ class VentaController extends Controller
         $datos['inafecto']  = 0.0;
 
         if ($datos['tipo_operacion'] === 'gravada') {
-            $datos['baseimp'] = round($monto, 2);
-            $datos['igv']     = round($monto * config('rentaltech.igv'), 2);
+            $desglose = $this->desglosarImporte($monto, $incluyeIgv);
+            $datos['baseimp'] = $desglose['base'];
+            $datos['igv']     = $desglose['igv'];
         } elseif ($datos['tipo_operacion'] === 'exonerada') {
             $datos['exonerado'] = round($monto, 2);
         } else {
@@ -514,9 +524,26 @@ class VentaController extends Controller
 
         $datos['total'] = round($datos['baseimp'] + $datos['igv'] + $datos['exonerado'] + $datos['inafecto'], 2);
 
-        unset($datos['monto'], $datos['tipo_operacion']);
+        unset($datos['monto'], $datos['tipo_operacion'], $datos['precios_incluyen_igv']);
 
         return $datos;
+    }
+
+    /**
+     * Separa un monto gravado en base imponible + IGV. Si el precio ya trae
+     * el IGV incluido (precio de venta al público, lo normal en el catálogo
+     * de productos), se extrae en vez de sumarse encima — de lo contrario se
+     * estaría cobrando el IGV dos veces.
+     */
+    private function desglosarImporte(float $monto, bool $incluyeIgv): array
+    {
+        if ($incluyeIgv) {
+            $base = round($monto / (1 + config('rentaltech.igv')), 2);
+
+            return ['base' => $base, 'igv' => round($monto - $base, 2)];
+        }
+
+        return ['base' => round($monto, 2), 'igv' => round($monto * config('rentaltech.igv'), 2)];
     }
 
     private function aniosDisponibles(): array
@@ -573,6 +600,7 @@ class VentaController extends Controller
             'tipo_operacion' => ['required', Rule::in(['gravada', 'exonerada', 'inafecta'])],
             'monto'          => ['required', 'numeric', 'min:0.01'],
             'tipcambio'      => ['nullable', 'numeric', 'min:0'],
+            'precios_incluyen_igv' => ['nullable', 'boolean'],
         ]);
     }
 
@@ -600,6 +628,7 @@ class VentaController extends Controller
             'items.*.producto_nombre'      => ['nullable', 'string', 'max:255'],
             'items.*.cantidad'             => ['nullable', 'integer', 'min:0'],
             'items.*.precio_unitario'      => ['nullable', 'numeric', 'min:0'],
+            'precios_incluyen_igv'         => ['nullable', 'boolean'],
         ]);
     }
 
@@ -625,6 +654,7 @@ class VentaController extends Controller
             'items.*.producto_nombre'  => ['nullable', 'string', 'max:255'],
             'items.*.cantidad'         => ['nullable', 'integer', 'min:0'],
             'items.*.precio_unitario'  => ['nullable', 'numeric', 'min:0'],
+            'precios_incluyen_igv'     => ['nullable', 'boolean'],
         ]);
 
         $origen = Venta::find($datos['venta_origen_id']);
