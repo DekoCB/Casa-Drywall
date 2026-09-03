@@ -47,15 +47,42 @@
         @foreach (config('menu.admin') as $seccion => $items)
             <div class="sb-section">{{ $seccion }}</div>
             @foreach ($items as $item)
-                <a href="{{ route($item['route']) }}"
-                   class="mi @if(in_array(Route::currentRouteName(), $item['active'] ?? [$item['route']])) active @endif"
-                   title="{{ $item['label'] }}">
-                    {!! $item['icon'] !!}
-                    <span>{{ $item['label'] }}</span>
-                    @isset($item['badge'])
-                        <span class="badge {{ $item['badge_class'] }}">{{ $item['badge'] }}</span>
-                    @endisset
-                </a>
+                @if (! empty($item['submenu']))
+                    @php
+                        $rutasHijas = array_column($item['submenu'], 'route');
+                        $rutaActual = Route::currentRouteName();
+                        $padreActivo = in_array($rutaActual, $item['active'] ?? [$item['route']]);
+                        $grupoActivo = $padreActivo || in_array($rutaActual, $rutasHijas);
+                    @endphp
+                    <div class="mi-grupo @if($grupoActivo) abierto @endif">
+                        <div class="mi-padre-fila">
+                            <a href="{{ route($item['route']) }}" class="mi @if($padreActivo) active @endif" title="{{ $item['label'] }}">
+                                {!! $item['icon'] !!}
+                                <span>{{ $item['label'] }}</span>
+                            </a>
+                            <button type="button" class="mi-flecha-btn" data-toggle-submenu aria-label="Expandir {{ $item['label'] }}">
+                                <svg class="mi-flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                            </button>
+                        </div>
+                        <div class="mi-submenu">
+                            @foreach ($item['submenu'] as $sub)
+                                <a href="{{ route($sub['route']) }}" class="mi mi-hijo @if($rutaActual === $sub['route']) active @endif">
+                                    <span>{{ $sub['label'] }}</span>
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                @else
+                    <a href="{{ route($item['route']) }}"
+                       class="mi @if(in_array(Route::currentRouteName(), $item['active'] ?? [$item['route']])) active @endif"
+                       title="{{ $item['label'] }}">
+                        {!! $item['icon'] !!}
+                        <span>{{ $item['label'] }}</span>
+                        @isset($item['badge'])
+                            <span class="badge {{ $item['badge_class'] }}">{{ $item['badge'] }}</span>
+                        @endisset
+                    </a>
+                @endif
             @endforeach
         @endforeach
     </nav>
@@ -143,6 +170,13 @@
         const nuevo = actual === 'dark' ? 'light' : 'dark';
         document.documentElement.dataset.theme = nuevo;
         localStorage.setItem('tema', nuevo);
+    });
+
+    // ── Submenús del sidebar ─────────────────────────────────────────────
+    document.querySelectorAll('[data-toggle-submenu]').forEach((boton) => {
+        boton.addEventListener('click', () => {
+            boton.closest('.mi-grupo')?.classList.toggle('abierto');
+        });
     });
 })();
 </script>

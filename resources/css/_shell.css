@@ -289,6 +289,23 @@ html, body {
 .mi.active { background: rgba(217,203,22,.16); color: var(--brand); }
 .mi.active::before { content:''; position:absolute; left:-10px; top:6px; bottom:6px; width:2px; border-radius:0 2px 2px 0; background:var(--brand); }
 
+/* Submenú anidado */
+.mi-grupo { margin: 1px 0; }
+.mi-padre-fila { display: flex; align-items: center; }
+.mi-padre-fila .mi { flex: 1; margin: 0; }
+.mi-flecha-btn {
+    background: none; border: none; color: #94A3B8; cursor: pointer;
+    padding: 8px 8px 8px 2px; flex-shrink: 0; display: flex; align-items: center;
+}
+.mi-flecha-btn:hover { color: var(--side-text); }
+.mi-flecha { width: 13px; height: 13px; transition: transform .15s var(--ease); }
+.mi-grupo.abierto .mi-flecha { transform: rotate(180deg); }
+.mi-submenu { max-height: 0; overflow: hidden; transition: max-height .2s var(--ease); }
+.mi-grupo.abierto .mi-submenu { max-height: 200px; }
+.mi-hijo { padding-left: 38px; font-size: 12.5px; }
+.app.sidebar-collapsed .mi-flecha-btn,
+.app.sidebar-collapsed .mi-submenu { display: none; }
+
 .badge {
     margin-left: auto;
     font-size: 9.5px; font-weight: 600; letter-spacing: 0.04em;

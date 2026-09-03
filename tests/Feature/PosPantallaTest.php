@@ -78,6 +78,14 @@ class PosPantallaTest extends TestCase
             ->assertSee('Caja 01');
     }
 
+    public function test_categorias_y_marcas_ahora_enlazadas_desde_el_menu_renderizan(): void
+    {
+        $usuario = Usuario::create(['username' => 'admin_'.uniqid(), 'password' => 'x', 'rol' => 'admin']);
+
+        $this->actingAs($usuario, 'web')->get(route('admin.categorias.index'))->assertOk();
+        $this->actingAs($usuario, 'web')->get(route('admin.marcas.index'))->assertOk();
+    }
+
     public function test_buscar_productos_ajax_devuelve_json(): void
     {
         $usuario = Usuario::create(['username' => 'admin_'.uniqid(), 'password' => 'x', 'rol' => 'admin']);

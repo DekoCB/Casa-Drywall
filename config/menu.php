@@ -35,8 +35,13 @@ return [
         'Gestión Comercial' => [
             ['route' => 'admin.clientes.index',     'label' => 'Clientes',     'icon' => $iconos['usuarios']],
             ['route' => 'admin.proveedores.index',  'label' => 'Proveedores',  'icon' => $iconos['proveedores']],
-            ['route' => 'admin.ventas.index',       'label' => 'Ventas',       'icon' => $iconos['carrito']],
-            ['route' => 'admin.pos.index',          'label' => 'Punto de Venta', 'icon' => $iconos['pos']],
+            [
+                'route' => 'admin.ventas.index', 'label' => 'Ventas', 'icon' => $iconos['carrito'],
+                'submenu' => [
+                    ['route' => 'admin.pos.index',  'label' => 'Punto de Venta'],
+                    ['route' => 'admin.caja.index', 'label' => 'Cajas'],
+                ],
+            ],
         ],
 
         'Compras & Documentos' => [
@@ -49,7 +54,6 @@ return [
             ['route' => 'admin.historial-pagos.index', 'label' => 'Historial de Pagos', 'icon' => $iconos['calendario']],
             ['route' => 'admin.ingresos.index',        'label' => 'Ingresos',           'icon' => $iconos['subida']],
             ['route' => 'admin.egresos.index',         'label' => 'Egresos',            'icon' => $iconos['bajada']],
-            ['route' => 'admin.caja.index',            'label' => 'Cajas',              'icon' => $iconos['caja']],
         ],
 
         'Inventario' => [
@@ -57,7 +61,9 @@ return [
                 'admin.productos.index', 'admin.productos.categorias',
                 'admin.productos.presentaciones', 'admin.productos.almacenes',
             ]],
-            ['route' => 'admin.merch.index',     'label' => 'Merch',     'icon' => $iconos['regalo']],
+            ['route' => 'admin.categorias.index', 'label' => 'Categorías', 'icon' => $iconos['bolsa']],
+            ['route' => 'admin.marcas.index',     'label' => 'Marcas',     'icon' => $iconos['documento']],
+            ['route' => 'admin.merch.index',      'label' => 'Merch',      'icon' => $iconos['regalo']],
         ],
 
         'Logística' => [
