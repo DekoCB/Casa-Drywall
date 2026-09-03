@@ -86,44 +86,6 @@ class PosPantallaTest extends TestCase
         $this->actingAs($usuario, 'web')->get(route('admin.marcas.index'))->assertOk();
     }
 
-    public function test_pagina_configuracion_renderiza_para_admin(): void
-    {
-        $usuario = Usuario::create(['username' => 'admin_'.uniqid(), 'password' => 'x', 'rol' => 'admin']);
-
-        $this->actingAs($usuario, 'web')
-            ->get(route('admin.configuracion.index'))
-            ->assertOk()
-            ->assertSee('Mi cuenta')
-            ->assertSee('Categorías')
-            ->assertSee('Cajas');
-    }
-
-    public function test_pagina_configuracion_no_accesible_para_secretaria(): void
-    {
-        $usuario = Usuario::create(['username' => 'sec_'.uniqid(), 'password' => 'x', 'rol' => 'secretaria']);
-
-        $this->actingAs($usuario, 'web')
-            ->get(route('admin.configuracion.index'))
-            ->assertRedirect();
-    }
-
-    public function test_admin_ve_link_a_configuracion_y_secretaria_conserva_el_modal(): void
-    {
-        $admin = Usuario::create(['username' => 'admin_'.uniqid(), 'password' => 'x', 'rol' => 'admin']);
-        $secretaria = Usuario::create(['username' => 'sec_'.uniqid(), 'password' => 'x', 'rol' => 'secretaria']);
-
-        $this->actingAs($admin, 'web')
-            ->get(route('admin.caja.index'))
-            ->assertOk()
-            ->assertSee('href="'.route('admin.configuracion.index').'"', false)
-            ->assertDontSee('id="cfgOverlay"', false);
-
-        $this->actingAs($secretaria, 'web')
-            ->get(route('secretaria.index'))
-            ->assertOk()
-            ->assertSee('id="cfgOverlay"', false);
-    }
-
     public function test_buscar_productos_ajax_devuelve_json(): void
     {
         $usuario = Usuario::create(['username' => 'admin_'.uniqid(), 'password' => 'x', 'rol' => 'admin']);

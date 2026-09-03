@@ -5,7 +5,6 @@ use App\Http\Controllers\Admin\CajaController;
 use App\Http\Controllers\Admin\CategoriaController;
 use App\Http\Controllers\Admin\ClienteController;
 use App\Http\Controllers\Admin\CobranzaController;
-use App\Http\Controllers\Admin\ConfiguracionController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DocumentoController;
 use App\Http\Controllers\Admin\EgresoController;
@@ -201,9 +200,6 @@ Route::middleware(['auth', 'rol:admin'])
         // Abrir/cerrar sesión de una caja ya existente es de admin y secretaria
         // por igual, ver el grupo aparte más abajo.
         Route::post('caja', [CajaController::class, 'store'])->name('caja.store');
-
-        // ── Configuración ───────────────────────────────────────────────────
-        Route::get('configuracion', [ConfiguracionController::class, 'index'])->name('configuracion.index');
     });
 
 /*
