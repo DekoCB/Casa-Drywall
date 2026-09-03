@@ -86,6 +86,24 @@ class PosPantallaTest extends TestCase
         $this->actingAs($usuario, 'web')->get(route('admin.marcas.index'))->assertOk();
     }
 
+    public function test_modal_de_cuenta_incluye_tarjetas_de_configuracion_solo_para_admin(): void
+    {
+        $admin = Usuario::create(['username' => 'admin_'.uniqid(), 'password' => 'x', 'rol' => 'admin']);
+        $secretaria = Usuario::create(['username' => 'sec_'.uniqid(), 'password' => 'x', 'rol' => 'secretaria']);
+
+        $this->actingAs($admin, 'web')
+            ->get(route('admin.caja.index'))
+            ->assertOk()
+            ->assertSee('Catálogo')
+            ->assertSee('Galonaje')
+            ->assertSee('href="'.route('admin.categorias.index').'"', false);
+
+        $this->actingAs($secretaria, 'web')
+            ->get(route('secretaria.index'))
+            ->assertOk()
+            ->assertDontSee('Galonaje');
+    }
+
     public function test_buscar_productos_ajax_devuelve_json(): void
     {
         $usuario = Usuario::create(['username' => 'admin_'.uniqid(), 'password' => 'x', 'rol' => 'admin']);
