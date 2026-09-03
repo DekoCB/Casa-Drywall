@@ -29,8 +29,14 @@ use Illuminate\View\View;
  */
 class VentaController extends Controller
 {
-    /** Códigos SUNAT de comprobante con su serie sugerida. */
+    /**
+     * Códigos de comprobante con su serie sugerida. `NV` (Nota de Venta) no
+     * es un código SUNAT — es un documento interno para ventas que todavía
+     * no necesitan un comprobante fiscal, y por eso nunca se registra en
+     * API-GO (`crearComprobante()` solo reconoce los códigos numéricos).
+     */
     public const TIPOS = [
+        'NV' => ['nombre' => 'Nota de Venta',         'serie' => 'NV01'],
         '01' => ['nombre' => '01 — Factura',          'serie' => 'F001'],
         '03' => ['nombre' => '03 — Boleta de Venta',  'serie' => 'B001'],
         '07' => ['nombre' => '07 — Nota de Crédito',  'serie' => 'FC01'],
@@ -95,6 +101,11 @@ class VentaController extends Controller
         // El listado se agrupa por mes, como en el original.
         $grupos = $ventas->groupBy(fn (Venta $v) => $v->fecha?->format('Y-m') ?? '');
 
+        // Una Nota de Crédito reduce lo vendido, no lo aumenta — se resta en
+        // vez de sumarse como el resto de comprobantes (la de Débito sí suma
+        // normal, ya trae su propio monto positivo).
+        $signo = fn (Venta $v) => $v->tipcomp === '07' ? -1 : 1;
+
         return view('admin.ventas.index', [
             'grupos'     => $grupos,
             'busqueda'   => $busqueda,
@@ -103,10 +114,10 @@ class VentaController extends Controller
             'hasta'      => $hasta,
             'tipos'      => self::TIPOS,
             'nVentas'    => $ventas->count(),
-            'totalBase'  => (float) $ventas->sum('baseimp'),
-            'totalSinIgv' => (float) $ventas->sum('exonerado') + (float) $ventas->sum('inafecto'),
-            'totalIgv'   => (float) $ventas->sum('igv'),
-            'totalGeneral' => (float) $ventas->sum('total'),
+            'totalBase'  => (float) $ventas->sum(fn (Venta $v) => $signo($v) * (float) $v->baseimp),
+            'totalSinIgv' => (float) $ventas->sum(fn (Venta $v) => $signo($v) * ((float) $v->exonerado + (float) $v->inafecto)),
+            'totalIgv'   => (float) $ventas->sum(fn (Venta $v) => $signo($v) * (float) $v->igv),
+            'totalGeneral' => (float) $ventas->sum(fn (Venta $v) => $signo($v) * (float) $v->total),
             'clientes'     => Cliente::orderBy('nombres')->get(['id', 'nombres', 'numero_documento']),
         ]);
     }
@@ -202,6 +213,10 @@ class VentaController extends Controller
 
             $venta->update([
                 'numero_venta' => $this->correlativo->venta(),
+                // `Cobranza::reflejarEnVentas()` solo reconoce tipos SUNAT (BV/NC)
+                // y cae a Factura para cualquier otro — se corrige aquí con el
+                // tipo real que eligió el usuario (necesario para "NV").
+                'tipcomp' => $datos['tipcomp'],
                 'tipo_comprobante' => self::TIPOS[$datos['tipcomp']]['nombre'] ?? null,
                 'n_ruc' => $datos['n_ruc'] ?? '',
                 'cliente_ruc' => $datos['n_ruc'] ?? null,
@@ -547,7 +562,7 @@ class VentaController extends Controller
             'fecha'          => ['required', 'date'],
             // Nota de Crédito/Débito (07/08) se genera solo desde `storeNota()`,
             // que exige un comprobante origen ya aceptado — no desde este alta genérica.
-            'tipcomp'        => ['required', Rule::in(['01', '03'])],
+            'tipcomp'        => ['required', Rule::in(['NV', '01', '03'])],
             'n_seri'         => ['required', 'string', 'max:4'],
             'n_comp'         => ['required', 'string', 'max:20'],
             'n_ruc'          => ['nullable', 'string', 'max:20'],
@@ -569,7 +584,7 @@ class VentaController extends Controller
         return $request->validate([
             'fecha'                        => ['required', 'date'],
             'fecha_vencimiento'            => ['required', 'date', 'after_or_equal:fecha'],
-            'tipcomp'                      => ['required', Rule::in(['01', '03'])],
+            'tipcomp'                      => ['required', Rule::in(['NV', '01', '03'])],
             'n_seri'                       => ['required', 'string', 'max:4'],
             'n_comp'                       => ['required', 'string', 'max:20'],
             'n_ruc'                        => ['nullable', 'string', 'max:20'],

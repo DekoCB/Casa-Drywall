@@ -246,7 +246,7 @@
                     <div class="ven-group">
                         <label class="ven-label" for="v-tipcomp">Tipo Comprobante <span>*</span></label>
                         <select class="ven-control" id="v-tipcomp" name="tipcomp" required>
-                            @foreach (array_intersect_key($tipos, array_flip(['01', '03'])) as $codigo => $tipo)
+                            @foreach (array_intersect_key($tipos, array_flip(['NV', '01', '03'])) as $codigo => $tipo)
                                 <option value="{{ $codigo }}" data-serie="{{ $tipo['serie'] }}">{{ $tipo['nombre'] }}</option>
                             @endforeach
                         </select>
@@ -278,6 +278,12 @@
                                placeholder="Nombre o empresa..." maxlength="300"
                                autocomplete="off">
                         <div class="ven-sugerencias" id="v-sug-razon"></div>
+                    </div>
+                    <div class="ven-group">
+                        <label class="ven-label">&nbsp;</label>
+                        <button type="button" class="btn btn-secondary btn-sm" id="btnVClienteVarios">
+                            Usar "Cliente Varios" (sin documento)
+                        </button>
                     </div>
 
                     <div class="ven-group ven-full">
@@ -381,12 +387,14 @@ let operacionActual = 'gravada';
 const campoTipo  = document.getElementById('v-tipcomp');
 const campoSerie = document.getElementById('v-n-seri');
 
-campoTipo.addEventListener('change', () => {
+function sugerirSerieVenta() {
     // Solo se sugiere si el usuario aún no escribió una serie propia.
     if (!campoSerie.value) {
         campoSerie.value = campoTipo.selectedOptions[0]?.dataset.serie || '';
     }
-});
+}
+
+campoTipo.addEventListener('change', sugerirSerieVenta);
 
 // ── Tipo de operación ────────────────────────────────────────────────────
 function fijarOperacion(op, conservarImportes = false) {
@@ -465,6 +473,16 @@ function elegirCliente(cliente) {
 
     document.querySelectorAll('.ven-sugerencias').forEach((s) => s.classList.remove('is-visible'));
 }
+
+// "Cliente Varios": para ventas a alguien que no dio su DNI o no está
+// registrado en el sistema — no queda enlazado a ninguna ficha de Cliente.
+document.getElementById('btnVClienteVarios').addEventListener('click', () => {
+    campoFicha.value = '';
+    campoRuc.value   = '';
+    campoRazon.value = 'Cliente Varios';
+
+    document.querySelectorAll('.ven-sugerencias').forEach((s) => s.classList.remove('is-visible'));
+});
 
 function buscarClientes(texto) {
     const t = texto.trim().toLowerCase();

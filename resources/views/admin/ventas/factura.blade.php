@@ -98,8 +98,8 @@
             <div class="form-group">
                 <label for="f-tipcomp">Tipo Comprobante <span>*</span></label>
                 <select id="f-tipcomp" name="tipcomp" required>
-                    @foreach (array_intersect_key($tipos, array_flip(['01', '03'])) as $codigo => $tipo)
-                        <option value="{{ $codigo }}" data-serie="{{ $tipo['serie'] }}" @selected(old('tipcomp') === $codigo)>{{ $tipo['nombre'] }}</option>
+                    @foreach (array_intersect_key($tipos, array_flip(['NV', '01', '03'])) as $codigo => $tipo)
+                        <option value="{{ $codigo }}" data-serie="{{ $tipo['serie'] }}" @selected(old('tipcomp', 'NV') === $codigo)>{{ $tipo['nombre'] }}</option>
                     @endforeach
                 </select>
             </div>
@@ -140,6 +140,9 @@
                        placeholder="Escribe el nombre o documento del cliente…">
                 <div class="nv-dropdown" id="cliente-dd"></div>
             </div>
+            <button type="button" class="btn btn-secondary btn-sm" id="btnClienteVarios" style="margin-top:8px;">
+                Usar "Cliente Varios" (sin documento)
+            </button>
         </div>
         <div class="form-grid">
             <div class="form-group">
@@ -238,11 +241,14 @@ const IGV_VENTAS = {{ config('rentaltech.igv') }};
 const fTipcomp = document.getElementById('f-tipcomp');
 const fNSeri   = document.getElementById('f-n-seri');
 
-fTipcomp.addEventListener('change', () => {
+function sugerirSerieFactura() {
     if (!fNSeri.value) {
         fNSeri.value = fTipcomp.selectedOptions[0]?.dataset.serie || '';
     }
-});
+}
+
+fTipcomp.addEventListener('change', sugerirSerieFactura);
+sugerirSerieFactura(); // "Nota de Venta" viene preseleccionada: sin esto, nunca se dispara el "change".
 
 // ── Buscador de cliente (mismo estilo que el de productos) ───────────────
 const CLIENTES = @json($clientes->map(fn ($c) => ['id' => $c->id, 'nombre' => $c->nombres, 'doc' => $c->numero_documento])->values());
@@ -317,6 +323,16 @@ clienteBuscar.addEventListener('keydown', (e) => {
 // Si el usuario edita el nombre a mano, se suelta la ficha del cliente elegido.
 document.getElementById('f-razonsocial').addEventListener('input', () => {
     document.getElementById('f-cliente-id').value = '';
+});
+
+// "Cliente Varios": para ventas a alguien que no dio su DNI o no está
+// registrado en el sistema — no queda enlazado a ninguna ficha de Cliente.
+document.getElementById('btnClienteVarios').addEventListener('click', () => {
+    document.getElementById('f-razonsocial').value = 'Cliente Varios';
+    document.getElementById('f-n-ruc').value = '';
+    document.getElementById('f-cliente-id').value = '';
+    clienteBuscar.value = '';
+    clienteCerrarBuscador();
 });
 
 // Tabla de productos: filas dinámicas con recálculo en vivo del total.
