@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\HistorialPagoController;
 use App\Http\Controllers\Admin\IngresoController;
 use App\Http\Controllers\Admin\MarcaController;
 use App\Http\Controllers\Admin\MerchController;
+use App\Http\Controllers\Admin\NotificacionController;
 use App\Http\Controllers\Admin\OrdenCompraController;
 use App\Http\Controllers\Admin\PedidoController;
 use App\Http\Controllers\Admin\PersonalController;
@@ -75,6 +76,8 @@ Route::middleware(['auth', 'rol:admin'])
     ->group(function () {
 
         Route::get('/', [DashboardController::class, 'index'])->name('index');
+
+        Route::post('notificaciones/marcar-leidas', [NotificacionController::class, 'marcarLeidas'])->name('notificaciones.marcar-leidas');
 
         // ── Gestión comercial ───────────────────────────────────────────────
         Route::get('clientes/destacados', [ClienteController::class, 'destacados'])->name('clientes.destacados');

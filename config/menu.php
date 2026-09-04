@@ -48,11 +48,16 @@ return [
                         'crearRoute' => 'admin.ventas.factura.create', 'crearQuery' => ['tipo' => '01']],
                     ['route' => 'admin.pedidos.index', 'label' => 'Pedidos',
                         'crearRoute' => 'admin.pedidos.index', 'crearQuery' => ['crear' => 1]],
-                    ['route' => 'admin.pos.index',  'label' => 'Punto de Venta'],
-                    ['route' => 'admin.caja.index', 'label' => 'Cajas'],
                     ['divider' => 'Gestión SUNAT'],
                     ['route' => 'admin.ventas.index', 'query' => ['estado_factura' => 'no_enviado'], 'label' => 'No enviados'],
                     ['route' => 'admin.ventas.index', 'query' => ['estado' => 'cancelada'], 'label' => 'Anulaciones'],
+                ],
+            ],
+            [
+                'route' => 'admin.pos.index', 'label' => 'POS', 'icon' => $iconos['pos'],
+                'submenu' => [
+                    ['route' => 'admin.pos.index',  'label' => 'Punto de Venta'],
+                    ['route' => 'admin.caja.index', 'label' => 'Cajas'],
                 ],
             ],
         ],

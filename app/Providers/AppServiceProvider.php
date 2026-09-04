@@ -2,8 +2,11 @@
 
 namespace App\Providers;
 
+use App\Services\CentroNotificaciones;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -22,5 +25,15 @@ class AppServiceProvider extends ServiceProvider
 
         // Nombres de meses y días en español en todas las vistas.
         Carbon::setLocale(config('app.locale'));
+
+        // Campanita del topbar: se calcula una sola vez por request y se
+        // comparte con el layout, en vez de que cada controlador la arme.
+        View::composer('layouts.admin', function ($view) {
+            $usuario = Auth::user();
+
+            $view->with('notificaciones', $usuario
+                ? app(CentroNotificaciones::class)->paraUsuario($usuario)
+                : ['todas' => collect(), 'porCategoria' => [], 'noLeidas' => 0]);
+        });
     }
 }
