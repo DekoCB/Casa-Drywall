@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\GalonajeController;
 use App\Http\Controllers\Admin\GuiaRemisionController;
 use App\Http\Controllers\Admin\HistorialPagoController;
 use App\Http\Controllers\Admin\IngresoController;
+use App\Http\Controllers\Admin\InventarioController;
 use App\Http\Controllers\Admin\MarcaController;
 use App\Http\Controllers\Admin\MerchController;
 use App\Http\Controllers\Admin\NotificacionController;
@@ -168,6 +169,19 @@ Route::middleware(['auth', 'rol:admin'])
         Route::resource('almacenes', AlmacenController::class)
             ->except(['show', 'create', 'edit'])->parameters(['almacenes' => 'almacen']);
 
+        Route::get('inventario/movimientos', [InventarioController::class, 'movimientos'])->name('inventario.movimientos');
+        Route::post('inventario/traslados', [InventarioController::class, 'storeTraslado'])->name('inventario.traslados.store');
+        Route::post('inventario/devoluciones', [InventarioController::class, 'storeDevolucion'])->name('inventario.devoluciones.store');
+        Route::get('inventario/kardex', [InventarioController::class, 'kardex'])->name('inventario.kardex');
+        Route::get('inventario/kardex/excel', [InventarioController::class, 'kardexExcel'])->name('inventario.kardex.excel');
+        Route::get('inventario/kardex/pdf', [InventarioController::class, 'kardexPdf'])->name('inventario.kardex.pdf');
+        Route::get('inventario/kardex-valorizado', [InventarioController::class, 'kardexValorizado'])->name('inventario.kardex-valorizado');
+        Route::get('inventario/kardex-valorizado/excel', [InventarioController::class, 'kardexValorizadoExcel'])->name('inventario.kardex-valorizado.excel');
+        Route::get('inventario/kardex-valorizado/pdf', [InventarioController::class, 'kardexValorizadoPdf'])->name('inventario.kardex-valorizado.pdf');
+        Route::get('inventario/reporte', [InventarioController::class, 'reporte'])->name('inventario.reporte');
+        Route::get('inventario/reporte/excel', [InventarioController::class, 'reporteExcel'])->name('inventario.reporte.excel');
+        Route::get('inventario/reporte/pdf', [InventarioController::class, 'reportePdf'])->name('inventario.reporte.pdf');
+
         Route::get('merch/movimientos', [MerchController::class, 'movimientos'])->name('merch.movimientos');
         Route::post('merch/{merch}/entregar', [MerchController::class, 'entregar'])->name('merch.entregar');
         Route::delete('merch/movimientos/{movimiento}', [MerchController::class, 'anularMovimiento'])->name('merch.movimientos.anular');
@@ -192,6 +206,15 @@ Route::middleware(['auth', 'rol:admin'])
 
         // ── Análisis ────────────────────────────────────────────────────────
         Route::get('reportes', [ReporteController::class, 'index'])->name('reportes.index');
+        Route::get('reportes/abc', [ReporteController::class, 'abc'])->name('reportes.abc');
+        Route::get('reportes/abc/excel', [ReporteController::class, 'abcExcel'])->name('reportes.abc.excel');
+        Route::get('reportes/abc/pdf', [ReporteController::class, 'abcPdf'])->name('reportes.abc.pdf');
+        Route::get('reportes/rotacion', [ReporteController::class, 'rotacion'])->name('reportes.rotacion');
+        Route::get('reportes/rotacion/excel', [ReporteController::class, 'rotacionExcel'])->name('reportes.rotacion.excel');
+        Route::get('reportes/rotacion/pdf', [ReporteController::class, 'rotacionPdf'])->name('reportes.rotacion.pdf');
+        Route::get('reportes/aging', [ReporteController::class, 'aging'])->name('reportes.aging');
+        Route::get('reportes/aging/excel', [ReporteController::class, 'agingExcel'])->name('reportes.aging.excel');
+        Route::get('reportes/aging/pdf', [ReporteController::class, 'agingPdf'])->name('reportes.aging.pdf');
 
         Route::prefix('galonaje')->name('galonaje.')->group(function () {
             Route::get('/', [GalonajeController::class, 'dashboard'])->name('dashboard');

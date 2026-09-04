@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MovimientoAlmacen extends Model
 {
@@ -16,6 +17,24 @@ class MovimientoAlmacen extends Model
     {
         return [
             'cantidad' => 'integer',
+            'stock_anterior' => 'integer',
+            'stock_nuevo' => 'integer',
+            'created_at' => 'datetime',
         ];
+    }
+
+    public function producto(): BelongsTo
+    {
+        return $this->belongsTo(Producto::class, 'producto_id');
+    }
+
+    public function almacen(): BelongsTo
+    {
+        return $this->belongsTo(Almacen::class, 'almacen_id');
+    }
+
+    public function usuario(): BelongsTo
+    {
+        return $this->belongsTo(Usuario::class, 'usuario_id');
     }
 }

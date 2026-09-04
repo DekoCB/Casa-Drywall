@@ -24,6 +24,7 @@ $iconos = [
     'camion' => $icon('<rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>'),
     'grafico' => $icon('<path d="M3 3v18h18"/><rect x="7" y="13" width="3" height="5"/><rect x="12" y="9" width="3" height="9"/><rect x="17" y="5" width="3" height="13"/>'),
     'pos' => $icon('<rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>'),
+    'inventario' => $icon('<path d="M21 8V21H3V8"/><path d="M1 3h22v5H1z"/><line x1="10" y1="12" x2="14" y2="12"/>'),
 ];
 
 return [
@@ -75,12 +76,28 @@ return [
         ],
 
         'Inventario' => [
-            ['route' => 'admin.productos.index', 'label' => 'Productos', 'icon' => $iconos['caja'], 'active' => [
-                'admin.productos.index', 'admin.productos.categorias',
-                'admin.productos.presentaciones', 'admin.productos.almacenes',
-            ]],
-            ['route' => 'admin.categorias.index', 'label' => 'Categorías', 'icon' => $iconos['bolsa']],
-            ['route' => 'admin.marcas.index',     'label' => 'Marcas',     'icon' => $iconos['documento']],
+            [
+                'route' => 'admin.productos.index', 'label' => 'Productos/Servicios', 'icon' => $iconos['caja'],
+                'submenu' => [
+                    ['route' => 'admin.productos.index', 'label' => 'Productos', 'active' => [
+                        'admin.productos.index', 'admin.productos.categorias',
+                        'admin.productos.presentaciones', 'admin.productos.almacenes',
+                    ]],
+                    ['route' => 'admin.categorias.index', 'label' => 'Categorías'],
+                    ['route' => 'admin.marcas.index', 'label' => 'Marcas'],
+                ],
+            ],
+            [
+                'route' => 'admin.inventario.movimientos', 'label' => 'Inventario', 'icon' => $iconos['inventario'],
+                'submenu' => [
+                    ['route' => 'admin.inventario.movimientos', 'label' => 'Movimientos'],
+                    ['route' => 'admin.inventario.movimientos', 'query' => ['tipo' => 'traslado'], 'label' => 'Traslados'],
+                    ['route' => 'admin.inventario.movimientos', 'query' => ['tipo' => 'devolucion'], 'label' => 'Devolución a proveedor'],
+                    ['route' => 'admin.inventario.kardex', 'label' => 'Reporte Kardex'],
+                    ['route' => 'admin.inventario.reporte', 'label' => 'Reporte Inventario'],
+                    ['route' => 'admin.inventario.kardex-valorizado', 'label' => 'Kardex valorizado'],
+                ],
+            ],
             ['route' => 'admin.merch.index',      'label' => 'Merch',      'icon' => $iconos['regalo']],
         ],
 

@@ -49,7 +49,7 @@
             @foreach ($items as $item)
                 @if (! empty($item['submenu']))
                     @php
-                        $rutasHijas = array_column($item['submenu'], 'route');
+                        $rutasHijas = collect($item['submenu'])->flatMap(fn ($sub) => $sub['active'] ?? [$sub['route'] ?? null])->filter()->all();
                         $rutaActual = Route::currentRouteName();
                         $padreActivo = in_array($rutaActual, $item['active'] ?? [$item['route']]);
                         $grupoActivo = $padreActivo || in_array($rutaActual, $rutasHijas);
@@ -70,8 +70,10 @@
                                     <div class="mi-divider">{{ $sub['divider'] }}</div>
                                 @else
                                     @php
-                                        $subActivo = $rutaActual === $sub['route']
-                                            && collect($sub['query'] ?? [])->every(fn ($v, $k) => (string) request()->query($k, '') === (string) $v);
+                                        $subActivo = isset($sub['active'])
+                                            ? in_array($rutaActual, $sub['active'])
+                                            : $rutaActual === $sub['route']
+                                                && collect($sub['query'] ?? [])->every(fn ($v, $k) => (string) request()->query($k, '') === (string) $v);
                                     @endphp
                                     <div class="mi-hijo-fila">
                                         <a href="{{ route($sub['route'], $sub['query'] ?? []) }}" class="mi mi-hijo @if($subActivo) active @endif">
