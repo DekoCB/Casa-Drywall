@@ -40,8 +40,8 @@ class VentasSubmenuTest extends TestCase
 
     public function test_filtro_anulaciones_muestra_lo_que_el_listado_normal_excluye(): void
     {
-        Venta::create(['fecha' => '2026-09-01', 'tipcomp' => 'COT', 'n_seri' => 'CT01', 'n_comp' => '00000001', 'estado' => 'cancelada']);
-        Venta::create(['fecha' => '2026-09-01', 'tipcomp' => 'COT', 'n_seri' => 'CT01', 'n_comp' => '00000002', 'estado' => 'activa']);
+        Venta::create(['fecha' => '2026-09-01', 'tipcomp' => 'NV', 'n_seri' => 'NV01', 'n_comp' => '00000001', 'estado' => 'cancelada']);
+        Venta::create(['fecha' => '2026-09-01', 'tipcomp' => 'NV', 'n_seri' => 'NV01', 'n_comp' => '00000002', 'estado' => 'activa']);
 
         $normal = $this->actingAs($this->admin(), 'web')->get(route('admin.ventas.index'));
         $anuladas = $this->actingAs($this->admin(), 'web')->get(route('admin.ventas.index', ['estado' => 'cancelada']));

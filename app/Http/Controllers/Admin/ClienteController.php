@@ -91,6 +91,7 @@ class ClienteController extends Controller
 
         $ventas = $this->enPeriodo(
             Venta::where('cliente_id', $cliente->id)
+                ->sinCotizaciones()
                 ->where(fn ($q) => $q->whereNull('estado')->orWhereNotIn('estado', ['cancelada', 'eliminada'])),
             'fecha',
             $periodo
@@ -150,6 +151,7 @@ class ClienteController extends Controller
     private function comprasPorCliente(array $periodo): array
     {
         return Venta::whereNotNull('cliente_id')
+            ->sinCotizaciones()
             ->where(fn ($q) => $q->whereNull('estado')->orWhereNotIn('estado', ['cancelada', 'eliminada']))
             ->when($periodo['mes'] !== '', fn ($q) => $q->whereRaw("DATE_FORMAT(fecha, '%Y-%m') = ?", [$periodo['mes']]))
             ->when($periodo['desde'] !== '', fn ($q) => $q->whereDate('fecha', '>=', $periodo['desde']))

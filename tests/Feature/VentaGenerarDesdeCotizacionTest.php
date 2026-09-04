@@ -98,4 +98,41 @@ class VentaGenerarDesdeCotizacionTest extends TestCase
         $cot->refresh();
         $this->assertSame('activa', $cot->estado);
     }
+
+    public function test_cotizacion_no_aparece_ni_suma_en_el_listado_general(): void
+    {
+        Venta::create([
+            'fecha' => '2026-09-01', 'tipcomp' => 'COT', 'n_seri' => 'CT01', 'n_comp' => '00000001',
+            'estado' => 'activa', 'total' => 500,
+        ]);
+        Venta::create([
+            'fecha' => '2026-09-01', 'tipcomp' => '03', 'n_seri' => 'B001', 'n_comp' => '00000001',
+            'estado' => 'activa', 'total' => 100,
+        ]);
+
+        $respuesta = $this->actingAs($this->admin(), 'web')->get(route('admin.ventas.index'));
+
+        // La cotización no debe estar en ningún grupo del listado general.
+        $tipos = collect($respuesta->viewData('grupos'))->flatten()->pluck('tipcomp');
+        $this->assertNotContains('COT', $tipos);
+        $this->assertContains('03', $tipos);
+
+        // Los totales/KPIs tampoco deben incluir el monto de la cotización.
+        $this->assertSame(1, $respuesta->viewData('nVentas'));
+        $this->assertSame(100.0, $respuesta->viewData('totalGeneral'));
+    }
+
+    public function test_la_lista_propia_de_cotizaciones_si_las_sigue_mostrando(): void
+    {
+        Venta::create([
+            'fecha' => '2026-09-01', 'tipcomp' => 'COT', 'n_seri' => 'CT01', 'n_comp' => '00000001',
+            'estado' => 'activa', 'total' => 500,
+        ]);
+
+        $respuesta = $this->actingAs($this->admin(), 'web')
+            ->get(route('admin.ventas.index', ['tipcomp' => 'COT']));
+
+        $this->assertSame(1, $respuesta->viewData('nVentas'));
+        $this->assertSame(500.0, $respuesta->viewData('totalGeneral'));
+    }
 }

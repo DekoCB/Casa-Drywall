@@ -134,7 +134,15 @@ class VentaController extends Controller
         $tipcomp = trim((string) $request->query('tipcomp', ''));
 
         $filtrada = Venta::query()
-            ->when($tipcomp !== '', fn ($query) => $query->where('tipcomp', $tipcomp))
+            ->when(
+                $tipcomp !== '',
+                fn ($query) => $query->where('tipcomp', $tipcomp),
+                // Sin un tipo pedido explícitamente, la Cotización no cuenta:
+                // es un presupuesto, no una venta comprometida — mezclarla
+                // aquí duplicaba el monto (cotización + la venta generada
+                // desde ella) y complicaba el cierre de caja.
+                fn ($query) => $query->sinCotizaciones()
+            )
             ->when($estadoFiltro === 'cancelada', function ($query) {
                 $query->where('estado', 'cancelada');
             }, function ($query) {

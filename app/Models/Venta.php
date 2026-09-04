@@ -131,4 +131,15 @@ class Venta extends Model
     {
         return $query->where('estado', '!=', 'anulada');
     }
+
+    /**
+     * Excluye Cotizaciones (COT): son un presupuesto interno, no una venta
+     * comprometida — no deben sumar en totales/listados de ventas ni en el
+     * cierre de caja. Quien necesite verlas las pide explícitamente por
+     * `tipcomp` (p.ej. la lista propia de Cotizaciones del sidebar).
+     */
+    public function scopeSinCotizaciones($query)
+    {
+        return $query->where('tipcomp', '!=', 'COT');
+    }
 }

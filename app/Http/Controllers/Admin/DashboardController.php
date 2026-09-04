@@ -138,7 +138,7 @@ class DashboardController extends Controller
      */
     private function ventasVigentes(): Builder
     {
-        return Venta::query()->where(
+        return Venta::query()->sinCotizaciones()->where(
             fn ($q) => $q->whereNull('estado')->orWhereNotIn('estado', ['cancelada', 'eliminada'])
         );
     }
