@@ -33,6 +33,10 @@
                 <span class="badge badge-danger" style="margin-top:6px;">Filtro: anulaciones
                     <a href="{{ route('admin.ventas.index') }}" style="margin-left:6px;color:inherit;">✕</a>
                 </span>
+            @elseif ($tipcompFiltro !== '')
+                <span class="badge badge-warning" style="margin-top:6px;">{{ $tipos[$tipcompFiltro]['nombre'] ?? $tipcompFiltro }}
+                    <a href="{{ route('admin.ventas.index') }}" style="margin-left:6px;color:inherit;">✕</a>
+                </span>
             @endif
         </div>
         <div class="ven-header-right">
@@ -181,6 +185,17 @@
                                         data-inafecto="{{ $venta->inafecto }}"
                                         data-total="{{ $venta->total }}"
                                         data-tipcambio="{{ $venta->tipcambio }}">✏</button>
+
+                                @if ($venta->tipcomp === 'COT')
+                                    <details class="ven-generar-dd">
+                                        <summary class="btn-edit-v" title="Generar venta desde esta cotización">➜</summary>
+                                        <div class="ven-generar-menu">
+                                            <a href="{{ route('admin.ventas.factura.create', ['tipo' => 'NV', 'desde' => $venta->id]) }}">Nota de Venta</a>
+                                            <a href="{{ route('admin.ventas.factura.create', ['tipo' => '03', 'desde' => $venta->id]) }}">Boleta</a>
+                                            <a href="{{ route('admin.ventas.factura.create', ['tipo' => '01', 'desde' => $venta->id]) }}">Factura</a>
+                                        </div>
+                                    </details>
+                                @endif
 
                                 @if (in_array($venta->tipcomp, ['COT', 'NV'], true) || (in_array($venta->tipcomp, ['01', '03'], true) && $venta->estado_factura === 'pendiente'))
                                     <form method="POST" action="{{ route('admin.ventas.anular', $venta) }}"
@@ -364,6 +379,13 @@ const URL_VENTAS = '{{ url('admin/ventas') }}';
 
 const modalVenta = document.getElementById('venModal');
 const formVenta  = document.getElementById('formVenta');
+
+// ── "Generar venta" (Cotización) ─────────────────────────────────────────
+document.addEventListener('click', (e) => {
+    document.querySelectorAll('.ven-generar-dd[open]').forEach((dd) => {
+        if (!dd.contains(e.target)) dd.removeAttribute('open');
+    });
+});
 
 // ── Filtros del listado ──────────────────────────────────────────────────
 // Mes y fechas se aplican al instante; el buscador espera a que se deje de

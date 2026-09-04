@@ -60,7 +60,7 @@ class VentaController extends Controller
     ) {}
 
     /** Página de alta de comprobante: monto único o detalle de productos. */
-    public function createFactura(): View
+    public function createFactura(Request $request): View
     {
         return view('admin.ventas.factura', [
             'tipos' => self::TIPOS,
@@ -73,7 +73,49 @@ class VentaController extends Controller
                 'COT' => $this->correlativo->documentoInterno('COT', self::TIPOS['COT']['serie']),
                 'NV' => $this->correlativo->documentoInterno('NV', self::TIPOS['NV']['serie']),
             ],
+            'origen' => $this->origenParaFactura($request),
         ]);
+    }
+
+    /**
+     * Precarga desde una Cotización existente (`?desde=`), para "Generar
+     * venta" en Nota de Venta/Boleta/Factura sin volver a escribir cliente
+     * ni productos. Si el id no corresponde a una Cotización, se ignora en
+     * silencio y el formulario abre vacío como siempre.
+     */
+    private function origenParaFactura(Request $request): ?array
+    {
+        $origenId = $request->query('desde');
+
+        if (! $origenId) {
+            return null;
+        }
+
+        $venta = Venta::with('detalles')->where('tipcomp', 'COT')->find($origenId);
+
+        if (! $venta) {
+            return null;
+        }
+
+        $tieneItems = $venta->detalles->isNotEmpty();
+
+        return [
+            'id' => $venta->id,
+            'comprobante' => "{$venta->n_seri}-{$venta->n_comp}",
+            'razonsocial' => $venta->razonsocial,
+            'n_ruc' => $venta->n_ruc,
+            'cliente_id' => $venta->cliente_id,
+            'items' => $venta->detalles->map(fn (VentaDetalle $d) => [
+                'nombre' => $d->prod_nombre,
+                'codigo' => $d->prod_codigo,
+                'precio' => (float) $d->precio_unitario,
+                'cantidad' => (int) $d->cantidad,
+            ])->values(),
+            // Solo tiene sentido cuando no hay items: el monto único que se
+            // usó en la cotización, ya desglosado a bruto para el formulario.
+            'monto' => $tieneItems ? 0.0 : round((float) $venta->baseimp + (float) $venta->igv + (float) $venta->exonerado + (float) $venta->inafecto, 2),
+            'tipo_operacion' => $venta->baseimp > 0 ? 'gravada' : ($venta->exonerado > 0 ? 'exonerada' : 'inafecta'),
+        ];
     }
 
     public function index(Request $request): View
@@ -87,8 +129,12 @@ class VentaController extends Controller
         // normales, se combinan con ellos.
         $estadoFactura = trim((string) $request->query('estado_factura', ''));
         $estadoFiltro  = trim((string) $request->query('estado', ''));
+        // Lista propia por tipo (Cotizaciones/Notas de Venta/Boletas/Facturas
+        // del submenú): filtra sobre el mismo listado, no es una vista aparte.
+        $tipcomp = trim((string) $request->query('tipcomp', ''));
 
         $filtrada = Venta::query()
+            ->when($tipcomp !== '', fn ($query) => $query->where('tipcomp', $tipcomp))
             ->when($estadoFiltro === 'cancelada', function ($query) {
                 $query->where('estado', 'cancelada');
             }, function ($query) {
@@ -142,6 +188,7 @@ class VentaController extends Controller
             'hasta'      => $hasta,
             'estadoFactura' => $estadoFactura,
             'estadoFiltro'  => $estadoFiltro,
+            'tipcompFiltro' => $tipcomp,
             'tipos'      => self::TIPOS,
             'nVentas'    => $ventas->count(),
             'totalBase'  => (float) $ventas->sum(fn (Venta $v) => $signo($v) * (float) $v->baseimp),
@@ -224,7 +271,11 @@ class VentaController extends Controller
             return back()->withInput()->with('error', 'Ingresa un monto o agrega al menos un producto.');
         }
 
-        $venta = DB::transaction(function () use ($request, $datos, $items, $importes) {
+        $origenCotizacion = ! empty($datos['origen_id'])
+            ? Venta::where('tipcomp', 'COT')->find($datos['origen_id'])
+            : null;
+
+        $venta = DB::transaction(function () use ($request, $datos, $items, $importes, $origenCotizacion) {
             $cliente = $this->fichaDelCliente($datos);
 
             // La cobranza dispara `Cobranza::reflejarEnVentas()`, que crea la
@@ -268,6 +319,9 @@ class VentaController extends Controller
                 'moneda' => 'PEN',
                 'tipo_cambio' => 1,
                 'tipcambio' => 1,
+                'observaciones' => $origenCotizacion
+                    ? "Generado desde Cotización {$origenCotizacion->n_seri}-{$origenCotizacion->n_comp}"
+                    : null,
             ]);
 
             foreach ($items as $item) {
@@ -693,6 +747,7 @@ class VentaController extends Controller
             'items.*.cantidad'             => ['nullable', 'integer', 'min:0'],
             'items.*.precio_unitario'      => ['nullable', 'numeric', 'min:0'],
             'precios_incluyen_igv'         => ['nullable', 'boolean'],
+            'origen_id'                    => ['nullable', 'integer', 'exists:ventas,id'],
         ]);
     }
 

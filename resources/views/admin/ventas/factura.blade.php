@@ -91,8 +91,19 @@
     </x-slot:acciones>
 </x-page-header>
 
+@if ($origen)
+    <div class="content-card" style="background:var(--brand-bg);border:1px solid var(--brand);display:flex;align-items:center;gap:10px;">
+        <span style="font-size:18px;">➜</span>
+        <span style="font-size:13px;color:var(--ink-2);">
+            Generando venta a partir de la Cotización <strong>{{ $origen['comprobante'] }}</strong> —
+            cliente y productos ya se precargaron abajo, revísalos antes de guardar.
+        </span>
+    </div>
+@endif
+
 <form method="POST" action="{{ route('admin.ventas.factura.store') }}" id="formFactura" class="nv-form">
     @csrf
+    <input type="hidden" name="origen_id" value="{{ old('origen_id', $origen['id'] ?? '') }}">
 
     <div class="content-card">
         <h3>Comprobante</h3>
@@ -374,7 +385,7 @@ const facturaBody = document.getElementById('facturaItemsBody');
 const PRODUCTOS = @json($productosJs);
 let indiceFactura = 0;
 
-function filaFacturaHtml(i, producto) {
+function filaFacturaHtml(i, producto, cantidad) {
     const nombre = producto?.nombre ?? '';
     const codigo = producto?.codigo ?? '';
     const precio = producto?.precio ?? 0;
@@ -383,15 +394,15 @@ function filaFacturaHtml(i, producto) {
         <td><input type="text" name="items[${i}][producto_nombre]" class="item-nombre-f"
                    value="${nombre.replace(/"/g, '&quot;')}" placeholder="Nombre del producto o servicio…"></td>
         <td><input type="text" name="items[${i}][producto_codigo]" class="item-codigo-f" value="${codigo}"></td>
-        <td><input type="number" name="items[${i}][cantidad]" value="1" min="1" step="1" class="item-cantidad-f"></td>
+        <td><input type="number" name="items[${i}][cantidad]" value="${cantidad}" min="1" step="1" class="item-cantidad-f"></td>
         <td><input type="number" name="items[${i}][precio_unitario]" value="${precio}" step="0.01" min="0" class="item-precio-f"></td>
         <td class="item-subtotal-f">S/ 0.00</td>
         <td><button type="button" class="btn btn-danger btn-sm btn-quitar-f">✕</button></td>
     </tr>`;
 }
 
-function agregarFilaFactura(producto = null) {
-    facturaBody.insertAdjacentHTML('beforeend', filaFacturaHtml(indiceFactura++, producto));
+function agregarFilaFactura(producto = null, cantidad = 1) {
+    facturaBody.insertAdjacentHTML('beforeend', filaFacturaHtml(indiceFactura++, producto, cantidad));
     recalcularFactura();
 }
 
@@ -578,6 +589,24 @@ document.getElementById('formFactura').addEventListener('submit', (e) => {
         alert('Ingresa un monto o agrega al menos un producto.');
     }
 });
+
+// ── Precarga desde una Cotización ("Generar venta") ──────────────────────
+const ORIGEN = @json($origen);
+
+if (ORIGEN) {
+    document.getElementById('f-razonsocial').value = ORIGEN.razonsocial || '';
+    document.getElementById('f-n-ruc').value        = ORIGEN.n_ruc || '';
+    document.getElementById('f-cliente-id').value   = ORIGEN.cliente_id || '';
+
+    if (ORIGEN.items.length > 0) {
+        ORIGEN.items.forEach((it) => {
+            agregarFilaFactura({ nombre: it.nombre, codigo: it.codigo, precio: it.precio }, it.cantidad);
+        });
+    } else if (ORIGEN.monto > 0) {
+        fTipoOperacion.value = ORIGEN.tipo_operacion;
+        fMonto.value = ORIGEN.monto;
+    }
+}
 
 recalcularFactura();
 

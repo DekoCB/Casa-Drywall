@@ -408,6 +408,8 @@
 .tc-07 { background: #fef9c3; color: #854d0e; border: 1px solid #fde68a; }
 .tc-08 { background: #fce7f3; color: #9d174d; border: 1px solid #fbcfe8; }
 .tc-09 { background: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; }
+.tc-COT { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+.tc-NV  { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
 
 /* Importes: los ceros se atenúan */
 .importe-pos  { font-weight: 700; color: var(--vn-texto); }
@@ -432,6 +434,22 @@
 .btn-edit-v:hover { background: var(--info-bg); border-color: #90cdf4; color: #2b6cb0; }
 .btn-del-v:hover  { background: var(--vn-verde); border-color: var(--vn-verde); color: var(--on-brand); }
 .form-eliminar { display: inline; }
+
+/* "Generar venta" desde una Cotización */
+.ven-generar-dd { position: relative; display: inline-block; }
+.ven-generar-dd summary { list-style: none; }
+.ven-generar-dd summary::-webkit-details-marker { display: none; }
+.ven-generar-dd[open] summary { background: var(--info-bg); border-color: #90cdf4; color: #2b6cb0; }
+.ven-generar-menu {
+    position: absolute; z-index: 20; top: calc(100% + 4px); right: 0;
+    min-width: 140px; background: var(--vn-sup-2); border: 1px solid var(--vn-borde);
+    border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,.15); overflow: hidden;
+}
+.ven-generar-menu a {
+    display: block; padding: 8px 12px; font-size: 12.5px; color: var(--vn-texto);
+    text-decoration: none; white-space: nowrap;
+}
+.ven-generar-menu a:hover { background: var(--info-bg); color: #2b6cb0; }
 
 /* Pie con los totales */
 .ven-table tfoot td { padding: 11px 12px; background: var(--side); color: rgba(240,237,232,.7); font-weight: 700; }

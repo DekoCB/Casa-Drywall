@@ -69,12 +69,18 @@
                                 @if (isset($sub['divider']))
                                     <div class="mi-divider">{{ $sub['divider'] }}</div>
                                 @else
-                                    <a href="{{ route($sub['route'], $sub['query'] ?? []) }}" class="mi mi-hijo @if($rutaActual === $sub['route']) active @endif">
-                                        <span>{{ $sub['label'] }}</span>
-                                        @if ($sub['crear'] ?? false)
-                                            <span class="mi-crear-pill">+ Crear</span>
+                                    @php
+                                        $subActivo = $rutaActual === $sub['route']
+                                            && collect($sub['query'] ?? [])->every(fn ($v, $k) => (string) request()->query($k, '') === (string) $v);
+                                    @endphp
+                                    <div class="mi-hijo-fila">
+                                        <a href="{{ route($sub['route'], $sub['query'] ?? []) }}" class="mi mi-hijo @if($subActivo) active @endif">
+                                            <span>{{ $sub['label'] }}</span>
+                                        </a>
+                                        @if (! empty($sub['crearRoute']))
+                                            <a href="{{ route($sub['crearRoute'], $sub['crearQuery'] ?? []) }}" class="mi-crear-pill" title="Crear {{ $sub['label'] }}">+ Crear</a>
                                         @endif
-                                    </a>
+                                    </div>
                                 @endif
                             @endforeach
                         </div>
