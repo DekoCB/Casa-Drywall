@@ -5,6 +5,18 @@
 
 @section('content')
 
+@php
+    $etiquetasTipo = ['flete' => 'Flete / Transporte', 'gasolina' => 'Gasolina', 'promocion' => 'Promoción', 'operativo' => 'Operativo', 'compra' => 'Compra', 'diversos' => 'Gastos diversos', 'planilla' => 'Planilla', 'otro' => 'Otro'];
+@endphp
+
+@if ($tipoSel !== '')
+    <div style="margin-bottom:12px;">
+        <span class="badge badge-warning">Filtro: {{ $etiquetasTipo[$tipoSel] ?? $tipoSel }}
+            <a href="{{ route('admin.egresos.index', ['mes' => $mes, 'anio' => $anio]) }}" style="margin-left:6px;color:inherit;">✕</a>
+        </span>
+    </div>
+@endif
+
 <x-page-header titulo="Egresos" subtitulo="Salidas de dinero: manuales y las generadas por ventas, órdenes y planilla">
     <x-slot:acciones>
         <form method="POST" action="{{ route('admin.egresos.sincronizar') }}" style="display:inline;">
@@ -144,8 +156,8 @@
             <div class="form-group">
                 <label for="tipo">Tipo <span>*</span></label>
                 <select id="tipo" name="tipo" required>
-                    @foreach (['flete' => 'Flete / Transporte', 'gasolina' => 'Gasolina', 'promocion' => 'Promoción', 'operativo' => 'Operativo', 'compra' => 'Compra', 'planilla' => 'Planilla', 'otro' => 'Otro'] as $valor => $texto)
-                        <option value="{{ $valor }}">{{ $texto }}</option>
+                    @foreach ($etiquetasTipo as $valor => $texto)
+                        <option value="{{ $valor }}" @selected($tipoSel === $valor)>{{ $texto }}</option>
                     @endforeach
                 </select>
             </div>
@@ -196,5 +208,9 @@ document.getElementById('formEgreso').addEventListener('submit', function () {
         this.appendChild(metodo);
     }
 });
+
+@if ($abrirCrear)
+    abrirModal('modalEgreso');
+@endif
 </script>
 @endpush

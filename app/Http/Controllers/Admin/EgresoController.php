@@ -19,6 +19,7 @@ class EgresoController extends Controller
         'venta_gasolina' => 'Gasolina de venta',
         'venta_promo' => 'Promoción de venta',
         'orden_compra' => 'Orden de compra',
+        'activo_fijo' => 'Activo fijo',
         'planilla' => 'Planilla',
     ];
 
@@ -26,6 +27,7 @@ class EgresoController extends Controller
     {
         $mes = (int) $request->query('mes', now()->month);
         $anio = (int) $request->query('anio', now()->year);
+        $tipo = trim((string) $request->query('tipo', ''));
 
         // El módulo original sincroniza al entrar, para que el mes consultado
         // siempre refleje los egresos derivados de ventas, OC y planilla.
@@ -33,6 +35,7 @@ class EgresoController extends Controller
 
         $egresos = Egreso::whereYear('fecha', $anio)
             ->whereMonth('fecha', $mes)
+            ->when($tipo !== '', fn ($q) => $q->where('tipo', $tipo))
             ->orderByDesc('fecha')
             ->orderByDesc('id')
             ->paginate(30)
@@ -56,12 +59,14 @@ class EgresoController extends Controller
             'porTipo' => $porTipo,
             'mes' => $mes,
             'anio' => $anio,
+            'tipoSel' => $tipo,
             'totalMes' => (float) $porTipo->sum('total'),
             'totalManual' => (float) $manual->total,
             'nManual' => (int) $manual->n,
             'almacenes' => Almacen::where('activo', true)->orderBy('id')->get(),
             'origenes' => self::ORIGENES,
             'anios' => $this->aniosDisponibles(),
+            'abrirCrear' => $request->boolean('crear'),
         ]);
     }
 
@@ -114,7 +119,9 @@ class EgresoController extends Controller
 
     private function aniosDisponibles(): array
     {
-        $anios = Egreso::selectRaw('DISTINCT YEAR(fecha) AS anio')->orderByDesc('anio')->pluck('anio')->all();
+        // `YEAR(fecha)` era SQL exclusivo de MySQL; se calcula en PHP para
+        // que también funcione en los tests (SQLite).
+        $anios = Egreso::pluck('fecha')->filter()->map(fn ($f) => $f->year)->unique()->sortDesc()->values()->all();
 
         return $anios ?: [now()->year];
     }

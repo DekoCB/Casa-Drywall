@@ -35,7 +35,6 @@ return [
 
         'Gestión Comercial' => [
             ['route' => 'admin.clientes.index',     'label' => 'Clientes',     'icon' => $iconos['usuarios']],
-            ['route' => 'admin.proveedores.index',  'label' => 'Proveedores',  'icon' => $iconos['proveedores']],
             [
                 'route' => 'admin.ventas.index', 'label' => 'Ventas', 'icon' => $iconos['carrito'],
                 'submenu' => [
@@ -64,8 +63,25 @@ return [
         ],
 
         'Compras & Documentos' => [
-            ['route' => 'admin.ordenes-compra.index', 'label' => 'Órdenes de Compra', 'icon' => $iconos['bolsa'],     'badge' => 'New', 'badge_class' => 'b-orange'],
-            ['route' => 'admin.facturas.index',       'label' => 'Facturas',          'icon' => $iconos['documento'], 'badge' => 'GP',  'badge_class' => 'b-violet'],
+            [
+                'route' => 'admin.ordenes-compra.index', 'label' => 'Compras', 'icon' => $iconos['bolsa'],
+                'submenu' => [
+                    ['route' => 'admin.ordenes-compra.index', 'label' => 'Listado de compras',
+                        'crearRoute' => 'admin.ordenes-compra.create'],
+                    ['route' => 'admin.egresos.index', 'query' => ['tipo' => 'diversos'], 'label' => 'Gastos diversos',
+                        'crearRoute' => 'admin.egresos.index', 'crearQuery' => ['tipo' => 'diversos', 'crear' => 1]],
+                    ['route' => 'admin.proveedores.index', 'label' => 'Proveedores'],
+                    ['route' => 'admin.cotizaciones-proveedor.index', 'label' => 'Solicitar cotización',
+                        'crearRoute' => 'admin.cotizaciones-proveedor.index', 'crearQuery' => ['crear' => 1]],
+                    ['route' => 'admin.activos-fijos.index', 'label' => 'Activos fijos'],
+                    ['route' => 'admin.activos-fijos.index', 'query' => ['crear' => 1], 'label' => 'Comprar activo fijo'],
+                    ['route' => 'admin.liquidaciones-compra.index', 'label' => 'Liquidación de compra',
+                        'crearRoute' => 'admin.liquidaciones-compra.index', 'crearQuery' => ['crear' => 1]],
+                    ['route' => 'admin.ordenes-compra.index', 'label' => 'Orden de compra',
+                        'crearRoute' => 'admin.ordenes-compra.create'],
+                ],
+            ],
+            ['route' => 'admin.facturas.index', 'label' => 'Facturas', 'icon' => $iconos['documento'], 'badge' => 'GP', 'badge_class' => 'b-violet'],
         ],
 
         'Finanzas' => [

@@ -1,9 +1,11 @@
 <?php
 
+use App\Http\Controllers\Admin\ActivoFijoController;
 use App\Http\Controllers\Admin\AlmacenController;
 use App\Http\Controllers\Admin\CajaController;
 use App\Http\Controllers\Admin\CategoriaController;
 use App\Http\Controllers\Admin\ClienteController;
+use App\Http\Controllers\Admin\CotizacionProveedorController;
 use App\Http\Controllers\Admin\CobranzaController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DocumentoController;
@@ -14,6 +16,7 @@ use App\Http\Controllers\Admin\GuiaRemisionController;
 use App\Http\Controllers\Admin\HistorialPagoController;
 use App\Http\Controllers\Admin\IngresoController;
 use App\Http\Controllers\Admin\InventarioController;
+use App\Http\Controllers\Admin\LiquidacionCompraController;
 use App\Http\Controllers\Admin\MarcaController;
 use App\Http\Controllers\Admin\MerchController;
 use App\Http\Controllers\Admin\NotificacionController;
@@ -120,6 +123,19 @@ Route::middleware(['auth', 'rol:admin'])
         Route::post('ordenes-compra/{orden}/token', [OrdenCompraController::class, 'generarToken'])->name('ordenes-compra.token');
         Route::post('ordenes-compra/{orden}/documento', [OrdenCompraController::class, 'actualizarDocumento'])->name('ordenes-compra.documento');
         Route::resource('ordenes-compra', OrdenCompraController::class)->parameters(['ordenes-compra' => 'orden']);
+
+        Route::resource('activos-fijos', ActivoFijoController::class)
+            ->except(['show', 'create', 'edit'])->parameters(['activos-fijos' => 'activoFijo']);
+
+        Route::post('cotizaciones-proveedor/{cotizacionProveedor}/enviar', [CotizacionProveedorController::class, 'enviar'])
+            ->name('cotizaciones-proveedor.enviar');
+        Route::resource('cotizaciones-proveedor', CotizacionProveedorController::class)
+            ->except(['show', 'create', 'edit'])->parameters(['cotizaciones-proveedor' => 'cotizacionProveedor']);
+
+        Route::get('liquidaciones-compra/{liquidacionCompra}/comprobante', [LiquidacionCompraController::class, 'comprobante'])
+            ->name('liquidaciones-compra.comprobante');
+        Route::resource('liquidaciones-compra', LiquidacionCompraController::class)
+            ->except(['show', 'create', 'edit'])->parameters(['liquidaciones-compra' => 'liquidacionCompra']);
 
         Route::get('facturas/estadisticas', [FacturaController::class, 'estadisticas'])->name('facturas.estadisticas');
         Route::post('facturas/analizar', [FacturaController::class, 'analizar'])->name('facturas.analizar');
