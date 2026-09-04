@@ -144,7 +144,7 @@
         <div class="ok" style="background:#fbeaea;border-color:#f0c9c9;color:#a12b2b;">⚠️ {{ session('error') }}</div>
     @endif
 
-    @if ($esComprobanteElectronico)
+    @if ($esComprobanteElectronico && config('empresas.activa.sunat_habilitado', true))
         @php
             $estadosSunat = [
                 'pendiente'  => 'Pendiente de registro',

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\SeleccionarEmpresa;
 use App\Http\Middleware\VerificarRol;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -16,6 +17,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'rol' => VerificarRol::class,
         ]);
+
+        // Multi-empresa: después de StartSession (ya sabe qué sesión es),
+        // antes que cualquier ruta protegida — cambia la conexión de BD y
+        // los datos de empresa activa según lo elegido en el selector.
+        $middleware->web(append: [SeleccionarEmpresa::class]);
 
         $middleware->redirectGuestsTo(fn () => route('login'));
 

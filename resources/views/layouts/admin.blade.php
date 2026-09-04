@@ -19,6 +19,19 @@
     <link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     @vite(['resources/css/admin.css', 'resources/js/app.js'])
     @stack('styles')
+    @if ($colorEmpresa = config('empresas.activa.color'))
+        {{-- Multi-empresa: color de marca propio (ver config/empresas.php).
+             Se define después de admin.css a propósito, para que gane sin
+             tocar ningún archivo de estilos existente. --}}
+        <style>
+            :root {
+                --brand: {{ $colorEmpresa }};
+                --brand-2: color-mix(in srgb, {{ $colorEmpresa }} 80%, black);
+                --brand-bg: color-mix(in srgb, {{ $colorEmpresa }} 16%, transparent);
+                --on-brand: #ffffff;
+            }
+        </style>
+    @endif
 </head>
 <body>
 <div class="app @if(request()->cookie('sidebarColapsada') === '1') sidebar-collapsed @endif" id="appShell">

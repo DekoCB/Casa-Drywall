@@ -25,6 +25,7 @@ $iconos = [
     'grafico' => $icon('<path d="M3 3v18h18"/><rect x="7" y="13" width="3" height="5"/><rect x="12" y="9" width="3" height="9"/><rect x="17" y="5" width="3" height="13"/>'),
     'pos' => $icon('<rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>'),
     'inventario' => $icon('<path d="M21 8V21H3V8"/><path d="M1 3h22v5H1z"/><line x1="10" y1="12" x2="14" y2="12"/>'),
+    'local' => $icon('<path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 9h1"/><path d="M14 9h1"/><path d="M9 13h1"/><path d="M14 13h1"/><path d="M10 21v-4h4v4"/>'),
 ];
 
 return [
@@ -35,6 +36,7 @@ return [
 
         'Gestión Comercial' => [
             ['route' => 'admin.clientes.index',     'label' => 'Clientes',     'icon' => $iconos['usuarios']],
+            ['route' => 'admin.locales.index',      'label' => 'Locales',      'icon' => $iconos['local']],
             [
                 'route' => 'admin.ventas.index', 'label' => 'Ventas', 'icon' => $iconos['carrito'],
                 'submenu' => [

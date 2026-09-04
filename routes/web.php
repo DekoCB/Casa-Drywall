@@ -17,6 +17,7 @@ use App\Http\Controllers\Admin\HistorialPagoController;
 use App\Http\Controllers\Admin\IngresoController;
 use App\Http\Controllers\Admin\InventarioController;
 use App\Http\Controllers\Admin\LiquidacionCompraController;
+use App\Http\Controllers\Admin\LocalController;
 use App\Http\Controllers\Admin\MarcaController;
 use App\Http\Controllers\Admin\MerchController;
 use App\Http\Controllers\Admin\NotificacionController;
@@ -33,6 +34,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\PerfilController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\ContadorController;
+use App\Http\Controllers\EmpresaController;
 use App\Http\Controllers\SecretariaController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -52,6 +54,13 @@ Route::get('/', function () {
         ? redirect($usuario->rutaInicio())
         : redirect()->route('login');
 });
+
+// Multi-empresa: selector previo al login (Casa Drywall / Jitk). Ver
+// App\Http\Middleware\SeleccionarEmpresa, que redirige acá cuando todavía
+// no se eligió ninguna.
+Route::get('/empresas', [EmpresaController::class, 'elegir'])->name('empresas.elegir');
+Route::get('/empresas/{empresa}', [EmpresaController::class, 'seleccionar'])->name('empresas.seleccionar');
+Route::post('/empresas/cambiar', [EmpresaController::class, 'cambiar'])->name('empresas.cambiar');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'show'])->name('login');
@@ -82,6 +91,14 @@ Route::middleware(['auth', 'rol:admin'])
         Route::get('/', [DashboardController::class, 'index'])->name('index');
 
         Route::post('notificaciones/marcar-leidas', [NotificacionController::class, 'marcarLeidas'])->name('notificaciones.marcar-leidas');
+
+        // ── Locales / Establecimientos (sucursales SUNAT, vía API-GO) ────────
+        Route::get('locales', [LocalController::class, 'index'])->name('locales.index');
+        Route::post('locales', [LocalController::class, 'store'])->name('locales.store');
+        Route::put('locales/{local}', [LocalController::class, 'update'])->name('locales.update');
+        Route::delete('locales/{local}', [LocalController::class, 'destroy'])->name('locales.destroy');
+        Route::post('locales/{local}/activar', [LocalController::class, 'activar'])->name('locales.activar');
+        Route::put('locales/{local}/series', [LocalController::class, 'actualizarSeries'])->name('locales.series');
 
         // ── Gestión comercial ───────────────────────────────────────────────
         Route::get('clientes/destacados', [ClienteController::class, 'destacados'])->name('clientes.destacados');

@@ -354,13 +354,18 @@ class VentaController extends Controller
         // Registro en el sistema de facturación electrónica (API-GO). Va
         // fuera de la transacción y protegido por try/catch: si el servicio
         // está caído la venta ya quedó guardada y no debe bloquearse por esto.
-        try {
-            $this->emisionSunat->crearComprobante($venta);
-        } catch (\Throwable $e) {
-            Log::warning('Fallo al registrar el comprobante en API-GO', [
-                'venta_id' => $venta->id,
-                'mensaje' => $e->getMessage(),
-            ]);
+        // Empresas sin SUNAT habilitado (ver config/empresas.php) no llaman
+        // a la API-GO en absoluto: el comprobante queda solo como registro
+        // interno, nunca se intenta emitir electrónicamente.
+        if (config('empresas.activa.sunat_habilitado', true)) {
+            try {
+                $this->emisionSunat->crearComprobante($venta);
+            } catch (\Throwable $e) {
+                Log::warning('Fallo al registrar el comprobante en API-GO', [
+                    'venta_id' => $venta->id,
+                    'mensaje' => $e->getMessage(),
+                ]);
+            }
         }
 
         // Se abre el comprobante recién generado, listo para imprimir o enviar.
@@ -478,13 +483,15 @@ class VentaController extends Controller
             return $venta;
         });
 
-        try {
-            $this->emisionSunat->crearComprobante($venta);
-        } catch (\Throwable $e) {
-            Log::warning('Fallo al registrar la nota en API-GO', [
-                'venta_id' => $venta->id,
-                'mensaje' => $e->getMessage(),
-            ]);
+        if (config('empresas.activa.sunat_habilitado', true)) {
+            try {
+                $this->emisionSunat->crearComprobante($venta);
+            } catch (\Throwable $e) {
+                Log::warning('Fallo al registrar la nota en API-GO', [
+                    'venta_id' => $venta->id,
+                    'mensaje' => $e->getMessage(),
+                ]);
+            }
         }
 
         return redirect()->route('admin.ventas.comprobante', $venta)->with(

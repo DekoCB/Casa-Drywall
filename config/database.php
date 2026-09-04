@@ -64,6 +64,25 @@ return [
             ]) : [],
         ],
 
+        // Base de datos de Jitk (multi-empresa, ver `config/empresas.php` y
+        // `App\Http\Middleware\SeleccionarEmpresa`) — mismo servidor MySQL,
+        // base de datos completamente separada.
+        'jitk' => [
+            'driver' => 'mysql',
+            'host' => env('DB_JITK_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('DB_JITK_PORT', env('DB_PORT', '3306')),
+            'database' => env('DB_JITK_DATABASE', 'db_jitk'),
+            'username' => env('DB_JITK_USERNAME', env('DB_USERNAME', 'root')),
+            'password' => env('DB_JITK_PASSWORD', env('DB_PASSWORD', '')),
+            'unix_socket' => env('DB_SOCKET', ''),
+            'charset' => env('DB_CHARSET', 'utf8mb4'),
+            'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+        ],
+
         'mariadb' => [
             'driver' => 'mariadb',
             'url' => env('DB_URL'),
