@@ -33,7 +33,7 @@ body {
 .login-video-overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, rgba(18,17,14,.6), rgba(18,17,14,.8));
+    background: linear-gradient(180deg, var(--login-overlay-1, rgba(18,17,14,.6)), var(--login-overlay-2, rgba(18,17,14,.8)));
 }
 
 /* Rastro luminoso amarillo que sigue al cursor por toda la pantalla de
@@ -211,36 +211,6 @@ body {
     transition: background-color .15s, border-color .15s;
 }
 .btn-ingresar:hover { background: var(--brand-2); border-color: var(--brand-2); }
-
-/* ── Divisor ── */
-.divider {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin: 20px 0 16px;
-}
-.divider::before, .divider::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--line);
-}
-.divider span {
-    font-size: 11px;
-    letter-spacing: .05em;
-    color: var(--ink-4);
-    text-transform: uppercase;
-}
-
-.register-link { text-align: center; }
-.register-link a {
-    color: var(--brand);
-    text-decoration: none;
-    font-size: 13.5px;
-    font-weight: 500;
-    transition: color .15s;
-}
-.register-link a:hover { color: var(--brand-2); }
 
 /* ── Footer ── */
 .login-footer {

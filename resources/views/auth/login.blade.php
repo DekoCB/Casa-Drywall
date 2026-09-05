@@ -17,12 +17,26 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     @vite(['resources/css/auth.css', 'resources/js/glow-cursor.js'])
+    @if ($colorEmpresa = config('empresas.activa.color'))
+        {{-- Multi-empresa: mismo mecanismo que layouts/admin.blade.php — la marca
+             propia de la empresa activa tiñe también el login, sin tocar el CSS base. --}}
+        <style>
+            :root {
+                --brand: {{ $colorEmpresa }};
+                --brand-2: color-mix(in srgb, {{ $colorEmpresa }} 80%, black);
+                --brand-bg: color-mix(in srgb, {{ $colorEmpresa }} 16%, transparent);
+                --on-brand: #ffffff;
+                --login-overlay-1: color-mix(in srgb, {{ $colorEmpresa }} 35%, transparent);
+                --login-overlay-2: color-mix(in srgb, {{ $colorEmpresa }} 65%, transparent);
+            }
+        </style>
+    @endif
 </head>
 <body>
 
 <div class="login-video-bg" aria-hidden="true">
     <video autoplay muted loop playsinline preload="auto">
-        <source src="{{ asset('videos/login-bg.mp4') }}" type="video/mp4">
+        <source src="{{ asset(config('empresas.activa.slug') === 'jitk' ? 'videos/login-bg-jitk.mp4' : 'videos/login-bg.mp4') }}" type="video/mp4">
     </video>
     <div class="login-video-overlay"></div>
 </div>
@@ -37,7 +51,9 @@
 <div class="login-wrapper">
 
     <div class="logo-block">
-        <img src="{{ asset('img/Logo-L.png') }}" alt="{{ config('rentaltech.empresa.razon_social') }}" class="login-logo">
+        @unless (config('empresas.activa.slug') === 'jitk')
+            <img src="{{ asset('img/Logo-L.png') }}" alt="{{ config('rentaltech.empresa.razon_social') }}" class="login-logo">
+        @endunless
         <div class="brand-tagline">Panel de Administración</div>
     </div>
 
@@ -114,12 +130,6 @@
             </button>
 
         </form>
-
-        <div class="divider"><span>o</span></div>
-
-        <div class="register-link">
-            <a href="{{ route('register') }}">¿No tienes cuenta? Crear Usuario →</a>
-        </div>
     </div>
 
     <div class="login-footer">
