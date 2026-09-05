@@ -18,37 +18,57 @@
     <link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     @vite(['resources/css/auth.css', 'resources/js/glow-cursor.js'])
     <style>
+        /* Varios videos apilados; solo el .is-active se ve, con un fundido
+           suave al cambiar (hover de tarjeta) en vez de recargar el <video>. */
+        .login-video-bg .bg-video { opacity: 0; transition: opacity .5s ease; }
+        .login-video-bg .bg-video.is-active { opacity: 1; }
+
         .empresas-wrapper {
             position: relative; z-index: 1; min-height: 100vh;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             padding: 40px 20px; gap: 28px;
         }
         .empresas-heading { text-align: center; }
-        .empresas-heading h1 { font-family: var(--font-display, inherit); font-size: 22px; color: var(--ink, #fff); margin-bottom: 6px; }
-        .empresas-heading p { font-size: 13.5px; color: var(--ink-3, #9aa); }
+        .empresas-heading h1 { font-family: var(--font-display, inherit); font-size: 22px; color: #fff; margin-bottom: 6px; text-shadow: 0 1px 4px rgba(0,0,0,.5); }
+        .empresas-heading p { font-size: 13.5px; color: rgba(255,255,255,.75); text-shadow: 0 1px 4px rgba(0,0,0,.5); }
         .empresas-grid { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; max-width: 700px; }
+
+        /* Cada tarjeta usa el color y (si tiene) el logo propio de la
+           empresa — ver config/empresas.php > selector. Sin logo (Jitk,
+           todavía) se muestra solo el nombre en grande. */
         .empresa-card {
             width: 220px; padding: 28px 20px; border-radius: 16px;
-            background: var(--surface, #fff); border: 1.5px solid var(--line, #e2e2e2);
-            text-decoration: none; text-align: center; transition: transform .18s, border-color .18s, box-shadow .18s;
+            background: var(--empresa-color, #3d9b8c); border: 1.5px solid transparent;
+            text-decoration: none; text-align: center; transition: transform .18s, box-shadow .18s;
             display: flex; flex-direction: column; align-items: center; gap: 12px;
+            box-shadow: 0 6px 20px rgba(0,0,0,.25);
         }
-        .empresa-card:hover { transform: translateY(-4px); border-color: var(--empresa-color, #3d9b8c); box-shadow: 0 10px 30px rgba(0,0,0,.15); }
-        .empresa-avatar {
-            width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center;
-            background: var(--empresa-color, #3d9b8c); color: #fff; font-size: 22px; font-weight: 800;
-            font-family: var(--font-display, inherit);
+        .empresa-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,.35); }
+        .empresa-logo {
+            width: 64px; height: 64px; object-fit: contain;
         }
-        .empresa-nombre { font-size: 15px; font-weight: 700; color: var(--ink, #111); }
-        .empresa-entrar { font-size: 12px; color: var(--ink-3, #888); }
+        .empresa-nombre {
+            font-size: 15px; font-weight: 700; color: var(--empresa-on-color, #fff);
+        }
+        .empresa-card--sin-logo .empresa-nombre {
+            font-size: 22px; font-family: var(--font-display, inherit);
+        }
+        .empresa-entrar { font-size: 12px; color: var(--empresa-on-color, #fff); opacity: .8; }
     </style>
 </head>
 <body>
 
 <div class="login-video-bg" aria-hidden="true">
-    <video autoplay muted loop playsinline preload="auto">
-        <source src="{{ asset('videos/login-bg.mp4') }}" type="video/mp4">
+    <video class="bg-video bg-video-default is-active" autoplay muted loop playsinline preload="auto">
+        <source src="{{ asset(config('empresas.selector_video_default')) }}" type="video/mp4">
     </video>
+    @foreach ($empresas as $slug => $empresa)
+        @if (! empty($empresa['selector']['video']))
+            <video class="bg-video" data-bg-empresa="{{ $slug }}" muted loop playsinline preload="auto">
+                <source src="{{ asset($empresa['selector']['video']) }}" type="video/mp4">
+            </video>
+        @endif
+    @endforeach
     <div class="login-video-overlay"></div>
 </div>
 
@@ -67,8 +87,14 @@
 
     <div class="empresas-grid">
         @foreach ($empresas as $slug => $empresa)
-            <a href="{{ route('empresas.seleccionar', $slug) }}" class="empresa-card" style="--empresa-color: {{ $empresa['color'] ?? '#3d9b8c' }};">
-                <div class="empresa-avatar">{{ Str::upper(Str::substr($empresa['nombre'], 0, 2)) }}</div>
+            @php $sel = $empresa['selector'] ?? []; @endphp
+            <a href="{{ route('empresas.seleccionar', $slug) }}"
+               class="empresa-card @if (empty($sel['logo'])) empresa-card--sin-logo @endif"
+               data-empresa="{{ $slug }}"
+               style="--empresa-color: {{ $sel['color'] ?? '#3d9b8c' }}; --empresa-on-color: {{ $sel['on_color'] ?? '#fff' }};">
+                @if (! empty($sel['logo']))
+                    <img src="{{ asset($sel['logo']) }}" alt="{{ $empresa['nombre'] }}" class="empresa-logo">
+                @endif
                 <div class="empresa-nombre">{{ $empresa['nombre'] }}</div>
                 <div class="empresa-entrar">Ingresar →</div>
             </a>
@@ -84,6 +110,31 @@ document.getElementById('themeToggle').addEventListener('click', () => {
     document.documentElement.dataset.theme = nuevo;
     localStorage.setItem('tema', nuevo);
 });
+
+// Video de fondo por tarjeta: al pasar el mouse por una empresa se
+// adelanta su propio video de login; al salir, vuelve al video por
+// defecto del selector (ver config/empresas.php > selector_video_default).
+(function () {
+    const videos = document.querySelectorAll('.bg-video');
+    const defaultVideo = document.querySelector('.bg-video-default');
+
+    function activar(video) {
+        videos.forEach(v => {
+            const activo = v === video;
+            v.classList.toggle('is-active', activo);
+            if (activo) v.play?.().catch(() => {}); else v.pause?.();
+        });
+    }
+
+    document.querySelectorAll('.empresa-card').forEach(card => {
+        const propio = document.querySelector(`.bg-video[data-bg-empresa="${card.dataset.empresa}"]`);
+        if (!propio) return;
+        card.addEventListener('mouseenter', () => activar(propio));
+        card.addEventListener('mouseleave', () => activar(defaultVideo));
+        card.addEventListener('focus', () => activar(propio));
+        card.addEventListener('blur', () => activar(defaultVideo));
+    });
+})();
 </script>
 
 </body>
