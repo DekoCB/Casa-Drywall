@@ -26,8 +26,6 @@
                 --brand-2: color-mix(in srgb, {{ $colorEmpresa }} 80%, black);
                 --brand-bg: color-mix(in srgb, {{ $colorEmpresa }} 16%, transparent);
                 --on-brand: #ffffff;
-                --login-overlay-1: color-mix(in srgb, {{ $colorEmpresa }} 35%, transparent);
-                --login-overlay-2: color-mix(in srgb, {{ $colorEmpresa }} 65%, transparent);
             }
         </style>
     @endif
@@ -41,7 +39,13 @@
     <div class="login-video-overlay"></div>
 </div>
 
-<div class="glow-cursor-layer" data-glow-cursor aria-hidden="true"></div>
+<div class="glow-cursor-layer"
+     data-glow-cursor
+     @if ($colorEmpresa = config('empresas.activa.color'))
+         data-glow-color="{{ $colorEmpresa }}"
+         data-glow-color-secondary="{{ config('empresas.activa.color_secondary', $colorEmpresa) }}"
+     @endif
+     aria-hidden="true"></div>
 
 <button type="button" class="theme-toggle theme-toggle-login" id="themeToggle" title="Cambiar tema" aria-label="Cambiar tema">
     <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>

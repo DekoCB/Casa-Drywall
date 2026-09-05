@@ -25,6 +25,7 @@ return [
             'nombre' => 'Jitk',
             'conexion' => 'jitk',
             'color' => '#0180fe',
+            'color_secondary' => '#014a91',
             'sunat_habilitado' => false,
             'empresa' => [
                 'razon_social' => 'Jitk',

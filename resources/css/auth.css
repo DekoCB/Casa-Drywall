@@ -33,7 +33,7 @@ body {
 .login-video-overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, var(--login-overlay-1, rgba(18,17,14,.6)), var(--login-overlay-2, rgba(18,17,14,.8)));
+    background: linear-gradient(180deg, rgba(18,17,14,.6), rgba(18,17,14,.8));
 }
 
 /* Rastro luminoso amarillo que sigue al cursor por toda la pantalla de
