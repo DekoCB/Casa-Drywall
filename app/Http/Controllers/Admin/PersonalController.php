@@ -90,7 +90,7 @@ class PersonalController extends Controller
             return;
         }
 
-        $rol = $request->input('acceso_rol', 'secretaria');
+        $rol = $request->input('acceso_rol') ?: 'secretaria';
         $password = $request->input('acceso_password');
 
         if ($empleado->usuario_id && $usuario = Usuario::find($empleado->usuario_id)) {
