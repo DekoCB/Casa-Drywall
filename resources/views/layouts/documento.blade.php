@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title') — Rental Tech SAC</title>
+    <title>@yield('title') — {{ config('rentaltech.empresa.razon_social') }}</title>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
@@ -56,8 +56,7 @@
 <div class="hoja">
     <div class="doc-head">
         <div class="doc-marca">
-            <b>Rental Tech <span style="color:#9B1E2A;">SAC</span></b>
-            <span>{{ config('rentaltech.empresa.razon_social') }}</span>
+            <b>{{ config('rentaltech.empresa.razon_social') }}</b>
             @if (config('rentaltech.empresa.ruc'))
                 <span>RUC {{ config('rentaltech.empresa.ruc') }}</span>
             @endif

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Cada entrada o salida de merch. Las entradas nacen de una orden de compra;
- * las salidas son las entregas a los clientes de Rental Tech.
+ * las salidas son las entregas a los clientes de Casa Drywall.
  */
 class MerchMovimiento extends Model
 {

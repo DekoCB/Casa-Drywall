@@ -53,7 +53,7 @@
     <form method="POST" action="{{ route('admin.ordenes-compra.store') }}" id="formOrden" class="oc-hoja">
         @csrf
 
-        {{-- Datos que van fijos en toda orden de Rental Tech. --}}
+        {{-- Datos que van fijos en toda orden de compra. --}}
         @foreach ($emisor as $campo => $valor)
             <input type="hidden" name="{{ $campo }}" value="{{ $valor }}">
         @endforeach
@@ -273,7 +273,10 @@
                            placeholder="Escribe para buscar cliente...">
                     <div class="oc-dropdown" id="oc-cliente-dd"></div>
                 </div>
-                <span class="oc-hint">¿Para qué cliente de Rental Tech es esta compra? (Opcional)</span>
+                <button type="button" class="btn btn-secondary btn-sm" id="btnOcClienteVarios" style="margin-top:8px;">
+                    Usar "Clientes Varios"
+                </button>
+                <span class="oc-hint">¿Para qué cliente de {{ config('rentaltech.empresa.razon_social') }} es esta compra? (Opcional)</span>
             </div>
 
             <div class="oc-campo">
@@ -966,6 +969,13 @@ $('oc-cliente').addEventListener('input', (e) => {
             dd.classList.remove('abierto');
         }
     }, 220);
+});
+
+// "Clientes Varios": para una compra que no pertenece a un cliente concreto
+// registrado — mismo atajo que ya existe en Nueva Venta.
+$('btnOcClienteVarios').addEventListener('click', () => {
+    $('oc-cliente').value = 'Clientes Varios';
+    $('oc-cliente-dd').classList.remove('abierto');
 });
 
 // ── Merch ────────────────────────────────────────────────────────────

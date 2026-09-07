@@ -8,7 +8,7 @@ use Illuminate\Database\Seeder;
 /**
  * Catálogo de merchandising con la lista de precios informada por la empresa.
  *
- * El merch se entrega a los clientes de Rental Tech, no se vende: el precio es
+ * El merch se entrega a los clientes de Casa Drywall, no se vende: el precio es
  * sólo el costo unitario del artículo, sin impuestos de por medio.
  */
 class MerchSeeder extends Seeder

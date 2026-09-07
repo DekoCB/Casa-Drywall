@@ -37,17 +37,19 @@ return [
 
     /*
     | Datos que van fijos en toda orden de compra. En el original están
-    | escritos como campos ocultos dentro del formulario.
+    | escritos como campos ocultos dentro del formulario. Se leen del mismo
+    | .env que `empresa` de arriba (no se duplican como texto fijo) para que
+    | nunca vuelvan a quedar desincronizados de los datos reales.
     */
     'emisor_oc' => [
-        'proveedor'    => 'RENTAL TECH SAC',
-        'ruc'          => '20612189651',
-        'telefono'     => '982018051',
-        'correo'       => 'rafaelf.aguinaga@gmail.com',
-        'direccion'    => 'CAR. CENTRAL KM. 100 SEC. CHUNCHUYACU',
-        'distrito'     => 'SAN RAMON',
-        'provincia'    => 'CHANCHAMAYO',
-        'departamento' => 'JUNIN',
+        'proveedor'    => env('RT_RAZON_SOCIAL', 'CASA DRYWALL E.I.R.L.'),
+        'ruc'          => env('RT_RUC', ''),
+        'telefono'     => env('RT_TELEFONO', ''),
+        'correo'       => env('RT_EMAIL', ''),
+        'direccion'    => env('RT_DIRECCION', ''),
+        'distrito'     => 'Pisco',
+        'provincia'    => 'Pisco',
+        'departamento' => 'Ica',
     ],
 
     /*

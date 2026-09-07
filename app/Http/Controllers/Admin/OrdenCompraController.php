@@ -283,7 +283,7 @@ class OrdenCompraController extends Controller
             'mensaje' => ['nullable', 'string'],
         ]);
 
-        $asunto = $datos['asunto'] ?: "Orden de Compra {$orden->numero_orden} — Rental Tech SAC";
+        $asunto = $datos['asunto'] ?: "Orden de Compra {$orden->numero_orden} — ".config('rentaltech.empresa.razon_social');
 
         Mail::raw(
             $datos['mensaje'] ?: "Adjuntamos la orden de compra {$orden->numero_orden}.",

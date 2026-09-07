@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crear Usuario — Rental Tech SAC</title>
+    <title>Crear Usuario — {{ config('rentaltech.empresa.razon_social') }}</title>
     <link rel="icon" href="{{ asset('img/Logo.png') }}" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
     @vite(['resources/css/register.css'])
@@ -12,7 +12,7 @@
     <div class="register-wrapper">
         <div class="register-container">
             <div class="logo-section">
-                <img src="{{ asset('img/logo1.png') }}" alt="Rental Tech SAC">
+                <img src="{{ asset('img/Logo-L.png') }}" alt="{{ config('rentaltech.empresa.razon_social') }}">
                 <h1>Crear Nuevo Usuario</h1>
                 <p>Registro de Administradores</p>
             </div>
@@ -161,7 +161,7 @@
         </div>
 
         <div class="footer-text">
-            © {{ date('Y') }} Rental Tech SAC - Todos los derechos reservados
+            © {{ date('Y') }} {{ config('rentaltech.empresa.razon_social') }} - Todos los derechos reservados
         </div>
     </div>
 

@@ -312,7 +312,7 @@
                 <div class="ped-header">
                     <div class="ped-title">
                         📦 Pedidos de Clientes
-                        <span class="ped-title-badge">Clientes → Rental Tech</span>
+                        <span class="ped-title-badge">Clientes → {{ config('rentaltech.empresa.razon_social') }}</span>
                     </div>
                 </div>
 
@@ -321,7 +321,7 @@
                         <div class="ped-empty">
                             <div class="ped-empty-icon">📦</div>
                             <h3>Sin pedidos registrados</h3>
-                            <p>Los pedidos que los clientes hacen a Rental Tech aparecerán aquí.</p>
+                            <p>Los pedidos que los clientes hacen a {{ config('rentaltech.empresa.razon_social') }} aparecerán aquí.</p>
                         </div>
                     @else
                         <table class="ped-table">

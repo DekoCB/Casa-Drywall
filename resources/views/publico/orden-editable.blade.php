@@ -99,5 +99,5 @@
 @endsection
 
 @section('pie')
-    Este enlace es temporal y de un solo uso por orden. Si expiró, solicite uno nuevo a Rental Tech SAC.
+    Este enlace es temporal y de un solo uso por orden. Si expiró, solicite uno nuevo a {{ config('rentaltech.empresa.razon_social') }}.
 @endsection

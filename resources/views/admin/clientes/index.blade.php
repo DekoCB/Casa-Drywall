@@ -5,7 +5,7 @@
 
 @section('content')
 
-<x-page-header titulo="Clientes" subtitulo="Gestión de la cartera de clientes de Rental Tech SAC">
+<x-page-header titulo="Clientes" :subtitulo="'Gestión de la cartera de clientes de '.config('rentaltech.empresa.razon_social')">
     <x-slot:acciones>
         <a href="{{ route('admin.clientes.destacados') }}" class="btn btn-dark btn-sm">
             <span class="btn-icon">★</span><span class="btn-text">Destacados</span>
