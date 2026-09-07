@@ -40,6 +40,10 @@
         .cab-marca { display:table; width:100%; }
         .cab-logo-cel { display:table-cell; width:64px; vertical-align:top; }
         .cab-logo-cel img { width:54px; height:54px; object-fit:contain; }
+        /* Mismo tamaño que el comprobante de Boleta/Factura (no en el ticket
+           80mm), centrado en su celda. */
+        body:not(.formato-80mm) .cab-logo-cel { width:90px; text-align:center; vertical-align:middle; }
+        body:not(.formato-80mm) .cab-logo-cel img { width:80px; height:80px; margin:0 auto; }
         .cab-emp-cel { display:table-cell; vertical-align:top; padding-left:12px; text-align:center; }
         .cab-emp b { font-size:12px; }
         .cab-emp p { font-size:8.7px; line-height:1.55; margin-top:1px; }
