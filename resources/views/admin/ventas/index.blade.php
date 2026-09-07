@@ -53,12 +53,15 @@
     </div>
 
     {{-- ══ Indicadores ══ --}}
+    {{-- Una Cotización es un presupuesto, no una venta comprometida: no
+         corresponde mostrarle montos de facturación/IGV, solo cuántas hay. --}}
     <div class="ven-kpis">
         <div class="ven-kpi">
             <div class="ven-kpi-label">Comprobantes</div>
             <div class="ven-kpi-val">{{ number_format($nVentas) }}</div>
             <div class="ven-kpi-sub">Registros activos</div>
         </div>
+        @if ($tipcompFiltro !== 'COT')
         <div class="ven-kpi">
             <div class="ven-kpi-label">Base Imponible</div>
             <div class="ven-kpi-val">S/ {{ number_format($totalBase, 2) }}</div>
@@ -79,6 +82,7 @@
             <div class="ven-kpi-val">S/ {{ number_format($totalGeneral, 2) }}</div>
             <div class="ven-kpi-sub">Suma de todos los comprobantes</div>
         </div>
+        @endif
     </div>
 
     {{-- ══ Listado ══ --}}
@@ -136,7 +140,9 @@
                         <td colspan="13">
                             <strong>{{ Str::upper($primerDia->translatedFormat('F Y')) }}</strong>
                             <span class="gh-conteo">{{ $grupo->count() }} comprobante{{ $grupo->count() > 1 ? 's' : '' }}</span>
-                            <span class="gh-total">S/ {{ number_format($grupo->sum('total'), 2) }}</span>
+                            @if ($tipcompFiltro !== 'COT')
+                                <span class="gh-total">S/ {{ number_format($grupo->sum('total'), 2) }}</span>
+                            @endif
                         </td>
                     </tr>
 
@@ -197,7 +203,10 @@
                                     </details>
                                 @endif
 
-                                @if (in_array($venta->tipcomp, ['COT', 'NV'], true) || (in_array($venta->tipcomp, ['01', '03'], true) && $venta->estado_factura === 'pendiente'))
+                                {{-- Una Cotización es un presupuesto interno sin efecto ante SUNAT: se
+                                     borra directo, no hace falta "Anular" (eso es para documentos que ya
+                                     salieron a producción/SUNAT). NV y Boleta/Factura sin enviar sí lo usan. --}}
+                                @if ($venta->tipcomp === 'NV' || (in_array($venta->tipcomp, ['01', '03'], true) && $venta->estado_factura === 'pendiente'))
                                     <form method="POST" action="{{ route('admin.ventas.anular', $venta) }}"
                                           data-confirmar="¿Anular el comprobante {{ $venta->n_seri }}-{{ $venta->n_comp }}? Esta acción no se puede deshacer.">
                                         @csrf
@@ -231,16 +240,20 @@
                                 <span class="tfoot-label">Total</span>
                                 <strong class="tfoot-count">{{ number_format($nVentas) }} registros</strong>
                             </td>
-                            <td colspan="3"></td>
-                            <td class="num">
-                                <div class="tfoot-label">IGV</div>
-                                <div class="tfoot-igv">S/ {{ number_format($totalIgv, 2) }}</div>
-                            </td>
-                            <td class="num" colspan="2">
-                                <div class="tfoot-label">Total</div>
-                                <div class="tfoot-total">S/ {{ number_format($totalGeneral, 2) }}</div>
-                            </td>
-                            <td></td>
+                            @if ($tipcompFiltro !== 'COT')
+                                <td colspan="3"></td>
+                                <td class="num">
+                                    <div class="tfoot-label">IGV</div>
+                                    <div class="tfoot-igv">S/ {{ number_format($totalIgv, 2) }}</div>
+                                </td>
+                                <td class="num" colspan="2">
+                                    <div class="tfoot-label">Total</div>
+                                    <div class="tfoot-total">S/ {{ number_format($totalGeneral, 2) }}</div>
+                                </td>
+                                <td></td>
+                            @else
+                                <td colspan="6"></td>
+                            @endif
                         </tr>
                     </tfoot>
                 @endif

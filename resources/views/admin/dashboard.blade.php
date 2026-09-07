@@ -67,17 +67,6 @@
         <div class="sub">Saldo vivo total</div>
       </div>
     </div>
-
-    <a href="{{ route('admin.cobranzas.index') }}" class="btn-gal" style="margin-top:20px;">
-      <span class="gal-ico">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 4-6"/></svg>
-      </span>
-      <span>
-        Ir a Cobranzas
-        <span class="gal-sub">S/ {{ number_format($porCobrar, 2) }} pendientes · gestión por cliente y documento</span>
-      </span>
-      <svg class="gal-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
-    </a>
   </div>
 
   <div class="hero-right">

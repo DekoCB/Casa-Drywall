@@ -56,15 +56,46 @@ class VentasSubmenuTest extends TestCase
         $this->assertNotContains('00000002', $idsAnuladas);
     }
 
-    public function test_anular_funciona_sobre_cotizacion(): void
+    public function test_listado_de_cotizaciones_no_muestra_montos_pero_si_puede_eliminarlas(): void
     {
+        Venta::create(['fecha' => '2026-09-01', 'tipcomp' => 'COT', 'n_seri' => 'CT01', 'n_comp' => '00000001', 'estado' => 'activa', 'total' => 999.99]);
+
+        $respuesta = $this->actingAs($this->admin(), 'web')
+            ->get(route('admin.ventas.index', ['tipcomp' => 'COT']));
+
+        $respuesta->assertOk();
+        // Una cotización es un presupuesto, no una venta comprometida: no
+        // corresponde mostrar un total de facturación por ella.
+        $respuesta->assertDontSee('Total General');
+        $respuesta->assertDontSee('gh-total');
+        // Pero, al no tener ningún efecto ante SUNAT, sí se puede borrar
+        // directo (no le corresponde "Anular", que es para lo que ya salió
+        // a producción).
+        $respuesta->assertSee('btn-del-v');
+    }
+
+    public function test_listado_normal_si_muestra_montos_y_boton_eliminar(): void
+    {
+        Venta::create(['fecha' => '2026-09-01', 'tipcomp' => '03', 'n_seri' => 'B001', 'n_comp' => '00000001', 'estado' => 'activa', 'total' => 100]);
+
+        $respuesta = $this->actingAs($this->admin(), 'web')->get(route('admin.ventas.index'));
+
+        $respuesta->assertOk();
+        $respuesta->assertSee('Total General');
+        $respuesta->assertSee('btn-del-v');
+    }
+
+    public function test_anular_rechaza_una_cotizacion(): void
+    {
+        // Una Cotización no tiene efecto ante SUNAT ni genera cobranza: se
+        // borra directo con "Eliminar", no le corresponde "Anular".
         $venta = Venta::create(['fecha' => '2026-09-01', 'tipcomp' => 'COT', 'n_seri' => 'CT01', 'n_comp' => '00000001', 'estado' => 'activa']);
 
         $this->actingAs($this->admin(), 'web')
             ->post(route('admin.ventas.anular', $venta))
             ->assertRedirect();
 
-        $this->assertSame('cancelada', $venta->fresh()->estado);
+        $this->assertSame('activa', $venta->fresh()->estado);
     }
 
     public function test_anular_funciona_sobre_boleta_no_enviada(): void

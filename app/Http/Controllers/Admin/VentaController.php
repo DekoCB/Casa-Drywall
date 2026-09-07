@@ -348,6 +348,18 @@ class VentaController extends Controller
                 ]);
             }
 
+            // Una Cotización es un presupuesto, no una deuda real: no debe
+            // pesar en Cobranzas ni en "Por cobrar" del Dashboard. Se
+            // aprovechó el mecanismo de Cobranza::reflejarEnVentas() de arriba
+            // solo para construir la fila de `ventas` (es el único camino que
+            // tiene este endpoint); acá se descarta esa cobranza — pero
+            // primero se desvincula la venta, porque `Cobranza::booted()`
+            // borra en cascada cualquier venta que siga apuntando a ella.
+            if ($datos['tipcomp'] === 'COT') {
+                $venta->update(['cobranza_id' => null]);
+                $cobranza->delete();
+            }
+
             return $venta;
         });
 
@@ -529,15 +541,17 @@ class VentaController extends Controller
     }
 
     /**
-     * Anula un comprobante que nunca llegó a comprometerse con SUNAT:
-     * Cotización/Nota de Venta (documentos internos) o una Boleta/Factura
-     * que todavía no se envió. Un comprobante ya aceptado por SUNAT no se
-     * anula así — se corrige con una Nota de Crédito (motivo "01 —
-     * Anulación de la operación"), el único mecanismo válido ante SUNAT.
+     * Anula un comprobante que nunca llegó a comprometerse con SUNAT: Nota de
+     * Venta (documento interno) o una Boleta/Factura que todavía no se
+     * envió. Una Cotización no pasa por acá — al no tener ningún efecto ante
+     * SUNAT ni generar cobranza, se borra directo con "Eliminar". Un
+     * comprobante ya aceptado por SUNAT tampoco se anula así — se corrige
+     * con una Nota de Crédito (motivo "01 — Anulación de la operación"), el
+     * único mecanismo válido ante SUNAT.
      */
     public function anular(Venta $venta): RedirectResponse
     {
-        $esDocumentoInterno = in_array($venta->tipcomp, ['COT', 'NV'], true);
+        $esDocumentoInterno = $venta->tipcomp === 'NV';
         // 'pendiente' es el valor por defecto: nunca se intentó registrar en
         // API-GO. Cualquier otro valor ('registrado', 'aceptado', 'rechazado')
         // ya generó algún rastro allá o ante SUNAT y no se anula por aquí.

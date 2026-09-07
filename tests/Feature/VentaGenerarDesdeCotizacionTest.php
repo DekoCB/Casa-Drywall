@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Cobranza;
 use App\Models\Usuario;
 use App\Models\Venta;
 use App\Models\VentaDetalle;
@@ -120,6 +121,49 @@ class VentaGenerarDesdeCotizacionTest extends TestCase
         // Los totales/KPIs tampoco deben incluir el monto de la cotización.
         $this->assertSame(1, $respuesta->viewData('nVentas'));
         $this->assertSame(100.0, $respuesta->viewData('totalGeneral'));
+    }
+
+    public function test_crear_una_cotizacion_no_genera_cobranza_pendiente(): void
+    {
+        // `storeFactura()` crea toda venta a través de una Cobranza (es el
+        // único camino que tiene para construir la fila de `ventas`) — para
+        // una Cotización, que es un presupuesto y no una deuda real, esa
+        // cobranza se debe descartar antes de terminar, sin arrastrarse la
+        // venta en el borrado en cascada de `Cobranza::booted()`.
+        $this->actingAs($this->admin(), 'web')->post(route('admin.ventas.factura.store'), [
+            'fecha' => '2026-09-01',
+            'fecha_vencimiento' => '2026-09-01',
+            'tipcomp' => 'COT',
+            'n_seri' => 'CT01',
+            'n_comp' => '00000001',
+            'razonsocial' => 'Cliente de Prueba',
+            'monto' => 500,
+            'tipo_operacion' => 'gravada',
+            'precios_incluyen_igv' => 1,
+        ])->assertRedirect();
+
+        $cotizacion = Venta::where('tipcomp', 'COT')->where('n_comp', '00000001')->firstOrFail();
+        $this->assertNull($cotizacion->cobranza_id);
+        $this->assertSame(0, Cobranza::count());
+    }
+
+    public function test_crear_una_boleta_si_genera_cobranza_pendiente(): void
+    {
+        $this->actingAs($this->admin(), 'web')->post(route('admin.ventas.factura.store'), [
+            'fecha' => '2026-09-01',
+            'fecha_vencimiento' => '2026-09-01',
+            'tipcomp' => '03',
+            'n_seri' => 'B001',
+            'n_comp' => '00000001',
+            'razonsocial' => 'Cliente de Prueba',
+            'monto' => 100,
+            'tipo_operacion' => 'gravada',
+            'precios_incluyen_igv' => 1,
+        ])->assertRedirect();
+
+        $venta = Venta::where('tipcomp', '03')->where('n_comp', '00000001')->firstOrFail();
+        $this->assertNotNull($venta->cobranza_id);
+        $this->assertSame(1, Cobranza::count());
     }
 
     public function test_la_lista_propia_de_cotizaciones_si_las_sigue_mostrando(): void
