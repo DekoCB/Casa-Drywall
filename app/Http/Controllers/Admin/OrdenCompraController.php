@@ -139,7 +139,6 @@ class OrdenCompraController extends Controller
             'lineas'      => CatalogoKendall::LINEAS,
             'bases'       => CatalogoKendall::BASES,
             'ejemplos'    => CatalogoKendall::EJEMPLOS,
-            'emisor'      => config('rentaltech.emisor_oc'),
             'proveedores' => Proveedor::where('estado', 'activo')->orderBy('razon_social')->get(),
             'empresas'    => EmpresaTransporte::where('estado', 'activo')->orderBy('nombre')->get(),
             'catalogoMerch' => Merch::orderBy('nombre')->get(),

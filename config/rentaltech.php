@@ -36,23 +36,6 @@ return [
     'tipo_cambio_facturas' => (float) env('RT_TIPO_CAMBIO_FACTURAS', 3.44),
 
     /*
-    | Datos que van fijos en toda orden de compra. En el original están
-    | escritos como campos ocultos dentro del formulario. Se leen del mismo
-    | .env que `empresa` de arriba (no se duplican como texto fijo) para que
-    | nunca vuelvan a quedar desincronizados de los datos reales.
-    */
-    'emisor_oc' => [
-        'proveedor'    => env('RT_RAZON_SOCIAL', 'CASA DRYWALL E.I.R.L.'),
-        'ruc'          => env('RT_RUC', ''),
-        'telefono'     => env('RT_TELEFONO', ''),
-        'correo'       => env('RT_EMAIL', ''),
-        'direccion'    => env('RT_DIRECCION', ''),
-        'distrito'     => 'Pisco',
-        'provincia'    => 'Pisco',
-        'departamento' => 'Ica',
-    ],
-
-    /*
     | Cuentas bancarias que se muestran al pie de la Cotización, para que el
     | cliente pueda depositar directamente. Datos fijos de la empresa, igual
     | que `emisor_oc`.

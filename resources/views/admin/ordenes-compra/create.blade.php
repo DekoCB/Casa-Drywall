@@ -53,10 +53,6 @@
     <form method="POST" action="{{ route('admin.ordenes-compra.store') }}" id="formOrden" class="oc-hoja">
         @csrf
 
-        {{-- Datos que van fijos en toda orden de compra. --}}
-        @foreach ($emisor as $campo => $valor)
-            <input type="hidden" name="{{ $campo }}" value="{{ $valor }}">
-        @endforeach
         <input type="hidden" name="estado" value="Pendiente">
         <input type="hidden" name="gasto_unit" value="0">
         <input type="hidden" name="peso" id="oc-peso">
@@ -70,8 +66,8 @@
         <div class="ocd-membrete">
             <div>
                 <span class="ocd-tipo">Orden de compra</span>
-                <div class="ocd-emisor-nombre">{{ $emisor['proveedor'] }}</div>
-                <div class="ocd-emisor-dato">RUC {{ $emisor['ruc'] }} · {{ $emisor['distrito'] }}, {{ $emisor['departamento'] }}</div>
+                <div class="ocd-emisor-nombre" id="ocr-proveedor">{{ old('proveedor') ?: 'Sin proveedor' }}</div>
+                <div class="ocd-emisor-dato">RUC <span id="ocr-ruc">{{ old('ruc') ?: '—' }}</span></div>
             </div>
 
             <div class="ocd-membrete-der">
@@ -109,9 +105,74 @@
             <h3 class="ocp-titulo">¿Qué vas a comprar?</h3>
             <p class="ocp-ayuda">Busca en el catálogo y agrega las líneas. Si la compra incluye merch para clientes, también va aquí.</p>
 
-        {{-- ══ Productos ══ --}}
+        {{-- ══ Proveedor ══ --}}
         <div class="ocd-seccion">
             <span class="ocd-num">1</span>
+            <div>
+                <div class="ocd-tit">Proveedor</div>
+                <div class="ocd-sub">A quién se le compra; elígelo del listado o escríbelo</div>
+            </div>
+        </div>
+
+        <div class="oc-form-grid">
+            <div class="oc-campo oc-form-full">
+                <label class="oc-label" for="proveedor_select">Buscar en proveedores registrados</label>
+                <select class="oc-input" id="proveedor_select">
+                    <option value="">— Escribir manualmente —</option>
+                    @foreach ($proveedores as $prov)
+                        <option value="{{ $prov->id }}"
+                                data-razon="{{ $prov->razon_social }}"
+                                data-ruc="{{ $prov->ruc }}"
+                                data-telefono="{{ $prov->telefono }}"
+                                data-correo="{{ $prov->email }}"
+                                data-direccion="{{ $prov->direccion }}"
+                                data-distrito="{{ $prov->distrito }}"
+                                data-provincia="{{ $prov->provincia }}"
+                                data-departamento="{{ $prov->departamento }}">
+                            {{ $prov->razon_social }} — {{ $prov->ruc }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="oc-campo">
+                <label class="oc-label" for="proveedor">Razón social <span>*</span></label>
+                <input type="text" class="oc-input" id="proveedor" name="proveedor" required maxlength="255"
+                       value="{{ old('proveedor') }}">
+            </div>
+            <div class="oc-campo">
+                <label class="oc-label" for="ruc">RUC</label>
+                <input type="text" class="oc-input mono" id="ruc" name="ruc" maxlength="20" value="{{ old('ruc') }}">
+            </div>
+            <div class="oc-campo">
+                <label class="oc-label" for="telefono">Teléfono</label>
+                <input type="text" class="oc-input" id="telefono" name="telefono" maxlength="50" value="{{ old('telefono') }}">
+            </div>
+            <div class="oc-campo">
+                <label class="oc-label" for="correo">Correo</label>
+                <input type="email" class="oc-input" id="correo" name="correo" maxlength="150" value="{{ old('correo') }}">
+            </div>
+            <div class="oc-campo">
+                <label class="oc-label" for="distrito">Distrito</label>
+                <input type="text" class="oc-input" id="distrito" name="distrito" maxlength="100" value="{{ old('distrito') }}">
+            </div>
+            <div class="oc-campo">
+                <label class="oc-label" for="provincia">Provincia</label>
+                <input type="text" class="oc-input" id="provincia" name="provincia" maxlength="100" value="{{ old('provincia') }}">
+            </div>
+            <div class="oc-campo">
+                <label class="oc-label" for="departamento">Departamento</label>
+                <input type="text" class="oc-input" id="departamento" name="departamento" maxlength="100" value="{{ old('departamento') }}">
+            </div>
+            <div class="oc-campo oc-form-full">
+                <label class="oc-label" for="direccion">Dirección</label>
+                <textarea class="oc-input" id="direccion" name="direccion" rows="2">{{ old('direccion') }}</textarea>
+            </div>
+        </div>
+
+        {{-- ══ Productos ══ --}}
+        <div class="ocd-seccion">
+            <span class="ocd-num">2</span>
             <div>
                 <div class="ocd-tit">Productos</div>
                 <div class="ocd-sub">Busca en el catálogo y agrega las líneas de la orden</div>
@@ -169,7 +230,7 @@
 
         {{-- ══ Merch ══ --}}
         <div class="ocd-seccion">
-            <span class="ocd-num opcional">2</span>
+            <span class="ocd-num opcional">3</span>
             <div>
                 <div class="ocd-tit">Merch para clientes</div>
                 <div class="ocd-sub">Entra al stock de Merch y se anota como egreso de promoción</div>
@@ -236,7 +297,7 @@
 
         {{-- ══ Datos generales ══ --}}
         <div class="ocd-seccion">
-            <span class="ocd-num">3</span>
+            <span class="ocd-num">4</span>
             <div>
                 <div class="ocd-tit">Datos de la orden</div>
                 <div class="ocd-sub">Número, fecha, cliente, documentos y transporte</div>
@@ -330,7 +391,7 @@
 
         {{-- ══ Costos ══ --}}
         <div class="ocd-seccion">
-            <span class="ocd-num">4</span>
+            <span class="ocd-num">5</span>
             <div>
                 <div class="ocd-tit">Costos</div>
                 <div class="ocd-sub">Tipo de cambio, precio de venta y condición de pago</div>
@@ -387,7 +448,7 @@
 
         {{-- ══ Observaciones ══ --}}
         <div class="ocd-seccion">
-            <span class="ocd-num opcional">5</span>
+            <span class="ocd-num opcional">6</span>
             <div>
                 <div class="ocd-tit">Observaciones</div>
                 <div class="ocd-sub">Notas para el proveedor o para la secretaria</div>
@@ -511,6 +572,32 @@ let dias        = 30;
 let totalManual = false;
 
 const $ = (id) => document.getElementById(id);
+
+// ── Proveedor: autocompletar desde el catálogo o escribirlo a mano ───────
+$('proveedor_select').addEventListener('change', function () {
+    const opcion = this.selectedOptions[0];
+    if (! opcion?.dataset.razon) { return; }
+
+    $('proveedor').value      = opcion.dataset.razon || '';
+    $('ruc').value            = opcion.dataset.ruc || '';
+    $('telefono').value       = opcion.dataset.telefono || '';
+    $('correo').value         = opcion.dataset.correo || '';
+    $('direccion').value      = opcion.dataset.direccion || '';
+    $('distrito').value       = opcion.dataset.distrito || '';
+    $('provincia').value      = opcion.dataset.provincia || '';
+    $('departamento').value   = opcion.dataset.departamento || '';
+
+    pintarMembreteProveedor();
+});
+
+function pintarMembreteProveedor() {
+    $('ocr-proveedor').textContent = $('proveedor').value.trim() || 'Sin proveedor';
+    $('ocr-ruc').textContent       = $('ruc').value.trim() || '—';
+}
+
+['proveedor', 'ruc'].forEach((campo) => {
+    $(campo).addEventListener('input', pintarMembreteProveedor);
+});
 
 // ── Buscador de productos ────────────────────────────────────────────────
 let resultados = [];
