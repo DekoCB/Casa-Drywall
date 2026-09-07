@@ -34,6 +34,7 @@ class ReporteController extends Controller
                 ['route' => 'admin.ventas.index', 'query' => ['tipcomp' => 'NV'], 'titulo' => 'Notas de Venta', 'desc' => 'Notas de venta emitidas, sin comprobante SUNAT.', 'icon' => 'documento'],
                 ['route' => 'admin.clientes.index', 'titulo' => 'Clientes', 'desc' => 'Análisis y detalle de tu cartera de clientes.', 'icon' => 'cliente'],
                 ['route' => 'admin.reportes.abc', 'titulo' => 'Análisis ABC', 'desc' => 'Productos más vendidos, clasificados A/B/C por ingreso.', 'icon' => 'abc', 'destacado' => true],
+                ['route' => 'admin.reportes.utilidad', 'titulo' => 'Utilidades', 'desc' => 'Margen bruto por producto: ingreso menos costo de compra.', 'icon' => 'abc', 'destacado' => true],
             ],
             'Compras' => [
                 ['route' => 'admin.ordenes-compra.index', 'titulo' => 'Órdenes de Compra', 'desc' => 'Resumen de todas las compras realizadas.', 'icon' => 'compra'],
@@ -76,6 +77,36 @@ class ReporteController extends Controller
             'B — '.$reporte['resumen']['B']['n'].' productos' => $reporte['resumen']['B']['etiqueta'],
             'C — '.$reporte['resumen']['C']['n'].' productos' => $reporte['resumen']['C']['etiqueta'],
             'Total' => 'S/ '.number_format($reporte['resumen']['total'], 2),
+        ]);
+    }
+
+    public function utilidad(Request $request): View
+    {
+        $reporte = $this->centro->utilidadVentas(
+            $request->query('desde'),
+            $request->query('hasta'),
+            (string) $request->query('q', '')
+        );
+
+        return view('admin.reportes.utilidad', $reporte);
+    }
+
+    public function utilidadExcel(Request $request): Response
+    {
+        $reporte = $this->centro->utilidadVentas($request->query('desde'), $request->query('hasta'), (string) $request->query('q', ''));
+
+        return $this->respuestaExcel('Utilidades', $reporte);
+    }
+
+    public function utilidadPdf(Request $request): Response
+    {
+        $reporte = $this->centro->utilidadVentas($request->query('desde'), $request->query('hasta'), (string) $request->query('q', ''));
+
+        return $this->respuestaPdf('Utilidades por Producto', $reporte, [
+            'Ingreso' => 'S/ '.number_format($reporte['resumen']['ingreso'], 2),
+            'Costo' => 'S/ '.number_format($reporte['resumen']['costo'], 2),
+            'Utilidad' => 'S/ '.number_format($reporte['resumen']['utilidad'], 2),
+            'Margen' => $reporte['resumen']['margen_pct'].'%',
         ]);
     }
 

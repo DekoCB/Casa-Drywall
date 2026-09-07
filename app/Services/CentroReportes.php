@@ -150,6 +150,74 @@ class CentroReportes
     }
 
     /**
+     * Utilidad bruta por producto vendido: ingreso (lo facturado) menos costo
+     * (cantidad × `precio_compra` ACTUAL del producto — no hay costo histórico
+     * guardado por línea de venta, misma simplificación documentada que ya usa
+     * `CentroInventario::kardex()` en modo valorizado). Se excluyen
+     * Cotizaciones y ventas canceladas/eliminadas, igual que en `analisisAbc`.
+     */
+    public function utilidadVentas(?string $desde, ?string $hasta, string $busqueda = ''): array
+    {
+        $desde = $desde ?: now()->startOfYear()->toDateString();
+        $hasta = $hasta ?: now()->toDateString();
+        $busqueda = trim($busqueda);
+
+        $filas = VentaDetalle::query()
+            ->join('ventas', 'ventas.id', '=', 'venta_detalle.venta_id')
+            ->join('productos', 'productos.id', '=', 'venta_detalle.producto_id')
+            ->where('ventas.tipcomp', '!=', 'COT')
+            ->where(fn ($q) => $q->whereNull('ventas.estado')->orWhereNotIn('ventas.estado', ['cancelada', 'eliminada']))
+            ->whereDate('ventas.fecha', '>=', $desde)
+            ->whereDate('ventas.fecha', '<=', $hasta)
+            ->when($busqueda !== '', fn ($q) => $q->where(
+                fn ($qq) => $qq->where('venta_detalle.prod_nombre', 'like', "%{$busqueda}%")
+                    ->orWhere('venta_detalle.prod_codigo', 'like', "%{$busqueda}%")
+            ))
+            ->groupBy('venta_detalle.producto_id', 'venta_detalle.prod_codigo', 'venta_detalle.prod_nombre', 'productos.precio_compra')
+            ->selectRaw('venta_detalle.prod_codigo as codigo, venta_detalle.prod_nombre as nombre, productos.precio_compra as costo_unit')
+            ->selectRaw('SUM(venta_detalle.cantidad) as cantidad, SUM(venta_detalle.subtotal) as ingreso')
+            ->orderByDesc('ingreso')
+            ->get();
+
+        $items = $filas->map(function ($fila) {
+            $ingreso = (float) $fila->ingreso;
+            $costo = (float) $fila->cantidad * (float) $fila->costo_unit;
+            $utilidad = $ingreso - $costo;
+
+            return [
+                'codigo' => $fila->codigo ?: '—',
+                'nombre' => $fila->nombre,
+                'cantidad' => (int) $fila->cantidad,
+                'ingreso' => round($ingreso, 2),
+                'costo' => round($costo, 2),
+                'utilidad' => round($utilidad, 2),
+                'margen_pct' => $ingreso > 0 ? round($utilidad / $ingreso * 100, 1) : 0.0,
+            ];
+        })->sortByDesc('utilidad')->values();
+
+        $totalIngreso = (float) $items->sum('ingreso');
+        $totalCosto = (float) $items->sum('costo');
+        $totalUtilidad = $totalIngreso - $totalCosto;
+
+        return [
+            'filtros' => ['desde' => $desde, 'hasta' => $hasta, 'q' => $busqueda],
+            'resumen' => [
+                'ingreso' => round($totalIngreso, 2),
+                'costo' => round($totalCosto, 2),
+                'utilidad' => round($totalUtilidad, 2),
+                'margen_pct' => $totalIngreso > 0 ? round($totalUtilidad / $totalIngreso * 100, 1) : 0.0,
+            ],
+            'items' => $items,
+            'columnas' => ['Código', 'Producto', 'Cant.', 'Ingreso (S/)', 'Costo (S/)', 'Utilidad (S/)', 'Margen %'],
+            'filas' => $items->map(fn ($f) => [
+                $f['codigo'], $f['nombre'], $f['cantidad'],
+                number_format($f['ingreso'], 2), number_format($f['costo'], 2),
+                number_format($f['utilidad'], 2), $f['margen_pct'].'%',
+            ])->all(),
+        ];
+    }
+
+    /**
      * Aging de cuentas por cobrar por cliente, en tramos de 30 días. Los
      * tramos se calculan en PHP con `Cobranza::diasVencidos()` (no con
      * `whereRaw`/`DATEDIFF`): esa raíz ya rompió los tests en SQLite una vez

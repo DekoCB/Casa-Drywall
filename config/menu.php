@@ -50,6 +50,7 @@ return [
                         'crearRoute' => 'admin.ventas.factura.create', 'crearQuery' => ['tipo' => '01']],
                     ['route' => 'admin.pedidos.index', 'label' => 'Pedidos',
                         'crearRoute' => 'admin.pedidos.index', 'crearQuery' => ['crear' => 1]],
+                    ['route' => 'admin.reportes.utilidad', 'label' => 'Utilidades'],
                     ['divider' => 'Gestión SUNAT'],
                     ['route' => 'admin.ventas.index', 'query' => ['estado_factura' => 'no_enviado'], 'label' => 'No enviados'],
                     ['route' => 'admin.ventas.index', 'query' => ['estado' => 'cancelada'], 'label' => 'Anulaciones'],

@@ -99,6 +99,34 @@ class ReportesTest extends TestCase
         $this->assertSame('Alta', $items->firstWhere('codigo', 'P011')['estado']);
     }
 
+    public function test_utilidad_resta_el_costo_de_compra_actual_y_excluye_cotizaciones(): void
+    {
+        $producto = Producto::create(['codigo' => 'P020', 'nombre' => 'Placa Drywall', 'stock' => 50, 'precio_compra' => 30, 'precio_venta' => 50]);
+
+        $venta = $this->ventaConItems('2026-06-01', '03', [
+            ['codigo' => 'P020', 'nombre' => 'Placa Drywall', 'cantidad' => 10, 'precio' => 50],
+        ]);
+        VentaDetalle::where('venta_id', $venta->id)->update(['producto_id' => $producto->id]);
+
+        // Una cotización con el mismo producto no debe sumarse a la utilidad.
+        $cotizacion = $this->ventaConItems('2026-06-02', 'COT', [
+            ['codigo' => 'P020', 'nombre' => 'Placa Drywall', 'cantidad' => 100, 'precio' => 50],
+        ]);
+        VentaDetalle::where('venta_id', $cotizacion->id)->update(['producto_id' => $producto->id]);
+
+        $respuesta = $this->actingAs($this->admin(), 'web')
+            ->get(route('admin.reportes.utilidad', ['desde' => '2026-06-01', 'hasta' => '2026-06-30']));
+
+        $respuesta->assertOk();
+        $fila = $respuesta->viewData('items')->firstWhere('codigo', 'P020');
+
+        $this->assertSame(10, $fila['cantidad']); // no 110 — la cotización no cuenta
+        $this->assertSame(500.0, $fila['ingreso']); // 10 * 50
+        $this->assertSame(300.0, $fila['costo']); // 10 * 30
+        $this->assertSame(200.0, $fila['utilidad']); // 500 - 300
+        $this->assertSame(40.0, $fila['margen_pct']); // 200 / 500
+    }
+
     public function test_aging_agrupa_por_cliente_en_tramos_de_30_dias(): void
     {
         $cliente = Cliente::create(['nombres' => 'Constructora ABC', 'numero_documento' => '20123456789']);

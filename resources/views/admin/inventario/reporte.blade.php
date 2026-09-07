@@ -60,6 +60,11 @@
             <div class="rep-kpi-label">Valor total</div>
             <div class="rep-kpi-val">S/ {{ number_format($resumen['valor_total'], 2) }}</div>
         </div>
+        <div class="rep-kpi">
+            <div class="rep-kpi-label">Utilidad potencial</div>
+            <div class="rep-kpi-val">S/ {{ number_format($resumen['utilidad_potencial'], 2) }}</div>
+            <div class="rep-kpi-sub">Si se vende todo el stock actual</div>
+        </div>
     </div>
 
     <div class="table-container">
@@ -67,7 +72,8 @@
             <thead>
                 <tr>
                     <th>Código</th><th>Producto</th><th>Categoría</th><th>Marca</th>
-                    <th class="num">Stock</th><th class="num">Mín.</th><th class="num">Costo Unit.</th><th class="num">Valor</th>
+                    <th class="num">Stock</th><th class="num">Mín.</th><th class="num">Costo Compra</th>
+                    <th class="num">Precio Venta</th><th class="num">Utilidad</th><th class="num">Utilidad %</th><th class="num">Valor</th>
                 </tr>
             </thead>
             <tbody>
@@ -80,10 +86,13 @@
                     <td class="num" style="color:{{ $fila['stock'] <= $fila['minimo'] ? '#A8231F' : 'inherit' }};font-weight:{{ $fila['stock'] <= $fila['minimo'] ? '700' : '400' }};">{{ number_format($fila['stock']) }}</td>
                     <td class="num">{{ number_format($fila['minimo']) }}</td>
                     <td class="num">S/ {{ number_format($fila['costo'], 2) }}</td>
+                    <td class="num">S/ {{ number_format($fila['precio_venta'], 2) }}</td>
+                    <td class="num" style="color:{{ $fila['utilidad'] < 0 ? '#A8231F' : '#1f6b5e' }};">S/ {{ number_format($fila['utilidad'], 2) }}</td>
+                    <td class="num">{{ number_format($fila['utilidad_pct'], 1) }}%</td>
                     <td class="num">S/ {{ number_format($fila['valor'], 2) }}</td>
                 </tr>
             @empty
-                <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--ink-3);">Sin productos para el filtro seleccionado.</td></tr>
+                <tr><td colspan="11" style="text-align:center;padding:40px;color:var(--ink-3);">Sin productos para el filtro seleccionado.</td></tr>
             @endforelse
             </tbody>
         </table>

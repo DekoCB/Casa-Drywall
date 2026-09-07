@@ -97,16 +97,27 @@ class CentroInventario
             ->orderBy('nombre')
             ->get();
 
-        $items = $productos->map(fn (Producto $p) => [
-            'codigo' => $p->codigo ?: '—',
-            'nombre' => $p->nombre,
-            'categoria' => $p->categoria?->nombre ?? '—',
-            'marca' => $p->marca?->nombre ?? '—',
-            'stock' => (int) $p->stock,
-            'minimo' => (int) $p->stock_minimo,
-            'costo' => (float) $p->precio_compra,
-            'valor' => round((int) $p->stock * (float) $p->precio_compra, 2),
-        ]);
+        $items = $productos->map(function (Producto $p) {
+            $costo = (float) $p->precio_compra;
+            $venta = (float) $p->precio_venta;
+            $utilidad = $venta - $costo;
+
+            return [
+                'codigo' => $p->codigo ?: '—',
+                'nombre' => $p->nombre,
+                'categoria' => $p->categoria?->nombre ?? '—',
+                'marca' => $p->marca?->nombre ?? '—',
+                'stock' => (int) $p->stock,
+                'minimo' => (int) $p->stock_minimo,
+                'costo' => $costo,
+                'precio_venta' => $venta,
+                'utilidad' => round($utilidad, 2),
+                // Margen sobre el precio de venta (no sobre el costo): 0 si
+                // el producto todavía no tiene precio de venta cargado.
+                'utilidad_pct' => $venta > 0 ? round($utilidad / $venta * 100, 1) : 0.0,
+                'valor' => round((int) $p->stock * $costo, 2),
+            ];
+        });
 
         return [
             'filtros' => ['categoria' => $categoriaId, 'marca' => $marcaId, 'q' => $busqueda],
@@ -114,12 +125,15 @@ class CentroInventario
                 'productos' => $items->count(),
                 'unidades' => (int) $items->sum('stock'),
                 'valor_total' => round((float) $items->sum('valor'), 2),
+                // Utilidad potencial de vender todo el stock actual al precio de venta.
+                'utilidad_potencial' => round((float) $items->sum(fn ($f) => $f['stock'] * $f['utilidad']), 2),
             ],
             'items' => $items,
-            'columnas' => ['Código', 'Producto', 'Categoría', 'Marca', 'Stock', 'Mín.', 'Costo Unit.', 'Valor'],
+            'columnas' => ['Código', 'Producto', 'Categoría', 'Marca', 'Stock', 'Mín.', 'Costo Unit.', 'Precio Venta', 'Utilidad Unit.', 'Utilidad %', 'Valor'],
             'filas' => $items->map(fn ($f) => [
                 $f['codigo'], $f['nombre'], $f['categoria'], $f['marca'], $f['stock'], $f['minimo'],
-                number_format($f['costo'], 2), number_format($f['valor'], 2),
+                number_format($f['costo'], 2), number_format($f['precio_venta'], 2),
+                number_format($f['utilidad'], 2), $f['utilidad_pct'].'%', number_format($f['valor'], 2),
             ])->all(),
         ];
     }

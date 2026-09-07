@@ -205,6 +205,8 @@ Route::middleware(['auth', 'rol:admin'])
         Route::get('inventario/movimientos', [InventarioController::class, 'movimientos'])->name('inventario.movimientos');
         Route::post('inventario/traslados', [InventarioController::class, 'storeTraslado'])->name('inventario.traslados.store');
         Route::post('inventario/devoluciones', [InventarioController::class, 'storeDevolucion'])->name('inventario.devoluciones.store');
+        Route::patch('inventario/movimientos/{movimiento}/entregado', [InventarioController::class, 'marcarEntregado'])->name('inventario.movimientos.entregado');
+        Route::patch('inventario/movimientos/{movimiento}/cantidad', [InventarioController::class, 'actualizarCantidad'])->name('inventario.movimientos.cantidad');
         Route::get('inventario/kardex', [InventarioController::class, 'kardex'])->name('inventario.kardex');
         Route::get('inventario/kardex/excel', [InventarioController::class, 'kardexExcel'])->name('inventario.kardex.excel');
         Route::get('inventario/kardex/pdf', [InventarioController::class, 'kardexPdf'])->name('inventario.kardex.pdf');
@@ -242,6 +244,9 @@ Route::middleware(['auth', 'rol:admin'])
         Route::get('reportes/abc', [ReporteController::class, 'abc'])->name('reportes.abc');
         Route::get('reportes/abc/excel', [ReporteController::class, 'abcExcel'])->name('reportes.abc.excel');
         Route::get('reportes/abc/pdf', [ReporteController::class, 'abcPdf'])->name('reportes.abc.pdf');
+        Route::get('reportes/utilidad', [ReporteController::class, 'utilidad'])->name('reportes.utilidad');
+        Route::get('reportes/utilidad/excel', [ReporteController::class, 'utilidadExcel'])->name('reportes.utilidad.excel');
+        Route::get('reportes/utilidad/pdf', [ReporteController::class, 'utilidadPdf'])->name('reportes.utilidad.pdf');
         Route::get('reportes/rotacion', [ReporteController::class, 'rotacion'])->name('reportes.rotacion');
         Route::get('reportes/rotacion/excel', [ReporteController::class, 'rotacionExcel'])->name('reportes.rotacion.excel');
         Route::get('reportes/rotacion/pdf', [ReporteController::class, 'rotacionPdf'])->name('reportes.rotacion.pdf');
