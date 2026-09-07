@@ -351,15 +351,9 @@
                                placeholder="KENDALL SUPER-D XA (Ti,CK4)">
                     </div>
 
-                    <div class="form-group">
-                        <label for="categoria_id">Categoría <span>*</span></label>
-                        <select id="categoria_id" name="categoria_id" required>
-                            <option value="">Seleccionar categoría</option>
-                            @foreach ($categorias as $cat)
-                                <option value="{{ $cat->id }}">{{ $cat->nombre }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+                    {{-- Categoría quitada del formulario por ahora, a pedido; el campo
+                         y la columna siguen existiendo (categoria_id queda null). --}}
+                    <input type="hidden" id="categoria_id" name="categoria_id" value="">
                     <div class="form-group">
                         <label for="marca_id">Marca</label>
                         <select id="marca_id" name="marca_id">

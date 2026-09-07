@@ -121,6 +121,7 @@ class InventarioController extends Controller
                     'motivo' => $datos['motivo'] ?? null,
                     'referencia' => $referencia,
                     'usuario_id' => $request->user()->id,
+                    'estado' => 'en_curso',
                 ]);
             }
 
@@ -171,12 +172,92 @@ class InventarioController extends Controller
                 'motivo' => $datos['motivo'] ?? null,
                 'referencia' => $proveedor ? "Proveedor: {$proveedor->razon_social}" : null,
                 'usuario_id' => $request->user()->id,
+                'estado' => 'en_curso',
             ]);
 
             $producto->recalcularStock();
         });
 
         return back()->with('mensaje', 'Devolución registrada.');
+    }
+
+    /** Marca un movimiento (y su pareja, si es traslado) como entregado: ya no admite editar la cantidad. */
+    public function marcarEntregado(MovimientoAlmacen $movimiento): RedirectResponse
+    {
+        $this->filasDelMovimiento($movimiento)->each->update(['estado' => 'entregado']);
+
+        return back()->with('mensaje', 'Movimiento marcado como entregado.');
+    }
+
+    /**
+     * Corrige la cantidad de un movimiento todavía "en_curso", ajustando el
+     * stock ACTUAL del almacén (no reconstruye el kardex histórico completo).
+     * Un traslado corrige sus dos filas (origen y destino) juntas para no
+     * desbalancear el stock entre almacenes. Un ajuste no se edita aquí: al
+     * ser un valor absoluto (no un delta), corregirlo es registrar uno nuevo.
+     */
+    public function actualizarCantidad(Request $request, MovimientoAlmacen $movimiento): RedirectResponse
+    {
+        if ($movimiento->tipo === 'ajuste') {
+            return back()->with('error', 'Un ajuste no se edita: registra uno nuevo con el valor correcto.');
+        }
+
+        if ($movimiento->estado !== 'en_curso') {
+            return back()->with('error', 'Este movimiento ya fue entregado; no se puede editar la cantidad.');
+        }
+
+        $datos = $request->validate([
+            'cantidad' => ['required', 'integer', 'min:1'],
+        ]);
+
+        DB::transaction(function () use ($datos, $movimiento) {
+            foreach ($this->filasDelMovimiento($movimiento) as $fila) {
+                $disminuye = in_array($fila->tipo, ['salida', 'devolucion'], true)
+                    || ($fila->tipo === 'traslado' && $fila->stock_nuevo < $fila->stock_anterior);
+
+                $stockFila = StockAlmacen::lockForUpdate()
+                    ->where('producto_id', $fila->producto_id)
+                    ->where('almacen_id', $fila->almacen_id)
+                    ->firstOrFail();
+
+                // Se retrocede el efecto viejo sobre el stock actual y se
+                // aplica el nuevo, en vez de tocar solo `stock_nuevo` de la
+                // fila (que puede haber quedado desactualizado por
+                // movimientos posteriores).
+                $stockSinEsteMovimiento = $stockFila->stock + ($disminuye ? $fila->cantidad : -$fila->cantidad);
+                $nuevoStock = $stockSinEsteMovimiento + ($disminuye ? -$datos['cantidad'] : $datos['cantidad']);
+
+                if ($nuevoStock < 0) {
+                    throw ValidationException::withMessages([
+                        'cantidad' => 'La nueva cantidad dejaría el stock de ese almacén en negativo.',
+                    ]);
+                }
+
+                $stockFila->update(['stock' => $nuevoStock]);
+
+                $fila->update([
+                    'cantidad' => $datos['cantidad'],
+                    'stock_anterior' => $stockSinEsteMovimiento,
+                    'stock_nuevo' => $nuevoStock,
+                ]);
+
+                $fila->producto->recalcularStock();
+            }
+        });
+
+        return back()->with('mensaje', 'Cantidad actualizada.');
+    }
+
+    /** El movimiento solo, o su pareja completa (origen+destino) si es un traslado. */
+    private function filasDelMovimiento(MovimientoAlmacen $movimiento): \Illuminate\Support\Collection
+    {
+        if ($movimiento->tipo === 'traslado' && $movimiento->referencia) {
+            return MovimientoAlmacen::where('referencia', $movimiento->referencia)
+                ->where('tipo', 'traslado')
+                ->get();
+        }
+
+        return collect([$movimiento]);
     }
 
     public function kardex(Request $request): View
@@ -245,6 +326,7 @@ class InventarioController extends Controller
             'Productos' => $reporte['resumen']['productos'],
             'Unidades' => $reporte['resumen']['unidades'],
             'Valor total' => 'S/ '.number_format($reporte['resumen']['valor_total'], 2),
+            'Utilidad potencial' => 'S/ '.number_format($reporte['resumen']['utilidad_potencial'], 2),
         ]);
     }
 

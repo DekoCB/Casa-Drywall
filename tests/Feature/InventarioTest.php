@@ -92,6 +92,95 @@ class InventarioTest extends TestCase
         $this->assertStringContainsString('Distribuidora XYZ', $mov->referencia);
     }
 
+    public function test_traslado_nuevo_queda_en_curso_y_admite_editar_la_cantidad(): void
+    {
+        [$origen, $destino] = $this->dosAlmacenes();
+        $producto = Producto::create(['codigo' => 'P100', 'nombre' => 'Placa', 'stock' => 50]);
+        StockAlmacen::create(['producto_id' => $producto->id, 'almacen_id' => $origen->id, 'stock' => 50]);
+
+        $this->actingAs($this->admin(), 'web')->post(route('admin.inventario.traslados.store'), [
+            'producto_id' => $producto->id,
+            'almacen_origen_id' => $origen->id,
+            'almacen_destino_id' => $destino->id,
+            'cantidad' => 20,
+        ]);
+
+        $movs = MovimientoAlmacen::where('producto_id', $producto->id)->where('tipo', 'traslado')->get();
+        $this->assertTrue($movs->every(fn (MovimientoAlmacen $m) => $m->estado === 'en_curso'));
+
+        // Se corrige: en realidad eran 15, no 20 — debe corregir ambos almacenes a la vez.
+        $movOrigen = $movs->firstWhere('almacen_id', $origen->id);
+        $this->actingAs($this->admin(), 'web')
+            ->patch(route('admin.inventario.movimientos.cantidad', $movOrigen), ['cantidad' => 15])
+            ->assertRedirect();
+
+        $this->assertSame(35, StockAlmacen::where('almacen_id', $origen->id)->value('stock')); // 50-15
+        $this->assertSame(15, StockAlmacen::where('almacen_id', $destino->id)->value('stock'));
+        $this->assertTrue(MovimientoAlmacen::where('producto_id', $producto->id)->get()->every(fn (MovimientoAlmacen $m) => $m->cantidad === 15));
+    }
+
+    public function test_marcar_entregado_bloquea_la_edicion_de_cantidad(): void
+    {
+        [$almacen] = $this->dosAlmacenes();
+        $producto = Producto::create(['codigo' => 'P101', 'nombre' => 'Cinta', 'stock' => 20]);
+        StockAlmacen::create(['producto_id' => $producto->id, 'almacen_id' => $almacen->id, 'stock' => 20]);
+
+        $this->actingAs($this->admin(), 'web')->post(route('admin.inventario.devoluciones.store'), [
+            'producto_id' => $producto->id, 'almacen_id' => $almacen->id, 'cantidad' => 5,
+        ]);
+        $mov = MovimientoAlmacen::where('producto_id', $producto->id)->firstOrFail();
+
+        $this->actingAs($this->admin(), 'web')
+            ->patch(route('admin.inventario.movimientos.entregado', $mov))
+            ->assertRedirect();
+        $this->assertSame('entregado', $mov->fresh()->estado);
+
+        $this->actingAs($this->admin(), 'web')
+            ->patch(route('admin.inventario.movimientos.cantidad', $mov), ['cantidad' => 10])
+            ->assertSessionHas('error');
+
+        $this->assertSame(15, StockAlmacen::where('almacen_id', $almacen->id)->value('stock')); // sin cambios
+        $this->assertSame(5, $mov->fresh()->cantidad);
+    }
+
+    public function test_entrada_manual_queda_entregada_de_una_y_no_se_puede_editar(): void
+    {
+        [$almacen] = $this->dosAlmacenes();
+        $producto = Producto::create(['codigo' => 'P103', 'nombre' => 'Cinta métrica', 'stock' => 0]);
+        StockAlmacen::create(['producto_id' => $producto->id, 'almacen_id' => $almacen->id, 'stock' => 0]);
+
+        // Entrada/salida/ajuste terminan en el mismo clic, en un solo
+        // almacén: no hay tránsito físico que alguien deba confirmar después
+        // (a diferencia de traslado/devolución, que sí empiezan "en curso").
+        $this->actingAs($this->admin(), 'web')->post(route('admin.productos.stock', $producto), [
+            'almacen_id' => $almacen->id, 'tipo' => 'entrada', 'cantidad' => 30,
+        ]);
+
+        $mov = MovimientoAlmacen::where('producto_id', $producto->id)->firstOrFail();
+        $this->assertSame('entregado', $mov->estado);
+
+        $this->actingAs($this->admin(), 'web')
+            ->patch(route('admin.inventario.movimientos.cantidad', $mov), ['cantidad' => 50])
+            ->assertSessionHas('error');
+    }
+
+    public function test_editar_cantidad_de_un_ajuste_es_rechazado(): void
+    {
+        [$almacen] = $this->dosAlmacenes();
+        $producto = Producto::create(['codigo' => 'P102', 'nombre' => 'Tornillo', 'stock' => 100]);
+        StockAlmacen::create(['producto_id' => $producto->id, 'almacen_id' => $almacen->id, 'stock' => 100]);
+        $mov = MovimientoAlmacen::create([
+            'producto_id' => $producto->id, 'almacen_id' => $almacen->id, 'tipo' => 'ajuste',
+            'cantidad' => 90, 'stock_anterior' => 100, 'stock_nuevo' => 90, 'estado' => 'en_curso',
+        ]);
+
+        $this->actingAs($this->admin(), 'web')
+            ->patch(route('admin.inventario.movimientos.cantidad', $mov), ['cantidad' => 80])
+            ->assertSessionHas('error');
+
+        $this->assertSame(90, $mov->fresh()->cantidad);
+    }
+
     public function test_listado_de_movimientos_filtra_por_tipo(): void
     {
         [$almacen] = $this->dosAlmacenes();
@@ -150,6 +239,18 @@ class InventarioTest extends TestCase
         $respuesta->assertOk();
         $fila = $respuesta->viewData('items')->firstWhere('codigo', 'P007');
         $this->assertSame(187.5, $fila['valor']); // 15 * 12.5
+    }
+
+    public function test_reporte_inventario_calcula_la_utilidad_unitaria(): void
+    {
+        Producto::create(['codigo' => 'P009', 'nombre' => 'Perfil', 'stock' => 10, 'precio_compra' => 8, 'precio_venta' => 12]);
+
+        $respuesta = $this->actingAs($this->admin(), 'web')->get(route('admin.inventario.reporte'));
+
+        $respuesta->assertOk();
+        $fila = $respuesta->viewData('items')->firstWhere('codigo', 'P009');
+        $this->assertSame(4.0, $fila['utilidad']); // 12 - 8
+        $this->assertEqualsWithDelta(33.3, $fila['utilidad_pct'], 0.1); // 4/12
     }
 
     public function test_exportaciones_de_inventario_responden_con_el_content_type_correcto(): void

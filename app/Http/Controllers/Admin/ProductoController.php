@@ -371,6 +371,10 @@ class ProductoController extends Controller
                 'stock_nuevo' => $nuevo,
                 'motivo' => $datos['motivo'] ?? null,
                 'usuario_id' => $request->user()->id,
+                // Entrada/salida/ajuste terminan en el mismo clic, en un solo
+                // almacén — no hay ningún tránsito físico que alguien tenga
+                // que confirmar después (a diferencia de traslado/devolución).
+                'estado' => 'entregado',
             ]);
 
             $producto->recalcularStock();
@@ -602,7 +606,7 @@ class ProductoController extends Controller
         return $request->validate([
             'codigo' => ['required', 'string', 'max:50'],
             'nombre' => ['required', 'string', 'max:255'],
-            'categoria_id' => ['required', 'integer', 'exists:categorias,id'],
+            'categoria_id' => ['nullable', 'integer', 'exists:categorias,id'],
             'marca_id' => ['nullable', 'integer', 'exists:marcas,id'],
             'presentacion' => ['nullable', 'string', 'max:100'],
             'viscosidad' => ['nullable', 'string', 'max:50'],

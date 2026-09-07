@@ -78,6 +78,7 @@
                 <tr>
                     <th>Fecha</th><th>Producto</th><th>Almacén</th><th>Tipo</th>
                     <th class="num">Cantidad</th><th class="num">Stock</th><th>Motivo / Referencia</th><th>Usuario</th>
+                    <th>Estado</th><th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -91,9 +92,26 @@
                     <td class="num">{{ $m->stock_anterior }} → {{ $m->stock_nuevo }}</td>
                     <td>{{ $m->motivo ?: ($m->referencia ?: '—') }}</td>
                     <td>{{ $m->usuario?->username ?? '—' }}</td>
+                    <td>
+                        <span class="rep-badge estado-{{ $m->estado === 'entregado' ? 'alta' : 'media' }}">
+                            {{ \App\Models\MovimientoAlmacen::ESTADOS[$m->estado] ?? ucfirst($m->estado) }}
+                        </span>
+                    </td>
+                    <td style="white-space:nowrap;">
+                        @if ($m->estado === 'en_curso')
+                            @unless ($m->tipo === 'ajuste')
+                                <button type="button" class="btn btn-secondary btn-sm" title="Editar cantidad"
+                                        data-editar-cantidad="{{ $m->id }}" data-cantidad-actual="{{ $m->cantidad }}">✏</button>
+                            @endunless
+                            <form method="POST" action="{{ route('admin.inventario.movimientos.entregado', $m) }}" style="display:inline;">
+                                @csrf @method('PATCH')
+                                <button type="submit" class="btn btn-secondary btn-sm" title="Marcar como entregado">✓ Entregado</button>
+                            </form>
+                        @endif
+                    </td>
                 </tr>
             @empty
-                <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--ink-3);">Sin movimientos para el filtro seleccionado.</td></tr>
+                <tr><td colspan="10" style="text-align:center;padding:40px;color:var(--ink-3);">Sin movimientos para el filtro seleccionado.</td></tr>
             @endforelse
             </tbody>
         </table>
@@ -237,6 +255,21 @@
     </form>
 </x-modal>
 
+{{-- ══ Editar cantidad de un movimiento "en curso" ══ --}}
+<x-modal id="modalEditarCantidad" titulo="Editar cantidad">
+    <form method="POST" id="formEditarCantidad">
+        @csrf @method('PATCH')
+        <div class="form-group">
+            <label>Nueva cantidad <span>*</span></label>
+            <input type="number" name="cantidad" id="inputNuevaCantidad" min="1" required>
+        </div>
+        <div class="header-btns" style="justify-content:flex-end;">
+            <button type="button" class="btn btn-secondary" data-cerrar="modalEditarCantidad">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+    </form>
+</x-modal>
+
 @endsection
 
 @push('scripts')
@@ -289,6 +322,17 @@ document.querySelectorAll('[data-buscar-producto]').forEach((input) => {
 
     document.addEventListener('click', (e) => {
         if (!contenedor.contains(e.target)) dropdown.classList.remove('activo');
+    });
+});
+
+// ── Editar cantidad de un movimiento "en curso" ──────────────────────────
+document.querySelectorAll('[data-editar-cantidad]').forEach((boton) => {
+    boton.addEventListener('click', () => {
+        const id = boton.dataset.editarCantidad;
+        document.getElementById('formEditarCantidad').action = '{{ url('admin/inventario/movimientos') }}/' + id + '/cantidad';
+        document.getElementById('inputNuevaCantidad').value = boton.dataset.cantidadActual;
+        document.getElementById('modalEditarCantidad').classList.add('active');
+        document.body.style.overflow = 'hidden';
     });
 });
 </script>
