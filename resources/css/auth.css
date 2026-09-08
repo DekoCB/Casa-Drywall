@@ -63,6 +63,14 @@ body {
     z-index: 1;
 }
 
+.back-empresas-login {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 1;
+    text-decoration: none;
+}
+
 .login-wrapper {
     position: relative;
     z-index: 1;
