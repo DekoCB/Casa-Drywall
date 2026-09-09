@@ -23,6 +23,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     @vite(['resources/css/admin.css', 'resources/css/modules/pos.css', 'resources/js/app.js'])
+    @include('partials.brand-color')
     @stack('styles')
 </head>
 <body class="pos-body">
