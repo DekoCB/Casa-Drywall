@@ -166,6 +166,7 @@
                 <label for="acceso_rol">Rol de acceso</label>
                 <select id="acceso_rol" name="acceso_rol">
                     <option value="">Sin acceso</option>
+                    <option value="ventas">Ventas</option>
                     <option value="secretaria">Secretaria</option>
                     <option value="contador">Contador</option>
                     <option value="admin">Administrador</option>

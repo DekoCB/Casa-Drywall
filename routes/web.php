@@ -114,7 +114,8 @@ Route::middleware(['auth', 'rol:admin'])
             ->parameters(['proveedores' => 'proveedor']);
 
         // La edición se hace desde el modal del listado; el alta es una página aparte.
-        Route::get('ventas/{venta}/comprobante', [VentaController::class, 'comprobante'])->name('ventas.comprobante');
+        // ventas.comprobante vive en el grupo compartido con POS (más abajo):
+        // Ventas y Secretaria también necesitan ver/imprimir el comprobante de una venta del POS.
         Route::get('ventas/factura/crear', [VentaController::class, 'createFactura'])->name('ventas.factura.create');
         Route::post('ventas/factura', [VentaController::class, 'storeFactura'])->name('ventas.factura.store');
         Route::get('ventas/notas/crear/{origen?}', [VentaController::class, 'createNota'])->name('ventas.notas.create');
@@ -270,17 +271,17 @@ Route::middleware(['auth', 'rol:admin'])
         });
 
         // Catálogo de cajas físicas (crear "Caja 01", etc.) — solo admin.
-        // Abrir/cerrar sesión de una caja ya existente es de admin y secretaria
-        // por igual, ver el grupo aparte más abajo.
+        // Abrir/cerrar sesión de una caja ya existente es de admin, secretaria
+        // y ventas por igual, ver el grupo aparte más abajo.
         Route::post('caja', [CajaController::class, 'store'])->name('caja.store');
     });
 
 /*
 |--------------------------------------------------------------------------
-| Punto de Venta y Caja — admin y secretaria
+| Punto de Venta y Caja — admin, secretaria y ventas
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'rol:admin,secretaria'])
+Route::middleware(['auth', 'rol:admin,secretaria,ventas'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
@@ -294,11 +295,31 @@ Route::middleware(['auth', 'rol:admin,secretaria'])
             Route::delete('suspendidas/{ventaSuspendida}', [PosController::class, 'eliminarSuspendida'])->name('suspendidas.destroy');
         });
 
+        // Ver/imprimir el comprobante de una venta (se abre tras cada venta del POS).
+        // No es solo de admin: Secretaria y Ventas cobran en el POS y necesitan
+        // el mismo comprobante, aunque no tengan acceso al resto de Ventas/Facturas.
+        Route::get('ventas/{venta}/comprobante', [VentaController::class, 'comprobante'])->name('ventas.comprobante');
+
+        // Abrir/cerrar una sesión de caja ya existente (lo dispara el propio POS).
+        // El catálogo de cajas físicas (crear "Caja 01", etc.) sigue siendo solo de
+        // admin, ver el grupo de arriba — por eso "index" no está acá.
         Route::prefix('caja')->name('caja.')->group(function () {
-            Route::get('/', [CajaController::class, 'index'])->name('index');
             Route::post('{caja}/abrir', [CajaController::class, 'abrir'])->name('abrir');
             Route::post('sesiones/{sesionCaja}/cerrar', [CajaController::class, 'cerrar'])->name('cerrar');
         });
+    });
+
+/*
+|--------------------------------------------------------------------------
+| Catálogo de cajas físicas — solo admin y secretaria (Ventas no lo necesita:
+| si no hay cajas creadas, es una tarea de configuración, no de venta)
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'rol:admin,secretaria'])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+        Route::get('caja', [CajaController::class, 'index'])->name('caja.index');
     });
 
 /*

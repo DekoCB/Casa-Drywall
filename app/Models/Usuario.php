@@ -47,12 +47,18 @@ class Usuario extends Authenticatable
         return $this->rol === 'contador';
     }
 
+    public function esVentas(): bool
+    {
+        return $this->rol === 'ventas';
+    }
+
     /** Ruta de inicio según el rol, igual que el redirect del login original. */
     public function rutaInicio(): string
     {
         return match ($this->rol) {
             'secretaria' => route('secretaria.index'),
             'contador' => route('contador.index'),
+            'ventas' => route('admin.pos.index'),
             default => route('admin.index'),
         };
     }
