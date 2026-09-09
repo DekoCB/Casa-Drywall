@@ -32,6 +32,10 @@ return [
     'admin' => [
         'Principal' => [
             ['route' => 'admin.index', 'label' => 'Dashboard', 'icon' => $iconos['dashboard'], 'active' => ['admin.index', 'admin.galonaje.dashboard']],
+            // Solo Ventas: su "Dashboard" real es /ventas (admin.index no le
+            // pertenece), y si no aparece acá no tiene forma de volver ahí
+            // una vez que entra a Cotizaciones/Boletas/etc.
+            ['route' => 'ventas.index', 'label' => 'Inicio', 'icon' => $iconos['dashboard'], 'roles' => ['ventas']],
         ],
 
         'Gestión Comercial' => [
@@ -39,6 +43,7 @@ return [
             ['route' => 'admin.locales.index',      'label' => 'Locales',      'icon' => $iconos['local']],
             [
                 'route' => 'admin.ventas.index', 'label' => 'Ventas', 'icon' => $iconos['carrito'],
+                'roles' => ['admin', 'ventas'],
                 'submenu' => [
                     ['route' => 'admin.ventas.index', 'query' => ['tipcomp' => 'COT'], 'label' => 'Cotizaciones',
                         'crearRoute' => 'admin.ventas.factura.create', 'crearQuery' => ['tipo' => 'COT']],
@@ -58,9 +63,12 @@ return [
             ],
             [
                 'route' => 'admin.pos.index', 'label' => 'POS', 'icon' => $iconos['pos'],
+                'roles' => ['admin', 'ventas'],
                 'submenu' => [
                     ['route' => 'admin.pos.index',  'label' => 'Punto de Venta'],
-                    ['route' => 'admin.caja.index', 'label' => 'Cajas'],
+                    // Catálogo de cajas físicas: solo admin y secretaria (ver routes/web.php).
+                    // Se pisa el 'roles' heredado del padre para que Ventas no la vea.
+                    ['route' => 'admin.caja.index', 'label' => 'Cajas', 'roles' => ['admin', 'secretaria']],
                 ],
             ],
         ],

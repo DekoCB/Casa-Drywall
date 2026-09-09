@@ -108,32 +108,11 @@ Route::middleware(['auth', 'rol:admin'])
         Route::get('clientes/{cliente}/movimientos', [ClienteController::class, 'movimientos'])->name('clientes.movimientos');
         Route::resource('clientes', ClienteController::class)->except(['show', 'create', 'edit']);
 
-        Route::get('documentos/buscar/{tipo}/{numero}', [DocumentoController::class, 'buscar'])
-            ->whereIn('tipo', ['ruc', 'dni'])
-            ->name('documentos.buscar');
+        // documentos.buscar (lookup RUC/DNI) vive en el grupo compartido con
+        // Ventas (más abajo): lo usa el formulario de Boleta/Factura para
+        // autocompletar datos del cliente.
         Route::resource('proveedores', ProveedorController::class)->except(['show', 'create', 'edit'])
             ->parameters(['proveedores' => 'proveedor']);
-
-        // La edición se hace desde el modal del listado; el alta es una página aparte.
-        // ventas.comprobante vive en el grupo compartido con POS (más abajo):
-        // Ventas y Secretaria también necesitan ver/imprimir el comprobante de una venta del POS.
-        Route::get('ventas/factura/crear', [VentaController::class, 'createFactura'])->name('ventas.factura.create');
-        Route::post('ventas/factura', [VentaController::class, 'storeFactura'])->name('ventas.factura.store');
-        Route::get('ventas/notas/crear/{origen?}', [VentaController::class, 'createNota'])->name('ventas.notas.create');
-        Route::post('ventas/notas', [VentaController::class, 'storeNota'])->name('ventas.notas.store');
-        Route::post('ventas/{venta}/enviar-sunat', [VentaController::class, 'enviarSunat'])->name('ventas.enviar-sunat');
-        Route::post('ventas/{venta}/anular', [VentaController::class, 'anular'])->name('ventas.anular');
-        Route::get('ventas/{venta}/pdf-sunat', [VentaController::class, 'pdfSunat'])->name('ventas.pdf-sunat');
-        Route::resource('ventas', VentaController::class)
-            ->except(['create', 'edit'])
-            ->parameters(['ventas' => 'venta']);
-
-        // Pedidos que hacen los clientes directamente (antes de convertirse en
-        // venta) — el modelo ya existía y se mostraba de solo lectura dentro
-        // de Órdenes de Compra; esto agrega el alta/edición real.
-        Route::resource('pedidos', PedidoController::class)
-            ->except(['show', 'create', 'edit'])
-            ->parameters(['pedidos' => 'pedido']);
 
         // ── Compras & documentos ────────────────────────────────────────────
         Route::get('ordenes-compra/excel', [OrdenCompraController::class, 'excel'])->name('ordenes-compra.excel');
@@ -246,9 +225,7 @@ Route::middleware(['auth', 'rol:admin'])
         Route::get('reportes/abc', [ReporteController::class, 'abc'])->name('reportes.abc');
         Route::get('reportes/abc/excel', [ReporteController::class, 'abcExcel'])->name('reportes.abc.excel');
         Route::get('reportes/abc/pdf', [ReporteController::class, 'abcPdf'])->name('reportes.abc.pdf');
-        Route::get('reportes/utilidad', [ReporteController::class, 'utilidad'])->name('reportes.utilidad');
-        Route::get('reportes/utilidad/excel', [ReporteController::class, 'utilidadExcel'])->name('reportes.utilidad.excel');
-        Route::get('reportes/utilidad/pdf', [ReporteController::class, 'utilidadPdf'])->name('reportes.utilidad.pdf');
+        // reportes.utilidad vive en el grupo compartido con Ventas (más abajo).
         Route::get('reportes/rotacion', [ReporteController::class, 'rotacion'])->name('reportes.rotacion');
         Route::get('reportes/rotacion/excel', [ReporteController::class, 'rotacionExcel'])->name('reportes.rotacion.excel');
         Route::get('reportes/rotacion/pdf', [ReporteController::class, 'rotacionPdf'])->name('reportes.rotacion.pdf');
@@ -275,6 +252,47 @@ Route::middleware(['auth', 'rol:admin'])
         // Abrir/cerrar sesión de una caja ya existente es de admin, secretaria
         // y ventas por igual, ver el grupo aparte más abajo.
         Route::post('caja', [CajaController::class, 'store'])->name('caja.store');
+    });
+
+/*
+|--------------------------------------------------------------------------
+| Módulo de Ventas (cotizaciones, notas de venta, boletas, facturas,
+| pedidos, utilidades) — admin y ventas
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'rol:admin,ventas'])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+        // Lookup RUC/DNI (RENIEC/SUNAT) para autocompletar el cliente al crear
+        // una Boleta/Factura — es de solo lectura contra una API externa, no
+        // expone el catálogo de Clientes propio (eso sigue siendo admin-only).
+        Route::get('documentos/buscar/{tipo}/{numero}', [DocumentoController::class, 'buscar'])
+            ->whereIn('tipo', ['ruc', 'dni'])
+            ->name('documentos.buscar');
+
+        // La edición se hace desde el modal del listado; el alta es una página aparte.
+        Route::get('ventas/factura/crear', [VentaController::class, 'createFactura'])->name('ventas.factura.create');
+        Route::post('ventas/factura', [VentaController::class, 'storeFactura'])->name('ventas.factura.store');
+        Route::get('ventas/notas/crear/{origen?}', [VentaController::class, 'createNota'])->name('ventas.notas.create');
+        Route::post('ventas/notas', [VentaController::class, 'storeNota'])->name('ventas.notas.store');
+        Route::post('ventas/{venta}/enviar-sunat', [VentaController::class, 'enviarSunat'])->name('ventas.enviar-sunat');
+        Route::post('ventas/{venta}/anular', [VentaController::class, 'anular'])->name('ventas.anular');
+        Route::get('ventas/{venta}/pdf-sunat', [VentaController::class, 'pdfSunat'])->name('ventas.pdf-sunat');
+        Route::resource('ventas', VentaController::class)
+            ->except(['create', 'edit'])
+            ->parameters(['ventas' => 'venta']);
+
+        // Pedidos que hacen los clientes directamente (antes de convertirse en
+        // venta) — el modelo ya existía y se mostraba de solo lectura dentro
+        // de Órdenes de Compra; esto agrega el alta/edición real.
+        Route::resource('pedidos', PedidoController::class)
+            ->except(['show', 'create', 'edit'])
+            ->parameters(['pedidos' => 'pedido']);
+
+        Route::get('reportes/utilidad', [ReporteController::class, 'utilidad'])->name('reportes.utilidad');
+        Route::get('reportes/utilidad/excel', [ReporteController::class, 'utilidadExcel'])->name('reportes.utilidad.excel');
+        Route::get('reportes/utilidad/pdf', [ReporteController::class, 'utilidadPdf'])->name('reportes.utilidad.pdf');
     });
 
 /*

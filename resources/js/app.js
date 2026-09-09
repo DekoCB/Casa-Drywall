@@ -289,3 +289,12 @@ document.querySelectorAll('input[type="date"]').forEach((input) => {
 window.confirmar = confirmar;
 window.abrirModal = abrirModal;
 window.cerrarModal = cerrarModal;
+
+// Submenús del sidebar (partials/menu-item.blade.php) — compartido por
+// layouts/admin.blade.php y layouts/rol.blade.php (paneles de Secretaria/
+// Contador/Ventas), que pueden incluir el mismo módulo con submenú.
+document.querySelectorAll('[data-toggle-submenu]').forEach((boton) => {
+    boton.addEventListener('click', () => {
+        boton.closest('.mi-grupo')?.classList.toggle('abierto');
+    });
+});

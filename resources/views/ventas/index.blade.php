@@ -5,15 +5,21 @@
 @section('crumb', 'Vista general')
 
 @section('menu')
+    @php
+        $gestionComercial = collect(config('menu.admin')['Gestión Comercial']);
+        $ventasItem = $gestionComercial->firstWhere('label', 'Ventas');
+        $posItem = $gestionComercial->firstWhere('label', 'POS');
+    @endphp
+
     <div class="sb-section">Principal</div>
-    <a href="{{ route('ventas.index') }}" class="mi active">
+    <a href="{{ route('ventas.index') }}" class="mi @if(request()->routeIs('ventas.index')) active @endif">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
-        Inicio
+        <span>Inicio</span>
     </a>
-    <a href="{{ route('admin.pos.index') }}" class="mi">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-        Punto de Venta
-    </a>
+
+    <div class="sb-section">Gestión Comercial</div>
+    @include('partials.menu-item', ['item' => $ventasItem])
+    @include('partials.menu-item', ['item' => $posItem])
 @endsection
 
 @section('content')
@@ -30,8 +36,9 @@
 <div class="content-card">
     <h3 style="font-size:18px;margin-bottom:14px;">Módulos habilitados</h3>
     <p style="color:#666;">
-        El perfil de Ventas trabaja únicamente sobre el Punto de Venta.
-        No tiene acceso a cotizaciones, boletas ni facturas fuera del POS.
+        El perfil de Ventas trabaja sobre el Punto de Venta y el módulo de Ventas
+        (cotizaciones, notas de venta, boletas, facturas y pedidos).
+        No tiene acceso a Clientes, Productos, Inventario ni al resto del panel.
         El administrador concede o retira estos accesos desde el módulo de Personal.
     </p>
 </div>
