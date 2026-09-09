@@ -58,7 +58,7 @@ class Usuario extends Authenticatable
         return match ($this->rol) {
             'secretaria' => route('secretaria.index'),
             'contador' => route('contador.index'),
-            'ventas' => route('admin.pos.index'),
+            'ventas' => route('ventas.index'),
             default => route('admin.index'),
         };
     }

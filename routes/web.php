@@ -36,6 +36,7 @@ use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\ContadorController;
 use App\Http\Controllers\EmpresaController;
 use App\Http\Controllers\SecretariaController;
+use App\Http\Controllers\VentasController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -332,6 +333,18 @@ Route::middleware(['auth', 'rol:secretaria'])
     ->name('secretaria.')
     ->group(function () {
         Route::get('/', [SecretariaController::class, 'index'])->name('index');
+    });
+
+/*
+|--------------------------------------------------------------------------
+| Panel de ventas
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'rol:ventas'])
+    ->prefix('ventas')
+    ->name('ventas.')
+    ->group(function () {
+        Route::get('/', [VentasController::class, 'index'])->name('index');
     });
 
 /*
