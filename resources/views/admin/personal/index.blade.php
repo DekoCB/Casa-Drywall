@@ -120,7 +120,13 @@
             </div>
             <div class="form-group">
                 <label for="cargo">Cargo <span>*</span></label>
-                <input type="text" id="cargo" name="cargo" required maxlength="100">
+                <select id="cargo" name="cargo" required>
+                    <option value="">Selecciona un cargo</option>
+                    @foreach ($cargos as $nombreCargo)
+                        <option value="{{ $nombreCargo }}">{{ $nombreCargo }}</option>
+                    @endforeach
+                </select>
+                <a href="{{ route('admin.cargos.index') }}" style="font-size:12px;">Gestionar cargos →</a>
             </div>
             <div class="form-group">
                 <label for="area">Área</label>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Cargo;
 use App\Models\Personal;
 use App\Models\Usuario;
 use Illuminate\Http\RedirectResponse;
@@ -43,6 +44,7 @@ class PersonalController extends Controller
             'totalActivos' => (int) $resumen->total,
             'totalPlanilla' => (float) $resumen->planilla,
             'totalAreas' => (int) $resumen->areas,
+            'cargos' => Cargo::orderBy('nombre')->pluck('nombre'),
         ]);
     }
 

@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\ActivoFijoController;
 use App\Http\Controllers\Admin\AlmacenController;
 use App\Http\Controllers\Admin\CajaController;
+use App\Http\Controllers\Admin\CargoController;
 use App\Http\Controllers\Admin\CategoriaController;
 use App\Http\Controllers\Admin\ClienteController;
 use App\Http\Controllers\Admin\CotizacionProveedorController;
@@ -219,6 +220,8 @@ Route::middleware(['auth', 'rol:admin'])
         // ── Recursos humanos ────────────────────────────────────────────────
         Route::resource('personal', PersonalController::class)->except(['show', 'create', 'edit'])
             ->parameters(['personal' => 'personal']);
+        Route::resource('cargos', CargoController::class)
+            ->except(['show', 'create', 'edit'])->parameters(['cargos' => 'cargo']);
 
         // ── Análisis ────────────────────────────────────────────────────────
         Route::get('reportes', [ReporteController::class, 'index'])->name('reportes.index');
