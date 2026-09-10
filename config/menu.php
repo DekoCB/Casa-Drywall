@@ -135,6 +135,7 @@ return [
 
         'Recursos Humanos' => [
             ['route' => 'admin.personal.index', 'label' => 'Personal', 'icon' => $iconos['usuarios']],
+            ['route' => 'admin.cargos.index', 'label' => 'Cargos', 'icon' => $iconos['proveedores']],
         ],
 
         'Análisis' => [
