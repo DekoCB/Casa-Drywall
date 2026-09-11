@@ -214,20 +214,17 @@ class InventarioTest extends TestCase
         $this->assertSame(2, $items->count());
     }
 
-    public function test_kardex_valorizado_usa_el_costo_actual_del_producto(): void
+    public function test_kardex_valorizado_lista_una_fila_por_producto_con_el_costo_actual(): void
     {
-        [$almacen] = $this->dosAlmacenes();
-        $producto = Producto::create(['codigo' => 'P006', 'nombre' => 'Perno', 'stock' => 20, 'precio_compra' => 3]);
-
-        MovimientoAlmacen::create(['producto_id' => $producto->id, 'almacen_id' => $almacen->id, 'tipo' => 'entrada', 'cantidad' => 20, 'stock_anterior' => 0, 'stock_nuevo' => 20]);
+        Producto::create(['codigo' => 'P006', 'nombre' => 'Perno', 'stock' => 20, 'precio_compra' => 3]);
 
         $respuesta = $this->actingAs($this->admin(), 'web')
-            ->get(route('admin.inventario.kardex-valorizado', ['producto_id' => $producto->id]));
+            ->get(route('admin.inventario.kardex-valorizado'));
 
         $respuesta->assertOk();
-        $fila = $respuesta->viewData('items')->first();
-        $this->assertSame(60.0, $fila['valor_movimiento']); // 20 * 3
-        $this->assertSame(60.0, $fila['saldo_valorizado']);  // stock_nuevo(20) * 3
+        $fila = $respuesta->viewData('items')->firstWhere('codigo', 'P006');
+        $this->assertSame(3.0, $fila['costo_ponderado']);
+        $this->assertSame(60.0, $fila['costo_producto']); // stock(20) * costo(3)
     }
 
     public function test_reporte_inventario_calcula_el_valor_a_costo_de_compra(): void
@@ -268,5 +265,9 @@ class InventarioTest extends TestCase
         $pdf = $admin->get(route('admin.inventario.kardex.pdf', ['producto_id' => $producto->id]));
         $pdf->assertOk();
         $this->assertStringContainsString('application/pdf', $pdf->headers->get('Content-Type'));
+
+        $kardexValorizadoExcel = $admin->get(route('admin.inventario.kardex-valorizado.excel'));
+        $kardexValorizadoExcel->assertOk();
+        $kardexValorizadoExcel->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     }
 }

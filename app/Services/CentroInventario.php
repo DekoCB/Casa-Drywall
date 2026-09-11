@@ -16,11 +16,9 @@ class CentroInventario
     /**
      * Historial de movimientos de un producto. `stock_anterior`/
      * `stock_nuevo` ya quedan guardados por movimiento (no se recalcula
-     * un acumulado aparte). En modo valorizado usa el costo ACTUAL del
-     * producto (`precio_compra`) para todo el historial — no hay costo
-     * por movimiento en la tabla, es una simplificación documentada.
+     * un acumulado aparte).
      */
-    public function kardex(Producto $producto, ?string $desde, ?string $hasta, bool $valorizado = false): array
+    public function kardex(Producto $producto, ?string $desde, ?string $hasta): array
     {
         $movimientos = MovimientoAlmacen::where('producto_id', $producto->id)
             ->with('almacen:id,nombre', 'usuario:id,username')
@@ -30,43 +28,16 @@ class CentroInventario
             ->orderBy('id')
             ->get();
 
-        $costo = (float) $producto->precio_compra;
-
-        $items = $movimientos->map(function (MovimientoAlmacen $m) use ($costo, $valorizado) {
-            $fila = [
-                'fecha' => $m->created_at,
-                'almacen' => $m->almacen?->nombre ?? '—',
-                'tipo' => $m->tipo,
-                'cantidad' => $m->cantidad,
-                'stock_anterior' => $m->stock_anterior,
-                'stock_nuevo' => $m->stock_nuevo,
-                'motivo' => $m->motivo ?: ($m->referencia ?: '—'),
-                'usuario' => $m->usuario?->username ?? '—',
-            ];
-
-            if ($valorizado) {
-                $fila['costo_unitario'] = round($costo, 2);
-                $fila['valor_movimiento'] = round($m->cantidad * $costo, 2);
-                $fila['saldo_valorizado'] = round($m->stock_nuevo * $costo, 2);
-            }
-
-            return $fila;
-        });
-
-        $columnas = ['Fecha', 'Almacén', 'Tipo', 'Cantidad', 'Stock Ant.', 'Stock Nuevo', 'Motivo', 'Usuario'];
-        $filaExport = fn (array $f) => [
-            $f['fecha']->format('d/m/Y H:i'), $f['almacen'], ucfirst($f['tipo']), $f['cantidad'],
-            $f['stock_anterior'], $f['stock_nuevo'], $f['motivo'], $f['usuario'],
-        ];
-
-        if ($valorizado) {
-            $columnas = ['Fecha', 'Almacén', 'Tipo', 'Cantidad', 'Costo Unit.', 'Valor Mov.', 'Stock Nuevo', 'Saldo Valorizado'];
-            $filaExport = fn (array $f) => [
-                $f['fecha']->format('d/m/Y H:i'), $f['almacen'], ucfirst($f['tipo']), $f['cantidad'],
-                number_format($f['costo_unitario'], 2), number_format($f['valor_movimiento'], 2),
-                $f['stock_nuevo'], number_format($f['saldo_valorizado'], 2),
-            ];
-        }
+        $items = $movimientos->map(fn (MovimientoAlmacen $m) => [
+            'fecha' => $m->created_at,
+            'almacen' => $m->almacen?->nombre ?? '—',
+            'tipo' => $m->tipo,
+            'cantidad' => $m->cantidad,
+            'stock_anterior' => $m->stock_anterior,
+            'stock_nuevo' => $m->stock_nuevo,
+            'motivo' => $m->motivo ?: ($m->referencia ?: '—'),
+            'usuario' => $m->usuario?->username ?? '—',
+        ]);
 
         return [
             'producto' => $producto,
@@ -74,11 +45,68 @@ class CentroInventario
             'resumen' => [
                 'movimientos' => $items->count(),
                 'stock_actual' => (int) $producto->stock,
-                'valor_actual' => $valorizado ? round($producto->stock * $costo, 2) : null,
             ],
             'items' => $items,
-            'columnas' => $columnas,
-            'filas' => $items->map($filaExport)->all(),
+            'columnas' => ['Fecha', 'Almacén', 'Tipo', 'Cantidad', 'Stock Ant.', 'Stock Nuevo', 'Motivo', 'Usuario'],
+            'filas' => $items->map(fn (array $f) => [
+                $f['fecha']->format('d/m/Y H:i'), $f['almacen'], ucfirst($f['tipo']), $f['cantidad'],
+                $f['stock_anterior'], $f['stock_nuevo'], $f['motivo'], $f['usuario'],
+            ])->all(),
+        ];
+    }
+
+    /**
+     * Kardex Valorizado: una fila por producto, con su costo y el valor
+     * total que representa en stock — en vez del historial de movimientos
+     * de un solo producto. Usa el costo ACTUAL del producto
+     * (`precio_compra`) como "costo ponderado": no hay costo por compra
+     * guardado en el historial para calcular un promedio ponderado real,
+     * misma simplificación documentada que ya usaba el Kardex valorizado
+     * por movimiento.
+     */
+    public function kardexValorizadoTodos(?int $categoriaId, ?int $marcaId, string $busqueda = ''): array
+    {
+        $busqueda = trim($busqueda);
+
+        $productos = Producto::activos()
+            ->with(['categoria:id,nombre', 'marca:id,nombre'])
+            ->when($categoriaId, fn ($q) => $q->where('categoria_id', $categoriaId))
+            ->when($marcaId, fn ($q) => $q->where('marca_id', $marcaId))
+            ->when($busqueda !== '', fn ($q) => $q->where(
+                fn ($qq) => $qq->where('nombre', 'like', "%{$busqueda}%")->orWhere('codigo', 'like', "%{$busqueda}%")
+            ))
+            ->orderBy('nombre')
+            ->get();
+
+        $items = $productos->map(function (Producto $p) {
+            $costoPonderado = (float) $p->precio_compra;
+            $stock = (int) $p->stock;
+
+            return [
+                'codigo' => $p->codigo ?: '—',
+                'nombre' => $p->nombre,
+                'categoria' => $p->categoria?->nombre ?? '—',
+                'marca' => $p->marca?->nombre ?? '—',
+                'unidad' => $p->presentacion ?: '—',
+                'stock' => $stock,
+                'costo_ponderado' => round($costoPonderado, 2),
+                'costo_producto' => round($stock * $costoPonderado, 2),
+            ];
+        });
+
+        return [
+            'filtros' => ['categoria' => $categoriaId, 'marca' => $marcaId, 'q' => $busqueda],
+            'resumen' => [
+                'productos' => $items->count(),
+                'unidades' => (int) $items->sum('stock'),
+                'valor_total' => round((float) $items->sum('costo_producto'), 2),
+            ],
+            'items' => $items,
+            'columnas' => ['Código', 'Producto', 'Categoría', 'Marca', 'Unidad', 'Stock', 'Costo Ponderado', 'Costo de Producto'],
+            'filas' => $items->map(fn ($f) => [
+                $f['codigo'], $f['nombre'], $f['categoria'], $f['marca'], $f['unidad'], $f['stock'],
+                number_format($f['costo_ponderado'], 2), number_format($f['costo_producto'], 2),
+            ])->all(),
         ];
     }
 

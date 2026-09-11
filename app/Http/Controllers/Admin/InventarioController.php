@@ -262,19 +262,19 @@ class InventarioController extends Controller
 
     public function kardex(Request $request): View
     {
-        return view('admin.inventario.kardex', $this->datosKardex($request, false) + ['valorizado' => false]);
+        return view('admin.inventario.kardex', $this->datosKardex($request));
     }
 
     public function kardexExcel(Request $request): Response
     {
-        $reporte = $this->datosKardex($request, false);
+        $reporte = $this->datosKardex($request);
 
         return $this->respuestaExcel('Kardex '.($reporte['producto']?->nombre ?? ''), $reporte);
     }
 
     public function kardexPdf(Request $request): Response
     {
-        $reporte = $this->datosKardex($request, false);
+        $reporte = $this->datosKardex($request);
 
         return $this->respuestaPdf('Kardex — '.($reporte['producto']?->nombre ?? 'Producto'), $reporte, [
             'Movimientos' => $reporte['resumen']['movimientos'],
@@ -282,26 +282,28 @@ class InventarioController extends Controller
         ]);
     }
 
+    /** Kardex Valorizado: una fila por producto (código, costo, stock, valor), no el historial de uno solo. */
     public function kardexValorizado(Request $request): View
     {
-        return view('admin.inventario.kardex', $this->datosKardex($request, true) + ['valorizado' => true]);
+        return view('admin.inventario.kardex-valorizado', $this->datosKardexValorizado($request) + [
+            'categorias' => Categoria::orderBy('nombre')->get(['id', 'nombre']),
+            'marcas' => Marca::orderBy('nombre')->get(['id', 'nombre']),
+        ]);
     }
 
     public function kardexValorizadoExcel(Request $request): Response
     {
-        $reporte = $this->datosKardex($request, true);
-
-        return $this->respuestaExcel('Kardex Valorizado '.($reporte['producto']?->nombre ?? ''), $reporte);
+        return $this->respuestaExcel('Kardex Valorizado', $this->datosKardexValorizado($request));
     }
 
     public function kardexValorizadoPdf(Request $request): Response
     {
-        $reporte = $this->datosKardex($request, true);
+        $reporte = $this->datosKardexValorizado($request);
 
-        return $this->respuestaPdf('Kardex Valorizado — '.($reporte['producto']?->nombre ?? 'Producto'), $reporte, [
-            'Movimientos' => $reporte['resumen']['movimientos'],
-            'Stock actual' => $reporte['resumen']['stock_actual'],
-            'Valor actual' => 'S/ '.number_format((float) $reporte['resumen']['valor_actual'], 2),
+        return $this->respuestaPdf('Kardex Valorizado', $reporte, [
+            'Productos' => $reporte['resumen']['productos'],
+            'Unidades' => $reporte['resumen']['unidades'],
+            'Valor total' => 'S/ '.number_format($reporte['resumen']['valor_total'], 2),
         ]);
     }
 
@@ -331,7 +333,7 @@ class InventarioController extends Controller
     }
 
     /** @return array{producto: ?Producto, filtros: array, resumen: array, items: \Illuminate\Support\Collection, columnas: array, filas: array} */
-    private function datosKardex(Request $request, bool $valorizado): array
+    private function datosKardex(Request $request): array
     {
         $productoId = (int) $request->query('producto_id', 0);
         $producto = $productoId > 0 ? Producto::find($productoId) : null;
@@ -340,14 +342,26 @@ class InventarioController extends Controller
             return [
                 'producto' => null,
                 'filtros' => ['desde' => $request->query('desde'), 'hasta' => $request->query('hasta')],
-                'resumen' => ['movimientos' => 0, 'stock_actual' => 0, 'valor_actual' => 0],
+                'resumen' => ['movimientos' => 0, 'stock_actual' => 0],
                 'items' => collect(),
                 'columnas' => [],
                 'filas' => [],
             ];
         }
 
-        return $this->centro->kardex($producto, $request->query('desde'), $request->query('hasta'), $valorizado);
+        return $this->centro->kardex($producto, $request->query('desde'), $request->query('hasta'));
+    }
+
+    private function datosKardexValorizado(Request $request): array
+    {
+        $categoria = $request->query('categoria');
+        $marca = $request->query('marca');
+
+        return $this->centro->kardexValorizadoTodos(
+            $categoria ? (int) $categoria : null,
+            $marca ? (int) $marca : null,
+            (string) $request->query('q', '')
+        );
     }
 
     private function datosReporte(Request $request): array

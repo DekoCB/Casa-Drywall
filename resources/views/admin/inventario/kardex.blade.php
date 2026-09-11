@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', $valorizado ? 'Kardex Valorizado' : 'Reporte Kardex')
+@section('title', 'Reporte Kardex')
 @section('crumb', 'Inventario')
 
 @push('styles')
@@ -13,17 +13,16 @@
     $productosJs = \App\Models\Producto::activos()->orderBy('nombre')
         ->get(['id', 'codigo', 'nombre'])
         ->map(fn ($p) => ['id' => $p->id, 'codigo' => $p->codigo, 'nombre' => $p->nombre])->values();
-    $rutaBase = $valorizado ? 'admin.inventario.kardex-valorizado' : 'admin.inventario.kardex';
 @endphp
 
-<x-page-header :titulo="$valorizado ? 'Kardex Valorizado' : 'Reporte Kardex'" subtitulo="Historial de movimientos de un producto, con saldo corrido">
+<x-page-header titulo="Reporte Kardex" subtitulo="Historial de movimientos de un producto, con saldo corrido">
     <x-slot:acciones>
         <a href="{{ route('admin.inventario.reporte') }}" class="btn btn-secondary btn-sm"><span class="btn-text">← Inventario</span></a>
     </x-slot:acciones>
 </x-page-header>
 
 <div class="content-card">
-    <form method="GET" action="{{ route($rutaBase) }}" class="rep-filtros-form" id="formKardex">
+    <form method="GET" action="{{ route('admin.inventario.kardex') }}" class="rep-filtros-form" id="formKardex">
         <div class="form-group" style="flex:1;min-width:240px;margin-bottom:0;">
             <label>Producto</label>
             <div class="nv-buscador" id="buscador-kardex">
@@ -46,15 +45,15 @@
 
         @if ($producto)
             <div class="rep-exportar">
-                <a href="{{ route($rutaBase.'.excel', request()->query()) }}" class="btn btn-secondary btn-sm"><span class="btn-text">⬇ Excel</span></a>
-                <a href="{{ route($rutaBase.'.pdf', request()->query()) }}" class="btn btn-secondary btn-sm"><span class="btn-text">📄 PDF</span></a>
+                <a href="{{ route('admin.inventario.kardex.excel', request()->query()) }}" class="btn btn-secondary btn-sm"><span class="btn-text">⬇ Excel</span></a>
+                <a href="{{ route('admin.inventario.kardex.pdf', request()->query()) }}" class="btn btn-secondary btn-sm"><span class="btn-text">📄 PDF</span></a>
             </div>
         @endif
     </form>
 
     @if (! $producto)
         <div style="text-align:center;padding:50px 20px;color:var(--ink-3);">
-            Busca un producto arriba para ver su {{ $valorizado ? 'Kardex valorizado' : 'Kardex' }}.
+            Busca un producto arriba para ver su Kardex.
         </div>
     @else
         <div class="rep-resumen">
@@ -71,12 +70,6 @@
                 <div class="rep-kpi-label">Stock actual</div>
                 <div class="rep-kpi-val">{{ $resumen['stock_actual'] }}</div>
             </div>
-            @if ($valorizado)
-                <div class="rep-kpi">
-                    <div class="rep-kpi-label">Valor actual</div>
-                    <div class="rep-kpi-val">S/ {{ number_format($resumen['valor_actual'], 2) }}</div>
-                </div>
-            @endif
         </div>
 
         <div class="table-container">
@@ -84,11 +77,7 @@
                 <thead>
                     <tr>
                         <th>Fecha</th><th>Almacén</th><th>Tipo</th><th class="num">Cantidad</th>
-                        @if ($valorizado)
-                            <th class="num">Costo Unit.</th><th class="num">Valor Mov.</th><th class="num">Stock Nuevo</th><th class="num">Saldo Valorizado</th>
-                        @else
-                            <th class="num">Stock Ant.</th><th class="num">Stock Nuevo</th><th>Motivo</th><th>Usuario</th>
-                        @endif
+                        <th class="num">Stock Ant.</th><th class="num">Stock Nuevo</th><th>Motivo</th><th>Usuario</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -98,17 +87,10 @@
                         <td>{{ $fila['almacen'] }}</td>
                         <td><span class="rep-badge estado-{{ in_array($fila['tipo'], ['entrada','traslado'], true) ? 'alta' : ($fila['tipo'] === 'ajuste' ? 'media' : 'baja') }}">{{ ucfirst($fila['tipo']) }}</span></td>
                         <td class="num">{{ number_format($fila['cantidad']) }}</td>
-                        @if ($valorizado)
-                            <td class="num">S/ {{ number_format($fila['costo_unitario'], 2) }}</td>
-                            <td class="num">S/ {{ number_format($fila['valor_movimiento'], 2) }}</td>
-                            <td class="num">{{ $fila['stock_nuevo'] }}</td>
-                            <td class="num">S/ {{ number_format($fila['saldo_valorizado'], 2) }}</td>
-                        @else
-                            <td class="num">{{ $fila['stock_anterior'] }}</td>
-                            <td class="num">{{ $fila['stock_nuevo'] }}</td>
-                            <td>{{ $fila['motivo'] }}</td>
-                            <td>{{ $fila['usuario'] }}</td>
-                        @endif
+                        <td class="num">{{ $fila['stock_anterior'] }}</td>
+                        <td class="num">{{ $fila['stock_nuevo'] }}</td>
+                        <td>{{ $fila['motivo'] }}</td>
+                        <td>{{ $fila['usuario'] }}</td>
                     </tr>
                 @empty
                     <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--ink-3);">Sin movimientos para el periodo seleccionado.</td></tr>

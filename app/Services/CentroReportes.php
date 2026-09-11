@@ -153,8 +153,8 @@ class CentroReportes
      * Utilidad bruta por producto vendido: ingreso (lo facturado) menos costo
      * (cantidad × `precio_compra` ACTUAL del producto — no hay costo histórico
      * guardado por línea de venta, misma simplificación documentada que ya usa
-     * `CentroInventario::kardex()` en modo valorizado). Se excluyen
-     * Cotizaciones y ventas canceladas/eliminadas, igual que en `analisisAbc`.
+     * `CentroInventario::kardexValorizadoTodos()`). Se excluyen Cotizaciones y
+     * ventas canceladas/eliminadas, igual que en `analisisAbc`.
      */
     public function utilidadVentas(?string $desde, ?string $hasta, string $busqueda = ''): array
     {
