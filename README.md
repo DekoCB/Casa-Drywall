@@ -1,8 +1,8 @@
-# Rental Tech SAC — Sistema de gestión (Laravel 12)
+# Casa Drywall E.I.R.L. — Sistema de gestión (Laravel 12)
 
-Migración a Laravel del sistema originalmente escrito en PHP plano
-(`htdocs/RENTAL TECH`). Conserva el mismo diseño, los mismos módulos y las
-mismas reglas de negocio.
+Migración a Laravel del sistema originalmente escrito en PHP plano para
+Rental Tech SAC, adaptado para Casa Drywall E.I.R.L. Conserva el mismo
+diseño, los mismos módulos y las mismas reglas de negocio.
 
 ## Requisitos
 
@@ -75,7 +75,7 @@ el mismo enfoque del original, pero genérico y reutilizable.
 
 ```dotenv
 RT_MASTER_PASSWORD=654321      # contraseña maestra para crear usuarios
-RT_RAZON_SOCIAL="RENTAL TECH SAC"
+RT_RAZON_SOCIAL="CASA DRYWALL E.I.R.L."
 RT_RUC=
 RT_DIRECCION=
 RT_IGV=0.18

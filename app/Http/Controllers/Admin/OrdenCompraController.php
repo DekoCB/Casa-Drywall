@@ -13,6 +13,7 @@ use App\Models\Proveedor;
 use App\Services\ExcelOrdenCompra;
 use App\Services\GeneradorCorrelativo;
 use App\Services\MerchInventario;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -93,7 +94,6 @@ class OrdenCompraController extends Controller
             'mesSel' => $mes,
             'estados' => self::ESTADOS,
             'meses' => self::MESES,
-            'costoUsd' => (float) $ordenes->sum('total_usd'),
             'costoSoles' => (float) $ordenes->sum('total_soles'),
             'ventasSoles' => (float) $ordenes->sum('precio_venta'),
             'margenBruto' => $margenBruto,
@@ -265,6 +265,31 @@ class OrdenCompraController extends Controller
             'Content-Disposition' => 'attachment; filename="'.$generador->nombreArchivo($ordenes, $tipo).'"',
             'Cache-Control'       => 'max-age=0',
         ]);
+    }
+
+    /**
+     * Descarga la orden (o varias) en PDF, una página por orden, con el
+     * mismo formato de comprobante que ya usa show.blade.php.
+     */
+    public function pdf(Request $request): Response
+    {
+        $ids = collect(explode(',', (string) $request->query('ids')))
+            ->map(fn ($id) => (int) trim($id))
+            ->filter();
+
+        $ordenes = $ids->isNotEmpty()
+            ? OrdenCompra::whereIn('id', $ids)->orderBy('id')->get()
+            : OrdenCompra::orderByDesc('fecha')->orderByDesc('id')->get();
+
+        abort_if($ordenes->isEmpty(), 404, 'No hay órdenes que exportar.');
+
+        $archivo = $ordenes->count() === 1
+            ? 'Orden de Compra '.$ordenes->first()->numero_orden.'.pdf'
+            : 'Ordenes de Compra '.now()->format('Ymd').'.pdf';
+
+        return Pdf::loadView('admin.ordenes-compra.pdf', ['ordenes' => $ordenes])
+            ->setPaper('a4', 'portrait')
+            ->download($archivo);
     }
 
     /** Envía la orden por correo a los contactos seleccionados. */

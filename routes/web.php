@@ -117,6 +117,7 @@ Route::middleware(['auth', 'rol:admin'])
 
         // ── Compras & documentos ────────────────────────────────────────────
         Route::get('ordenes-compra/excel', [OrdenCompraController::class, 'excel'])->name('ordenes-compra.excel');
+        Route::get('ordenes-compra/pdf', [OrdenCompraController::class, 'pdf'])->name('ordenes-compra.pdf');
         Route::get('ordenes-compra/verificar-numero', [OrdenCompraController::class, 'verificarNumero'])->name('ordenes-compra.verificar-numero');
         Route::post('ordenes-compra/{orden}/enviar', [OrdenCompraController::class, 'enviarCorreo'])->name('ordenes-compra.enviar');
         Route::post('ordenes-compra/{orden}/token', [OrdenCompraController::class, 'generarToken'])->name('ordenes-compra.token');

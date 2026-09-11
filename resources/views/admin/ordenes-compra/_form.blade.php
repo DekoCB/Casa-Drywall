@@ -8,6 +8,12 @@
     // Las líneas viejas guardan `precio`; las del formulario nuevo, `precio_unit_usd`.
     $precioLinea = fn (array $p) => (float) ($p['precio_unit_usd'] ?? $p['precio'] ?? 0);
     $totalMerch = collect($merchOrden)->sum(fn ($l) => ($l['cantidad'] ?? 0) * ($l['costo_unit'] ?? 0));
+
+    // El catálogo Kendall (en dólares) ya no existe: las órdenes nuevas se
+    // guardan con tc=1, así que solo las órdenes históricas reales se editan
+    // en dólares. Una orden nueva ($orden === null) siempre es en soles.
+    $esSolesNativo = ! $orden || abs((float) $orden->tc - 1.0) < 0.0001;
+    $simbolo = $esSolesNativo ? 'S/' : '$';
 @endphp
 
 <div class="oc-hoja">
@@ -185,7 +191,7 @@
                 <div class="ocd-tit">Productos</div>
                 <div class="ocd-sub">Las líneas de la orden y su precio unitario</div>
             </div>
-            <span class="ocd-etiqueta">Dólares</span>
+            <span class="ocd-etiqueta">{{ $esSolesNativo ? 'Soles' : 'Dólares' }}</span>
         </div>
 
         <div style="margin-bottom:12px;">
@@ -199,7 +205,7 @@
                         <th style="width:16%;">Código</th>
                         <th style="width:38%;">Descripción</th>
                         <th style="width:12%;">Cantidad</th>
-                        <th style="width:16%;">Precio USD</th>
+                        <th style="width:16%;">Precio {{ $esSolesNativo ? '(S/)' : 'USD' }}</th>
                         <th style="width:14%;" class="num">Subtotal</th>
                         <th style="width:4%;"></th>
                     </tr>
@@ -211,7 +217,7 @@
                         <td><input type="text" class="oc-input" name="productos[{{ $i }}][descripcion]" value="{{ $prod['descripcion'] ?? ($prod['nombre'] ?? '') }}"></td>
                         <td><input type="number" class="oc-input mono item-cantidad" name="productos[{{ $i }}][cantidad]" value="{{ $prod['cantidad'] ?? 1 }}" min="1"></td>
                         <td><input type="number" class="oc-input mono item-precio" name="productos[{{ $i }}][precio]" value="{{ $precioLinea($prod) }}" step="0.0001" min="0"></td>
-                        <td class="num item-subtotal">$ {{ number_format(($prod['cantidad'] ?? 0) * $precioLinea($prod), 2) }}</td>
+                        <td class="num item-subtotal">{{ $simbolo }} {{ number_format(($prod['cantidad'] ?? 0) * $precioLinea($prod), 2) }}</td>
                         <td><button type="button" class="ocm-btn peligro btn-quitar">✕</button></td>
                     </tr>
                 @endforeach
@@ -283,11 +289,15 @@
         </div>
 
         <div class="oc-form-grid">
-            <div class="oc-campo">
-                <label class="oc-label" for="tc">Tipo de cambio (S/$)</label>
-                <input type="number" class="oc-input mono" id="tc" name="tc" step="0.0001" min="0"
-                       value="{{ old('tc', $orden?->tc ?? config('rentaltech.tipo_cambio')) }}">
-            </div>
+            @if ($esSolesNativo)
+                <input type="hidden" id="tc" name="tc" value="1">
+            @else
+                <div class="oc-campo">
+                    <label class="oc-label" for="tc">Tipo de cambio (S/$)</label>
+                    <input type="number" class="oc-input mono" id="tc" name="tc" step="0.0001" min="0"
+                           value="{{ old('tc', $orden?->tc) }}">
+                </div>
+            @endif
             <div class="oc-campo">
                 <label class="oc-label" for="condicion_pago">Condición de pago</label>
                 <input type="text" class="oc-input" id="condicion_pago" name="condicion_pago" maxlength="100"
@@ -318,7 +328,7 @@
                     <span class="ocd-lleva-punto"></span>
                     <span class="ocd-lleva-nombre">Productos</span>
                     <span class="ocd-lleva-det">
-                        <span class="ocd-lleva-monto" id="ocr-prod-total">$ 0.00</span>
+                        <span class="ocd-lleva-monto" id="ocr-prod-total">{{ $simbolo }} 0.00</span>
                         <span class="ocd-lleva-sub"><span id="ocr-prod-lineas">0</span> línea(s)</span>
                     </span>
                 </div>
@@ -337,8 +347,8 @@
                 <input type="hidden" name="total_usd" id="total_usd" value="{{ old('total_usd', $orden?->total_usd ?? 0) }}">
                 <input type="hidden" name="total_soles" id="total_soles" value="{{ old('total_soles', $orden?->total_soles ?? 0) }}">
 
-                <div class="ocd-tfila"><span>Total en dólares</span><strong id="ocr-total-usd">$ 0.00</strong></div>
-                <div class="ocd-tfila"><span>Tipo de cambio</span><strong id="ocr-tc">—</strong></div>
+                <div class="ocd-tfila {{ $esSolesNativo ? 'oculta' : '' }}" id="ocr-fila-usd"><span>Total en dólares</span><strong id="ocr-total-usd">$ 0.00</strong></div>
+                <div class="ocd-tfila {{ $esSolesNativo ? 'oculta' : '' }}" id="ocr-fila-tc"><span>Tipo de cambio</span><strong id="ocr-tc">—</strong></div>
                 <div class="ocd-tgran">
                     <span>Total en soles</span>
                     <b id="ocr-total-soles">S/ 0.00</b>
@@ -353,7 +363,7 @@
     <div class="ocd-barra">
         <div class="ocd-barra-info">
             <div class="ocd-barra-lbl">Total de la orden</div>
-            <div class="ocd-barra-total"><span id="ocr-barra-total">S/ 0.00</span><span class="ocd-barra-usd" id="ocr-barra-usd">$ 0.00</span></div>
+            <div class="ocd-barra-total"><span id="ocr-barra-total">S/ 0.00</span><span class="ocd-barra-usd {{ $esSolesNativo ? 'oculta' : '' }}" id="ocr-barra-usd">$ 0.00</span></div>
             <div class="ocd-barra-det" id="ocr-barra-det">—</div>
         </div>
 
@@ -369,6 +379,12 @@
 <script>
 const $oc = (id) => document.getElementById(id);
 
+// El catálogo Kendall (en dólares) ya no existe: las órdenes nuevas se
+// guardan con tc=1, así que solo las órdenes históricas reales se editan en
+// dólares (ver $esSolesNativo en el PHP de esta misma vista).
+const OC_SIMBOLO = @json($simbolo);
+const OC_SOLES_NATIVO = @json($esSolesNativo);
+
 // ── Líneas de producto ───────────────────────────────────────────────────
 const cuerpo = $oc('itemsBody');
 let indice = {{ count($productos) }};
@@ -379,7 +395,7 @@ function filaHtml(i) {
         <td><input type="text" class="oc-input" name="productos[${i}][descripcion]"></td>
         <td><input type="number" class="oc-input mono item-cantidad" name="productos[${i}][cantidad]" value="1" min="1"></td>
         <td><input type="number" class="oc-input mono item-precio" name="productos[${i}][precio]" value="0" step="0.0001" min="0"></td>
-        <td class="num item-subtotal">$ 0.00</td>
+        <td class="num item-subtotal">${OC_SIMBOLO} 0.00</td>
         <td><button type="button" class="ocm-btn peligro btn-quitar">✕</button></td>
     </tr>`;
 }
@@ -454,7 +470,7 @@ function recalcular() {
 
         totalUsd += linea;
         lineas++;
-        fila.querySelector('.item-subtotal').textContent = '$ ' + linea.toFixed(2);
+        fila.querySelector('.item-subtotal').textContent = OC_SIMBOLO + ' ' + linea.toFixed(2);
     });
 
     let totalMerch = 0;
@@ -476,7 +492,7 @@ function recalcular() {
     $oc('total_usd').value   = totalUsd.toFixed(2);
     $oc('total_soles').value = totalSoles.toFixed(2);
 
-    $oc('ocr-prod-total').textContent  = '$ ' + totalUsd.toFixed(2);
+    $oc('ocr-prod-total').textContent  = OC_SIMBOLO + ' ' + totalUsd.toFixed(2);
     $oc('ocr-prod-lineas').textContent = lineas;
     $oc('ocr-item-productos').classList.toggle('lleno', lineas > 0);
 
@@ -484,8 +500,10 @@ function recalcular() {
     $oc('ocr-merch-lineas').textContent = lineasMerch;
     $oc('ocr-item-merch').classList.toggle('lleno', lineasMerch > 0);
 
-    $oc('ocr-total-usd').textContent   = '$ ' + totalUsd.toFixed(2);
-    $oc('ocr-tc').textContent          = tc.toFixed(4);
+    if (! OC_SOLES_NATIVO) {
+        $oc('ocr-total-usd').textContent = '$ ' + totalUsd.toFixed(2);
+        $oc('ocr-tc').textContent        = tc.toFixed(4);
+    }
     $oc('ocr-total-soles').textContent = 'S/ ' + totalSoles.toFixed(2);
 
     const nota = $oc('ocr-nota-merch');
@@ -494,8 +512,10 @@ function recalcular() {
 
     const barraSoles = totalSoles + totalMerch;
     $oc('ocr-barra-total').textContent = 'S/ ' + barraSoles.toFixed(2);
-    // El merch se paga en soles: para verlo en dólares se devuelve con el mismo tipo de cambio.
-    $oc('ocr-barra-usd').textContent = tc > 0 ? '$ ' + (barraSoles / tc).toFixed(2) : '$ —';
+    if (! OC_SOLES_NATIVO) {
+        // El merch se paga en soles: para verlo en dólares se devuelve con el mismo tipo de cambio.
+        $oc('ocr-barra-usd').textContent = tc > 0 ? '$ ' + (barraSoles / tc).toFixed(2) : '$ —';
+    }
     $oc('ocr-barra-det').textContent = lineas + ' producto(s)' + (lineasMerch ? ' · ' + lineasMerch + ' merch' : '');
 }
 

@@ -27,28 +27,13 @@
         </div>
         <div class="oc-header-right">
             <button type="button" class="btn-oc btn-outline-oc btn-excel-menu" data-ids=""
-                    title="Descargar Excel con todas las órdenes">
+                    title="Descargar todas las órdenes en PDF o Excel">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                     <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
                 </svg>
-                📊 Excel Completo
+                📄 Descargar todo
             </button>
-        </div>
-    </div>
-
-    {{-- ══ Tipo de cambio ══ --}}
-    <div class="tc-banner">
-        <div>
-            <div class="tc-label">💱 Tipo de Cambio Activo</div>
-            <div class="tc-value" id="tc-display">S/ {{ number_format(config('rentaltech.tipo_cambio'), 2) }} <span>por USD</span></div>
-        </div>
-        <div class="tc-fecha">📅 <span id="tc-fecha"></span></div>
-        <div class="tc-input-group">
-            <label for="tc-input">Actualizar TC:</label>
-            <input type="number" class="tc-input" id="tc-input" step="0.01" min="1"
-                   value="{{ number_format(config('rentaltech.tipo_cambio'), 2, '.', '') }}">
-            <span class="tc-sufijo">S//$</span>
         </div>
     </div>
 
@@ -70,9 +55,9 @@
                     <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
                 </svg>
             </div>
-            <div class="kpi-label">Costo Total (USD)</div>
-            <div class="kpi-val">$ {{ number_format($costoUsd, 2) }}</div>
-            <div class="kpi-sub">≈ S/ {{ number_format($costoSoles, 2) }}</div>
+            <div class="kpi-label">Costo Total</div>
+            <div class="kpi-val">S/ {{ number_format($costoSoles, 2) }}</div>
+            <div class="kpi-sub">{{ $nOrdenes > 0 ? $nOrdenes.' orden(es) del mes' : 'Sin datos aún' }}</div>
         </div>
         <div class="kpi-card">
             <div class="kpi-icon">
@@ -153,6 +138,9 @@
                     $totalSolesDia = $grupo->sum('total_soles');
                     $nDia = $grupo->count();
                     $idsDia = $grupo->pluck('id')->implode(',');
+                    // El catálogo Kendall (en dólares) ya no existe: si ninguna orden del
+                    // día es una orden histórica real en USD, no hay nada que convertir.
+                    $diaSolesNativo = $grupo->every(fn ($o) => abs((float) $o->tc - 1.0) < 0.0001);
                 @endphp
 
                 <div class="dia-grupo">
@@ -171,10 +159,12 @@
                         </div>
 
                         <div class="dia-stats">
-                            <div class="dia-stat">
-                                <div class="dia-stat-val">$ {{ number_format($totalUsdDia, 2) }}</div>
-                                <div class="dia-stat-lbl">Total USD</div>
-                            </div>
+                            @unless ($diaSolesNativo)
+                                <div class="dia-stat">
+                                    <div class="dia-stat-val">$ {{ number_format($totalUsdDia, 2) }}</div>
+                                    <div class="dia-stat-lbl">Total USD</div>
+                                </div>
+                            @endunless
                             <div class="dia-stat">
                                 <div class="dia-stat-val soles">S/ {{ number_format($totalSolesDia, 2) }}</div>
                                 <div class="dia-stat-lbl">Total S/</div>
@@ -186,7 +176,7 @@
                                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                                     <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
                                 </svg>
-                                📊 Excel ({{ $nDia }} hoja{{ $nDia > 1 ? 's' : '' }})
+                                📄 Descargar ({{ $nDia }})
                             </button>
                         </div>
 
@@ -202,7 +192,7 @@
                                                title="Seleccionar las {{ $nDia }} órdenes de este día">
                                     </th>
                                     <th># Orden</th><th>Cliente</th><th>SR (ES):</th><th>Productos</th>
-                                    <th>Total USD</th><th>Total S/</th><th>P.Venta S/</th>
+                                    <th>Total Compra</th><th>Total S/</th><th>P.Venta S/</th>
                                     <th>Rentabilidad</th><th>N° Factura</th><th>N° Guía</th><th>Acciones</th>
                                 </tr>
                             </thead>
@@ -212,12 +202,15 @@
                                     $pventa = (float) $orden->precio_venta;
                                     // Rentabilidad sobre el precio de venta, igual que en el original.
                                     $rent = $pventa > 0 ? ($pventa - (float) $orden->total_soles) / $pventa * 100 : 0;
+                                    // El catálogo Kendall (en dólares) ya no existe: solo las órdenes
+                                    // históricas reales muestran esta columna en USD.
+                                    $filaSolesNativo = abs((float) $orden->tc - 1.0) < 0.0001;
                                 @endphp
                                 <tr data-fila="{{ $orden->id }}">
                                     <td class="oc-td-check">
                                         <input type="checkbox" class="oc-check" value="{{ $orden->id }}"
                                                data-grupo="{{ $grupoId }}" data-numero="{{ $orden->numero_orden }}"
-                                               title="Incluir esta orden en el Excel">
+                                               title="Incluir esta orden en la descarga">
                                     </td>
                                     <td><strong class="oc-num-orden">{{ $orden->numero_orden }}</strong></td>
                                     <td>
@@ -229,7 +222,7 @@
                                     </td>
                                     <td>{{ $orden->proveedor }}</td>
                                     <td>{{ count($orden->productos ?? []) }} prod.</td>
-                                    <td>$ {{ number_format($orden->total_usd, 2) }}</td>
+                                    <td>{{ $filaSolesNativo ? 'S/' : '$' }} {{ number_format($orden->total_usd, 2) }}</td>
                                     <td>S/ {{ number_format($orden->total_soles, 2) }}</td>
                                     <td>S/ {{ number_format($pventa, 2) }}</td>
                                     <td>
@@ -263,7 +256,7 @@
                                     <td>
                                         <div class="oc-acciones">
                                             <button type="button" class="btn-excel-oc btn-excel-menu"
-                                                    data-ids="{{ $orden->id }}" title="Descargar Excel">📊 Excel ▾</button>
+                                                    data-ids="{{ $orden->id }}" title="Descargar PDF o Excel">📄 Descargar ▾</button>
                                             <button type="button" class="btn-email-oc btn-enviar-oc"
                                                     data-orden="{{ $orden->id }}"
                                                     data-numero="{{ $orden->numero_orden }}"
@@ -366,10 +359,10 @@
     <div class="oc-seleccion" id="oc-seleccion">
         <div class="oc-seleccion-info">
             <strong id="oc-sel-count">0 órdenes seleccionadas</strong>
-            <small id="oc-sel-det">Cada orden entra como una hoja del mismo archivo.</small>
+            <small id="oc-sel-det">En PDF cada orden ocupa su propia página; en Excel, su propia hoja.</small>
         </div>
         <button type="button" class="btn-excel-dia btn-excel-menu" id="oc-sel-excel" data-ids="">
-            📊 Excel (0 hojas)
+            📄 Descargar (0)
         </button>
         <button type="button" class="oc-sel-limpiar" id="oc-sel-limpiar">Limpiar</button>
     </div>
@@ -503,50 +496,12 @@ document.querySelectorAll('.factura-cell').forEach((celda) => {
     });
 });
 
-// ── Tipo de cambio ───────────────────────────────────────────────────────
-const tcDisplay = document.getElementById('tc-display');
-const tcInput   = document.getElementById('tc-input');
-const tcFecha   = document.getElementById('tc-fecha');
-
-function pintarTc(valor, fecha) {
-    tcDisplay.innerHTML = 'S/ ' + valor.toFixed(2) + ' <span>por USD</span>';
-    tcInput.value = valor.toFixed(2);
-    tcFecha.textContent = fecha;
-}
-
-tcInput.addEventListener('input', () => {
-    const valor = parseFloat(tcInput.value);
-    if (valor > 0) {
-        tcDisplay.innerHTML = 'S/ ' + valor.toFixed(2) + ' <span>por USD</span>';
-        window.localStorage.setItem('oc_tc', valor.toFixed(2));
-    }
-});
-
-(async () => {
-    // El original consulta la cotización del día; si no hay red, se conserva
-    // el último valor usado o el que trae la configuración.
-    const guardado = parseFloat(window.localStorage.getItem('oc_tc') || '0');
-
-    try {
-        const respuesta = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
-        const datos = await respuesta.json();
-
-        pintarTc(datos.rates.PEN, new Date(datos.time_last_updated * 1000)
-            .toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }));
-        window.localStorage.setItem('oc_tc', datos.rates.PEN.toFixed(2));
-    } catch (e) {
-        if (guardado > 0) {
-            pintarTc(guardado, 'Último valor guardado');
-        } else {
-            tcFecha.textContent = 'Sin conexión — valor manual';
-        }
-    }
-})();
-
-// ── Elegir el tipo de Excel ──────────────────────────────────────────────
+// ── Elegir el formato de descarga ────────────────────────────────────────
 // Cada botón abre el mismo menú; `data-ids` decide qué órdenes entran
-// (vacío = todas). Los dos formatos son los del original.
+// (vacío = todas). El PDF es la opción principal; el Excel (proveedor y
+// secretaria) se mantiene disponible para el archivo interno de costos.
 const URL_EXCEL = '{{ route('admin.ordenes-compra.excel') }}';
+const URL_PDF   = '{{ route('admin.ordenes-compra.pdf') }}';
 
 function cerrarMenuExcel() {
     document.getElementById('menu-excel-oc')?.remove();
@@ -559,13 +514,19 @@ function abrirMenuExcel(ids, origen) {
     menu.id = 'menu-excel-oc';
     menu.className = 'menu-excel';
     menu.innerHTML =
-        '<div class="menu-excel-titulo">Tipo de Excel</div>' +
-        '<button type="button" data-tipo="proveedor">' +
+        '<div class="menu-excel-titulo">Descargar orden</div>' +
+        '<button type="button" data-formato="pdf">' +
+            '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a12b2b" stroke-width="2.5">' +
+            '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>' +
+            '<span><strong>PDF de la orden</strong><small>Una página por orden, para el proveedor</small></span>' +
+        '</button>' +
+        '<div class="menu-excel-titulo" style="margin-top:6px;">Otros formatos</div>' +
+        '<button type="button" data-formato="excel-proveedor">' +
             '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#217346" stroke-width="2.5">' +
             '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>' +
             '<span><strong>Excel para Proveedor</strong><small>Formato oficial RT-PV-F-01</small></span>' +
         '</button>' +
-        '<button type="button" data-tipo="secretaria">' +
+        '<button type="button" data-formato="excel-secretaria">' +
             '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5b21b6" stroke-width="2.5">' +
             '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>' +
             '<line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>' +
@@ -577,7 +538,14 @@ function abrirMenuExcel(ids, origen) {
     menu.querySelectorAll('button').forEach((opcion) => {
         opcion.addEventListener('click', () => {
             cerrarMenuExcel();
-            window.location.href = URL_EXCEL + '?tipo=' + opcion.dataset.tipo + (ids ? '&ids=' + encodeURIComponent(ids) : '');
+
+            if (opcion.dataset.formato === 'pdf') {
+                window.location.href = URL_PDF + (ids ? '?ids=' + encodeURIComponent(ids) : '');
+                return;
+            }
+
+            const tipo = opcion.dataset.formato === 'excel-secretaria' ? 'secretaria' : 'proveedor';
+            window.location.href = URL_EXCEL + '?tipo=' + tipo + (ids ? '&ids=' + encodeURIComponent(ids) : '');
         });
     });
 
@@ -617,7 +585,7 @@ function pintarSeleccion(aviso) {
     const ids   = [...seleccionOc].join(',');
 
     btnSelExcel.dataset.ids   = ids;
-    btnSelExcel.textContent   = '📊 Excel (' + total + ' hoja' + (total === 1 ? '' : 's') + ')';
+    btnSelExcel.textContent   = '📄 Descargar (' + total + ')';
     btnSelExcel.disabled      = total === 0;
 
     document.getElementById('oc-sel-count').textContent =
@@ -694,8 +662,8 @@ pintarSeleccion();
         if (!primera) { return; }
 
         pintarSeleccion(recien.length > 1
-            ? 'Las ' + recien.length + ' órdenes que acabas de registrar, una por hoja.'
-            : 'Marca más órdenes para juntarlas en un solo Excel, una hoja por orden.');
+            ? 'Las ' + recien.length + ' órdenes que acabas de registrar.'
+            : 'Marca más órdenes para descargarlas juntas, una por página/hoja.');
 
         primera.closest('tr').scrollIntoView({ behavior: 'smooth', block: 'center' });
     });

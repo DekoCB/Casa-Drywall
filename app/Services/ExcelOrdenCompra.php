@@ -63,7 +63,7 @@ class ExcelOrdenCompra
         $fecha = $ordenes->first()?->fecha?->format('Ymd') ?? now()->format('Ymd');
         $sufijo = $tipo === 'secretaria' ? ' (Secretaria)' : '';
 
-        return "Orden de Compra RENTAL TECH SAC {$fecha}{$sufijo}.xlsx";
+        return 'Orden de Compra '.config('rentaltech.empresa.razon_social')." {$fecha}{$sufijo}.xlsx";
     }
 
     /* ═══════════════════════════════════════════════════════
@@ -128,11 +128,11 @@ class ExcelOrdenCompra
         $this->caja($hoja, 'I2', array_merge($this->fuente(self::NEGRO, 10), $this->alineado(Alignment::HORIZONTAL_CENTER)), self::NEGRO);
 
         $hoja->getRowDimension(3)->setRowHeight(18);
-        $hoja->setCellValue('A3', '📍 Car. Central Km 100, San Ramón, Junín - Perú');
+        $hoja->setCellValue('A3', '📍 '.config('rentaltech.empresa.direccion'));
         $hoja->getStyle('A3')->applyFromArray($etiqueta);
 
         $hoja->getRowDimension(4)->setRowHeight(18);
-        $hoja->setCellValue('B4', '✉ rental.tech2024@gmail.com');
+        $hoja->setCellValue('B4', '✉ '.config('rentaltech.empresa.email'));
         $hoja->getStyle('B4')->applyFromArray($etiqueta);
 
         $hoja->getRowDimension(5)->setRowHeight(14);

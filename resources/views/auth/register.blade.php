@@ -96,7 +96,7 @@
                                 <polyline points="22,6 12,13 2,6"></polyline>
                             </svg>
                         </span>
-                        <input type="email" id="email" name="email" placeholder="ejemplo@rentaltech.com" value="{{ old('email') }}" required>
+                        <input type="email" id="email" name="email" placeholder="ejemplo@casadrywall.pe" value="{{ old('email') }}" required>
                     </div>
                 </div>
 
