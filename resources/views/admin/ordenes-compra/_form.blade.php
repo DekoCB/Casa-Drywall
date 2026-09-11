@@ -20,15 +20,21 @@
 
     {{-- ══ Membrete ══ --}}
     <div class="ocd-membrete">
-        <div>
-            <span class="ocd-tipo">Editando orden de compra</span>
-            <div class="ocd-emisor-nombre" id="ocr-proveedor">{{ $orden?->proveedor ?: 'Sin proveedor' }}</div>
-            <div class="ocd-emisor-dato">RUC <span id="ocr-ruc">{{ $orden?->ruc ?: '—' }}</span></div>
+        <div class="ocd-membrete-marca">
+            <div class="ocd-logo-chip"><img src="{{ asset('img/Logo-rec.png') }}" alt="{{ config('rentaltech.empresa.razon_social') }}"></div>
+            <div>
+                <span class="ocd-tipo">Editando orden de compra</span>
+                <div class="ocd-emisor-nombre" id="ocr-proveedor">{{ $orden?->proveedor ?: 'Sin proveedor' }}</div>
+                <div class="ocd-emisor-dato">RUC <span id="ocr-ruc">{{ $orden?->ruc ?: '—' }}</span></div>
+            </div>
         </div>
 
         <div class="ocd-membrete-der">
-            <div class="ocd-numero" id="ocr-numero">{{ $orden?->numero_orden ?: '—' }}</div>
-            <div class="ocd-fecha" id="ocr-fecha">—</div>
+            <div class="ocd-caja-doc">
+                <div class="ocd-caja-tipo">Orden de compra</div>
+                <div class="ocd-numero" id="ocr-numero">{{ $orden?->numero_orden ?: '—' }}</div>
+                <div class="ocd-fecha" id="ocr-fecha">—</div>
+            </div>
         </div>
 
         <div class="ocd-membrete-pie">
@@ -121,9 +127,14 @@
                        value="{{ old('numero_orden', $orden?->numero_orden) }}" placeholder="Se genera automáticamente">
             </div>
             <div class="oc-campo">
-                <label class="oc-label" for="fecha">Fecha <span>*</span></label>
+                <label class="oc-label" for="fecha">Fecha de emisión <span>*</span></label>
                 <input type="date" class="oc-input" id="fecha" name="fecha" required
                        value="{{ old('fecha', $orden?->fecha?->format('Y-m-d') ?? now()->toDateString()) }}">
+            </div>
+            <div class="oc-campo">
+                <label class="oc-label" for="fecha_vencimiento">Fecha de vencimiento</label>
+                <input type="date" class="oc-input" id="fecha_vencimiento" name="fecha_vencimiento"
+                       value="{{ old('fecha_vencimiento', $orden?->fecha_vencimiento?->format('Y-m-d')) }}">
             </div>
             <div class="oc-campo">
                 <label class="oc-label" for="estado">Estado <span>*</span></label>
@@ -147,6 +158,20 @@
                 <label class="oc-label" for="nro_guia">N° de guía</label>
                 <input type="text" class="oc-input" id="nro_guia" name="nro_guia" maxlength="100"
                        value="{{ old('nro_guia', $orden?->nro_guia) }}">
+            </div>
+            <div class="oc-campo">
+                <label class="oc-label" for="referencia_venta">Referencia / O. Venta</label>
+                <input type="text" class="oc-input" id="referencia_venta" name="referencia_venta" maxlength="100"
+                       value="{{ old('referencia_venta', $orden?->referencia_venta) }}">
+            </div>
+            <div class="oc-campo">
+                <label class="oc-label" for="aprobado_por">Aprobado por</label>
+                <select class="oc-input" id="aprobado_por" name="aprobado_por">
+                    <option value="">—</option>
+                    @foreach ($aprobadores as $aprobador)
+                        <option value="{{ $aprobador->username }}" @selected(old('aprobado_por', $orden?->aprobado_por) === $aprobador->username)>{{ $aprobador->username }}</option>
+                    @endforeach
+                </select>
             </div>
             <div class="oc-campo">
                 <label class="oc-label" for="ref_fecha">Fecha de referencia</label>

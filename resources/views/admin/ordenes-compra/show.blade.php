@@ -39,18 +39,24 @@
 
         {{-- ══ Membrete ══ --}}
         <div class="ocd-membrete">
-            <div>
-                <span class="ocd-tipo">Orden de compra</span>
-                <div class="ocd-emisor-nombre">{{ $orden->proveedor }}</div>
-                <div class="ocd-emisor-dato">
-                    RUC {{ $orden->ruc ?: '—' }}
-                    @if ($orden->distrito) · {{ $orden->distrito }}, {{ $orden->departamento }} @endif
+            <div class="ocd-membrete-marca">
+                <div class="ocd-logo-chip"><img src="{{ asset('img/Logo-rec.png') }}" alt="{{ config('rentaltech.empresa.razon_social') }}"></div>
+                <div>
+                    <span class="ocd-tipo">Orden de compra</span>
+                    <div class="ocd-emisor-nombre">{{ $orden->proveedor }}</div>
+                    <div class="ocd-emisor-dato">
+                        RUC {{ $orden->ruc ?: '—' }}
+                        @if ($orden->distrito) · {{ $orden->distrito }}, {{ $orden->departamento }} @endif
+                    </div>
                 </div>
             </div>
 
             <div class="ocd-membrete-der">
-                <div class="ocd-numero">{{ $orden->numero_orden }}</div>
-                <div class="ocd-fecha">{{ $orden->fecha?->translatedFormat('d \d\e F \d\e Y') }}</div>
+                <div class="ocd-caja-doc">
+                    <div class="ocd-caja-tipo">Orden de compra</div>
+                    <div class="ocd-numero">{{ $orden->numero_orden }}</div>
+                    <div class="ocd-fecha">{{ $orden->fecha?->translatedFormat('d \d\e F \d\e Y') }}</div>
+                </div>
             </div>
 
             <div class="ocd-membrete-pie">
@@ -95,6 +101,18 @@
                 <div>
                     <div class="ocm-dato-lbl">Correo</div>
                     <div class="ocm-dato-val {{ $orden->correo ? '' : 'vacio' }}">{{ $orden->correo ?: '—' }}</div>
+                </div>
+                <div>
+                    <div class="ocm-dato-lbl">Fecha de vencimiento</div>
+                    <div class="ocm-dato-val {{ $orden->fecha_vencimiento ? '' : 'vacio' }}">{{ $orden->fecha_vencimiento?->format('d/m/Y') ?: '—' }}</div>
+                </div>
+                <div>
+                    <div class="ocm-dato-lbl">Referencia / O. Venta</div>
+                    <div class="ocm-dato-val {{ $orden->referencia_venta ? '' : 'vacio' }}">{{ $orden->referencia_venta ?: '—' }}</div>
+                </div>
+                <div>
+                    <div class="ocm-dato-lbl">Aprobado por</div>
+                    <div class="ocm-dato-val {{ $orden->aprobado_por ? '' : 'vacio' }}">{{ $orden->aprobado_por ?: '—' }}</div>
                 </div>
             </div>
 

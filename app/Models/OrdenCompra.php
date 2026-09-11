@@ -12,9 +12,9 @@ class OrdenCompra extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'numero_orden', 'fecha', 'proveedor', 'ruc', 'telefono', 'correo', 'direccion',
+        'numero_orden', 'fecha', 'fecha_vencimiento', 'proveedor', 'ruc', 'telefono', 'correo', 'direccion',
         'distrito', 'provincia', 'departamento', 'nro_factura', 'nro_guia', 'ref_fecha',
-        'empresa_transporte', 'cliente_ref', 'vendedor', 'cod_vendedor', 'peso', 'bultos',
+        'empresa_transporte', 'cliente_ref', 'referencia_venta', 'vendedor', 'aprobado_por', 'cod_vendedor', 'peso', 'bultos',
         'tc', 'precio_venta', 'gasto_unit', 'estado', 'condicion_pago', 'observaciones',
         'total_usd', 'total_soles', 'productos', 'merch',
     ];
@@ -23,6 +23,7 @@ class OrdenCompra extends Model
     {
         return [
             'fecha' => 'date',
+            'fecha_vencimiento' => 'date',
             'productos' => 'array',
             'merch' => 'array',
             'bultos' => 'integer',

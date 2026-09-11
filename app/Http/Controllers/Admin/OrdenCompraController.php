@@ -10,6 +10,7 @@ use App\Models\OrdenCompra;
 use App\Models\OrdenToken;
 use App\Models\PedidoCliente;
 use App\Models\Proveedor;
+use App\Models\Usuario;
 use App\Services\ExcelOrdenCompra;
 use App\Services\GeneradorCorrelativo;
 use App\Services\MerchInventario;
@@ -137,6 +138,7 @@ class OrdenCompraController extends Controller
             'proveedores' => Proveedor::where('estado', 'activo')->orderBy('razon_social')->get(),
             'empresas'    => EmpresaTransporte::where('estado', 'activo')->orderBy('nombre')->get(),
             'catalogoMerch' => Merch::orderBy('nombre')->get(),
+            'aprobadores' => Usuario::orderBy('username')->get(['id', 'username']),
         ]);
     }
 
@@ -182,6 +184,7 @@ class OrdenCompraController extends Controller
             'proveedores' => Proveedor::where('estado', 'activo')->orderBy('razon_social')->get(),
             'empresas' => EmpresaTransporte::where('estado', 'activo')->orderBy('nombre')->get(),
             'catalogoMerch' => Merch::orderBy('nombre')->get(),
+            'aprobadores' => Usuario::orderBy('username')->get(['id', 'username']),
         ]);
     }
 
@@ -404,6 +407,7 @@ class OrdenCompraController extends Controller
         return $request->validate([
             'numero_orden' => ['nullable', 'string', 'max:50'],
             'fecha' => ['required', 'date'],
+            'fecha_vencimiento' => ['nullable', 'date'],
             'proveedor' => ['required', 'string', 'max:255'],
             'ruc' => ['nullable', 'string', 'max:20'],
             'telefono' => ['nullable', 'string', 'max:50'],
@@ -417,7 +421,9 @@ class OrdenCompraController extends Controller
             'ref_fecha' => ['nullable', 'string', 'max:20'],
             'empresa_transporte' => ['nullable', 'string', 'max:200'],
             'cliente_ref' => ['nullable', 'string', 'max:200'],
+            'referencia_venta' => ['nullable', 'string', 'max:100'],
             'vendedor' => ['nullable', 'string', 'max:100'],
+            'aprobado_por' => ['nullable', 'string', 'max:100'],
             'cod_vendedor' => ['nullable', 'string', 'max:20'],
             'peso' => ['nullable', 'string', 'max:30'],
             'bultos' => ['nullable', 'integer', 'min:0'],

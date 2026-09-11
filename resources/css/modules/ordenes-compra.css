@@ -1000,6 +1000,23 @@ body.oc-seleccionando .fab-nueva-oc { display: none; }
         linear-gradient(180deg, #17191d 0%, #0d0e11 100%);
     color: var(--surface-2);
 }
+.ocd-membrete-marca {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+}
+.ocd-logo-chip {
+    flex: 0 0 auto;
+    width: 46px;
+    height: 46px;
+    border-radius: 10px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+.ocd-logo-chip img { width: 38px; height: 38px; object-fit: contain; }
 .ocd-emisor-nombre {
     font-size: 17px;
     font-weight: 800;
@@ -1025,9 +1042,24 @@ body.oc-seleccionando .fab-nueva-oc { display: none; }
     letter-spacing: 1.4px;
 }
 .ocd-membrete-der { text-align: right; }
+.ocd-caja-doc {
+    display: inline-block;
+    padding: 14px 22px;
+    border: 1px solid rgba(255,255,255,.28);
+    border-radius: 10px;
+    text-align: center;
+}
+.ocd-caja-tipo {
+    font-size: 10px;
+    font-weight: 700;
+    color: #a7dbd1;
+    text-transform: uppercase;
+    letter-spacing: 1.4px;
+}
 .ocd-numero {
+    margin-top: 6px;
     font-family: 'Geist Mono', ui-monospace, monospace;
-    font-size: 34px;
+    font-size: 28px;
     font-weight: 800;
     line-height: 1;
     color: #fff;
