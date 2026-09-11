@@ -11,7 +11,6 @@ use App\Http\Controllers\Admin\CobranzaController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DocumentoController;
 use App\Http\Controllers\Admin\EgresoController;
-use App\Http\Controllers\Admin\FacturaController;
 use App\Http\Controllers\Admin\GuiaRemisionController;
 use App\Http\Controllers\Admin\HistorialPagoController;
 use App\Http\Controllers\Admin\IngresoController;
@@ -136,18 +135,6 @@ Route::middleware(['auth', 'rol:admin'])
             ->name('liquidaciones-compra.comprobante');
         Route::resource('liquidaciones-compra', LiquidacionCompraController::class)
             ->except(['show', 'create', 'edit'])->parameters(['liquidaciones-compra' => 'liquidacionCompra']);
-
-        Route::get('facturas/estadisticas', [FacturaController::class, 'estadisticas'])->name('facturas.estadisticas');
-        Route::post('facturas/analizar', [FacturaController::class, 'analizar'])->name('facturas.analizar');
-        Route::get('facturas', [FacturaController::class, 'index'])->name('facturas.index');
-        Route::post('facturas', [FacturaController::class, 'store'])->name('facturas.store');
-        Route::get('facturas/{factura}', [FacturaController::class, 'show'])->name('facturas.show');
-        Route::put('facturas/{factura}', [FacturaController::class, 'update'])->name('facturas.update');
-        Route::delete('facturas/{factura}', [FacturaController::class, 'destroy'])->name('facturas.destroy');
-        Route::post('facturas/{factura}/cancelar', [FacturaController::class, 'alternarCancelado'])->name('facturas.cancelar');
-        Route::post('facturas/{factura}/pagada', [FacturaController::class, 'alternarPagada'])->name('facturas.pagada');
-        Route::post('facturas/{factura}/pdf', [FacturaController::class, 'subirPdf'])->name('facturas.pdf');
-        Route::delete('facturas/{factura}/pdf', [FacturaController::class, 'eliminarPdf'])->name('facturas.pdf-eliminar');
 
         // ── Finanzas ────────────────────────────────────────────────────────
         Route::get('cobranzas/importar', [CobranzaController::class, 'formImportar'])->name('cobranzas.importar');

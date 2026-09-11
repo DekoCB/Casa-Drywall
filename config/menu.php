@@ -92,7 +92,6 @@ return [
                         'crearRoute' => 'admin.ordenes-compra.create'],
                 ],
             ],
-            ['route' => 'admin.facturas.index', 'label' => 'Facturas', 'icon' => $iconos['documento'], 'badge' => 'GP', 'badge_class' => 'b-violet'],
         ],
 
         'Finanzas' => [
