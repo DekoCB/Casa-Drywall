@@ -9,11 +9,7 @@
 
 @section('content')
 
-<x-page-header titulo="Reporte de Inventario" subtitulo="Snapshot del stock actual, valorizado a costo de compra">
-    <x-slot:acciones>
-        <a href="{{ route('admin.inventario.movimientos') }}" class="btn btn-secondary btn-sm"><span class="btn-text">← Inventario</span></a>
-    </x-slot:acciones>
-</x-page-header>
+<x-page-header titulo="Reporte de Inventario" subtitulo="Snapshot del stock actual, valorizado a costo de compra" />
 
 <div class="content-card">
     <form method="GET" class="rep-filtros-form">
