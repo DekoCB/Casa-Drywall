@@ -374,6 +374,20 @@
         <button type="button" class="oc-sel-limpiar" id="oc-sel-limpiar">Limpiar</button>
     </div>
 </div>
+
+<x-modal id="modalEnviarOc" titulo="Enviar orden por correo">
+    <form id="formEnviarOc">
+        <p class="prod-mudo" id="ocEnviarDetalle" style="margin:0 0 14px;font-size:13.5px;"></p>
+        <div class="form-group">
+            <label for="ocEmailDestino">Correo del destinatario</label>
+            <input type="email" id="ocEmailDestino" required placeholder="proveedor@ejemplo.com">
+        </div>
+        <div class="header-btns" style="justify-content:flex-end;margin-top:16px;">
+            <button type="button" class="btn btn-secondary" data-cerrar="modalEnviarOc">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Enviar</button>
+        </div>
+    </form>
+</x-modal>
 @endsection
 
 @push('scripts')
@@ -688,25 +702,35 @@ pintarSeleccion();
 @endif
 
 // ── Envío por correo ─────────────────────────────────────────────────────
+let ocEnviarOrdenId = null;
+
 document.querySelectorAll('.btn-enviar-oc').forEach((boton) => {
     boton.addEventListener('click', () => {
-        const destino = window.prompt(
-            'Correo del destinatario para la orden ' + boton.dataset.numero + ' (' + boton.dataset.proveedor + '):'
-        );
-
-        if (!destino) { return; }
-
-        const formulario = document.createElement('form');
-        formulario.method = 'POST';
-        formulario.action = URL_OC + '/' + boton.dataset.orden + '/enviar';
-        formulario.innerHTML =
-            '<input type="hidden" name="_token" value="' + CSRF_OC + '">' +
-            '<input type="hidden" name="destinatarios[]">';
-        formulario.querySelector('input[name="destinatarios[]"]').value = destino;
-
-        document.body.appendChild(formulario);
-        formulario.submit();
+        ocEnviarOrdenId = boton.dataset.orden;
+        document.getElementById('ocEnviarDetalle').textContent =
+            'Orden ' + boton.dataset.numero + ' (' + boton.dataset.proveedor + ')';
+        document.getElementById('ocEmailDestino').value = '';
+        abrirModal('modalEnviarOc');
+        setTimeout(() => document.getElementById('ocEmailDestino').focus(), 50);
     });
+});
+
+document.getElementById('formEnviarOc').addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    const destino = document.getElementById('ocEmailDestino').value.trim();
+    if (!destino || !ocEnviarOrdenId) { return; }
+
+    const formulario = document.createElement('form');
+    formulario.method = 'POST';
+    formulario.action = URL_OC + '/' + ocEnviarOrdenId + '/enviar';
+    formulario.innerHTML =
+        '<input type="hidden" name="_token" value="' + CSRF_OC + '">' +
+        '<input type="hidden" name="destinatarios[]">';
+    formulario.querySelector('input[name="destinatarios[]"]').value = destino;
+
+    document.body.appendChild(formulario);
+    formulario.submit();
 });
 </script>
 @endpush
