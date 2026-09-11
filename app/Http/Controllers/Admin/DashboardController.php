@@ -56,6 +56,23 @@ class DashboardController extends Controller
         $facturado = (float) $actual->facturado;
         $cobrado = (float) $actual->cobrado;
 
+        // Facturas: cuánto se facturó (documento tributario formal). Boletas y
+        // Notas de Venta: cuánto entró en caja por esa vía (monto_pagado), no
+        // lo facturado — son ventas más informales donde importa el cobro real.
+        $montoFacturas = $this->agregadosPorTipo($desde, $hasta, '01', 'total');
+        $montoBoletas = $this->agregadosPorTipo($desde, $hasta, '03', 'monto_pagado');
+        $montoNotasVenta = $this->agregadosPorTipo($desde, $hasta, 'NV', 'monto_pagado');
+
+        $montoFacturasPct = null;
+        $montoBoletasPct = null;
+        $montoNotasVentaPct = null;
+
+        if ($desdePrev) {
+            $montoFacturasPct = $this->variacion($montoFacturas, $this->agregadosPorTipo($desdePrev, $hastaPrev, '01', 'total'));
+            $montoBoletasPct = $this->variacion($montoBoletas, $this->agregadosPorTipo($desdePrev, $hastaPrev, '03', 'monto_pagado'));
+            $montoNotasVentaPct = $this->variacion($montoNotasVenta, $this->agregadosPorTipo($desdePrev, $hastaPrev, 'NV', 'monto_pagado'));
+        }
+
         $antiguedad = $this->antiguedadDeuda();
 
         [$utilidadDesde, $utilidadHasta, $utilidadModo] = $this->rangoUtilidad($request);
@@ -80,14 +97,18 @@ class DashboardController extends Controller
             'stockBajo' => $this->productosStockBajo(),
 
             // Sin período previo comparable en el histórico, no se inventa un delta.
-            'facturadoPct' => $previo ? $this->variacion($facturado, (float) $previo->facturado) : null,
             'cobradoPct' => $previo ? $this->variacion($cobrado, (float) $previo->cobrado) : null,
             'comprobantesPct' => $previo ? $this->variacion((int) $actual->n, (int) $previo->n) : null,
 
-            // Desglose por tipo de comprobante, sobre el mismo período del hero.
-            'montoFacturas' => $this->agregadosPorTipo($desde, $hasta, '01'),
-            'montoBoletas' => $this->agregadosPorTipo($desde, $hasta, '03'),
-            'montoNotasVenta' => $this->agregadosPorTipo($desde, $hasta, 'NV'),
+            // Desglose por tipo de comprobante: Facturas es lo facturado (con
+            // la comparativa que antes tenía la tarjeta "Facturado" general);
+            // Boletas/Notas de Venta es lo efectivamente cobrado por esa vía.
+            'montoFacturas' => $montoFacturas,
+            'montoBoletas' => $montoBoletas,
+            'montoNotasVenta' => $montoNotasVenta,
+            'montoFacturasPct' => $montoFacturasPct,
+            'montoBoletasPct' => $montoBoletasPct,
+            'montoNotasVentaPct' => $montoNotasVentaPct,
 
             // ── Utilidades (día o mes elegido) ─────────────────────────────
             'utilidadModo' => $utilidadModo,
@@ -176,13 +197,16 @@ class DashboardController extends Controller
             ->first();
     }
 
-    /** Monto facturado de un solo tipo de comprobante (01 Factura, 03 Boleta, NV Nota de Venta). */
-    private function agregadosPorTipo(Carbon $desde, Carbon $hasta, string $tipcomp): float
+    /**
+     * Monto de un solo tipo de comprobante (01 Factura, 03 Boleta, NV Nota de
+     * Venta): `total` para lo facturado, `monto_pagado` para lo cobrado.
+     */
+    private function agregadosPorTipo(Carbon $desde, Carbon $hasta, string $tipcomp, string $campo): float
     {
         return (float) $this->ventasVigentes()
             ->where('tipcomp', $tipcomp)
             ->whereBetween('fecha', [$desde->toDateString(), $hasta->toDateString()])
-            ->sum('total');
+            ->sum($campo);
     }
 
     /**

@@ -106,16 +106,6 @@
 </div>
 <div class="kpi-grid">
 
-  @php $d = $delta($facturadoPct); @endphp
-  <div class="kpi">
-    <div class="kpi-head"><div class="kpi-lbl">Facturado</div>
-      <svg class="kpi-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 17l6-6 4 4 8-9"/></svg>
-    </div>
-    <div class="kpi-val"><span class="cur">S/</span>{{ number_format($facturado, 2) }}</div>
-    <div class="kpi-sub"><span class="delta {{ $d['clase'] }}">{{ $d['texto'] }}</span> vs período previo</div>
-    <div class="kpi-spark"><svg viewBox="0 0 200 40" preserveAspectRatio="none"><defs><linearGradient id="g1" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#1F4A86" stop-opacity=".2"/><stop offset="1" stop-color="#1F4A86" stop-opacity="0"/></linearGradient></defs><path d="M0,34 L50,28 L100,20 L150,14 L200,8 L200,40 L0,40Z" fill="url(#g1)"/><path d="M0,34 L50,28 L100,20 L150,14 L200,8" fill="none" stroke="#1F4A86" stroke-width="1.4"/></svg></div>
-  </div>
-
   @php $d = $delta($cobradoPct); @endphp
   <div class="kpi">
     <div class="kpi-head"><div class="kpi-lbl">Cobrado</div>
@@ -173,20 +163,29 @@
 
 {{-- ══ DESGLOSE POR COMPROBANTE ══ --}}
 <div class="sec-head" style="margin-top:28px">
-  <h3>Facturado por tipo de comprobante</h3><div class="rule"></div>
+  <h3>Por tipo de comprobante</h3><div class="rule"></div>
 </div>
 <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+  @php $d = $delta($montoFacturasPct); @endphp
   <div class="kpi">
     <div class="kpi-head"><div class="kpi-lbl">Facturas</div></div>
     <div class="kpi-val"><span class="cur">S/</span>{{ number_format($montoFacturas, 2) }}</div>
+    <div class="kpi-sub"><span class="delta {{ $d['clase'] }}">{{ $d['texto'] }}</span> vs período previo</div>
+    <div class="kpi-spark"><svg viewBox="0 0 200 40" preserveAspectRatio="none"><path d="M0,34 L50,28 L100,20 L150,14 L200,8" fill="none" stroke="#1F4A86" stroke-width="1.4"/></svg></div>
   </div>
+  @php $d = $delta($montoBoletasPct); @endphp
   <div class="kpi">
     <div class="kpi-head"><div class="kpi-lbl">Boletas</div></div>
     <div class="kpi-val"><span class="cur">S/</span>{{ number_format($montoBoletas, 2) }}</div>
+    <div class="kpi-sub"><span class="delta {{ $d['clase'] }}">{{ $d['texto'] }}</span> cobrado vs período previo</div>
+    <div class="kpi-spark"><svg viewBox="0 0 200 40" preserveAspectRatio="none"><path d="M0,36 L50,30 L100,24 L150,14 L200,10" fill="none" stroke="#11704A" stroke-width="1.4"/></svg></div>
   </div>
+  @php $d = $delta($montoNotasVentaPct); @endphp
   <div class="kpi">
     <div class="kpi-head"><div class="kpi-lbl">Notas de Venta</div></div>
     <div class="kpi-val"><span class="cur">S/</span>{{ number_format($montoNotasVenta, 2) }}</div>
+    <div class="kpi-sub"><span class="delta {{ $d['clase'] }}">{{ $d['texto'] }}</span> cobrado vs período previo</div>
+    <div class="kpi-spark"><svg viewBox="0 0 200 40" preserveAspectRatio="none"><path d="M0,36 L50,30 L100,24 L150,14 L200,10" fill="none" stroke="#11704A" stroke-width="1.4"/></svg></div>
   </div>
 </div>
 
@@ -202,14 +201,12 @@
   <form method="GET" class="dash-utilidad-form">
     <input type="hidden" name="periodo" value="{{ $periodo }}">
     <label for="utilidadFecha">Un día</label>
-    <input type="date" id="utilidadFecha" name="utilidad_fecha" value="{{ $utilidadModo === 'dia' ? $utilidadFecha : '' }}">
-    <button type="submit" class="btn btn-secondary btn-sm">Ver</button>
+    <input type="date" id="utilidadFecha" name="utilidad_fecha" value="{{ $utilidadModo === 'dia' ? $utilidadFecha : '' }}" onchange="this.form.submit()">
   </form>
   <form method="GET" class="dash-utilidad-form">
     <input type="hidden" name="periodo" value="{{ $periodo }}">
     <label for="utilidadMes">Un mes</label>
-    <input type="month" id="utilidadMes" name="utilidad_mes" value="{{ $utilidadModo === 'mes' ? $utilidadMes : '' }}">
-    <button type="submit" class="btn btn-secondary btn-sm">Ver</button>
+    <input type="month" id="utilidadMes" name="utilidad_mes" value="{{ $utilidadModo === 'mes' ? $utilidadMes : '' }}" onchange="this.form.submit()">
   </form>
 </div>
 <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
