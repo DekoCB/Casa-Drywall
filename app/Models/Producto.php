@@ -13,7 +13,7 @@ class Producto extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'codigo', 'nombre', 'categoria_id', 'marca_id', 'presentacion', 'viscosidad',
+        'codigo', 'nombre', 'categoria_id', 'marca_id', 'proveedor_id', 'presentacion', 'viscosidad',
         'descripcion', 'especificaciones', 'precio_compra', 'precio_venta',
         'precio_alquiler', 'stock', 'stock_minimo', 'peso', 'imagen', 'estado',
     ];
@@ -38,6 +38,11 @@ class Producto extends Model
     public function marca(): BelongsTo
     {
         return $this->belongsTo(Marca::class, 'marca_id');
+    }
+
+    public function proveedor(): BelongsTo
+    {
+        return $this->belongsTo(Proveedor::class, 'proveedor_id');
     }
 
     public function stockPorAlmacen(): HasMany

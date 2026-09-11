@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Proveedor extends Model
 {
@@ -18,5 +19,10 @@ class Proveedor extends Model
             'fecha_cumpleanos' => 'date',
             'dias_credito' => 'integer',
         ];
+    }
+
+    public function productos(): HasMany
+    {
+        return $this->hasMany(Producto::class, 'proveedor_id');
     }
 }

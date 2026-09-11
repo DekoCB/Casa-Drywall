@@ -113,6 +113,8 @@ Route::middleware(['auth', 'rol:admin'])
         // autocompletar datos del cliente.
         Route::resource('proveedores', ProveedorController::class)->except(['show', 'create', 'edit'])
             ->parameters(['proveedores' => 'proveedor']);
+        Route::post('proveedores/{proveedor}/productos', [ProveedorController::class, 'importarProductos'])
+            ->name('proveedores.productos.importar');
 
         // ── Compras & documentos ────────────────────────────────────────────
         Route::get('ordenes-compra/excel', [OrdenCompraController::class, 'excel'])->name('ordenes-compra.excel');

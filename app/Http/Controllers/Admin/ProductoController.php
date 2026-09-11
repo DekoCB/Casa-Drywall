@@ -310,6 +310,7 @@ class ProductoController extends Controller
     public function buscar(Request $request): JsonResponse
     {
         $termino = trim((string) $request->query('q', ''));
+        $proveedorId = (int) $request->query('proveedor_id', 0);
 
         if ($termino === '') {
             return response()->json([]);
@@ -320,6 +321,7 @@ class ProductoController extends Controller
                 $q->where('nombre', 'like', "%{$termino}%")
                     ->orWhere('codigo', 'like', "%{$termino}%");
             })
+            ->when($proveedorId > 0, fn ($q) => $q->where('proveedor_id', $proveedorId))
             ->limit(20)
             ->get(['id', 'codigo', 'nombre', 'presentacion', 'precio_venta', 'stock', 'peso']);
 
