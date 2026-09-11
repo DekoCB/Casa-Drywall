@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Cobranza;
 use App\Models\Producto;
 use App\Models\Venta;
+use App\Services\CentroReportes;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -38,6 +39,8 @@ class DashboardController extends Controller
         ['clave' => 'd90_mas',    'etiqueta' => 'Más de 90 días', 'desde' => 91, 'hasta' => null],
     ];
 
+    public function __construct(private readonly CentroReportes $centroReportes) {}
+
     public function index(Request $request): View
     {
         $periodo = array_key_exists($request->query('periodo'), self::PERIODOS)
@@ -54,6 +57,12 @@ class DashboardController extends Controller
         $cobrado = (float) $actual->cobrado;
 
         $antiguedad = $this->antiguedadDeuda();
+
+        [$utilidadDesde, $utilidadHasta, $utilidadModo] = $this->rangoUtilidad($request);
+        $utilidad = $this->centroReportes->utilidadVentas(
+            $utilidadDesde->toDateString(),
+            $utilidadHasta->toDateString()
+        )['resumen'];
 
         return view('admin.dashboard', [
             'periodo' => $periodo,
@@ -74,6 +83,20 @@ class DashboardController extends Controller
             'facturadoPct' => $previo ? $this->variacion($facturado, (float) $previo->facturado) : null,
             'cobradoPct' => $previo ? $this->variacion($cobrado, (float) $previo->cobrado) : null,
             'comprobantesPct' => $previo ? $this->variacion((int) $actual->n, (int) $previo->n) : null,
+
+            // Desglose por tipo de comprobante, sobre el mismo período del hero.
+            'montoFacturas' => $this->agregadosPorTipo($desde, $hasta, '01'),
+            'montoBoletas' => $this->agregadosPorTipo($desde, $hasta, '03'),
+            'montoNotasVenta' => $this->agregadosPorTipo($desde, $hasta, 'NV'),
+
+            // ── Utilidades (día o mes elegido) ─────────────────────────────
+            'utilidadModo' => $utilidadModo,
+            'utilidadFecha' => $utilidadModo === 'dia' ? $utilidadDesde->toDateString() : null,
+            'utilidadMes' => $utilidadModo === 'mes' ? $utilidadDesde->format('Y-m') : null,
+            'utilidadIngreso' => $utilidad['ingreso'],
+            'utilidadCosto' => $utilidad['costo'],
+            'utilidadTotal' => $utilidad['utilidad'],
+            'utilidadMargen' => $utilidad['margen_pct'],
 
             // ── Gráficos ────────────────────────────────────────────────────
             'tendencia' => $this->tendenciaMensual(24),
@@ -151,6 +174,37 @@ class DashboardController extends Controller
             ->selectRaw('COALESCE(SUM(monto_pagado), 0) AS cobrado')
             ->selectRaw('COUNT(*) AS n')
             ->first();
+    }
+
+    /** Monto facturado de un solo tipo de comprobante (01 Factura, 03 Boleta, NV Nota de Venta). */
+    private function agregadosPorTipo(Carbon $desde, Carbon $hasta, string $tipcomp): float
+    {
+        return (float) $this->ventasVigentes()
+            ->where('tipcomp', $tipcomp)
+            ->whereBetween('fecha', [$desde->toDateString(), $hasta->toDateString()])
+            ->sum('total');
+    }
+
+    /**
+     * Rango de la tarjeta de Utilidades: un día puntual (`utilidad_fecha`) o
+     * un mes completo (`utilidad_mes`); sin ninguno de los dos, el mes actual.
+     *
+     * @return array{0: Carbon, 1: Carbon, 2: string}
+     */
+    private function rangoUtilidad(Request $request): array
+    {
+        if ($request->filled('utilidad_fecha')) {
+            $dia = Carbon::parse($request->query('utilidad_fecha'));
+
+            return [$dia->copy()->startOfDay(), $dia->copy()->endOfDay(), 'dia'];
+        }
+
+        $mes = $request->query('utilidad_mes');
+        $inicio = $mes
+            ? Carbon::createFromFormat('Y-m', $mes)->startOfMonth()
+            : Carbon::today()->startOfMonth();
+
+        return [$inicio, $inicio->copy()->endOfMonth(), 'mes'];
     }
 
     /** Serie mensual de facturado y cobrado de los últimos N meses. */

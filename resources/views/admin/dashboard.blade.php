@@ -171,6 +171,66 @@
 
 </div>
 
+{{-- ══ DESGLOSE POR COMPROBANTE ══ --}}
+<div class="sec-head" style="margin-top:28px">
+  <h3>Facturado por tipo de comprobante</h3><div class="rule"></div>
+</div>
+<div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+  <div class="kpi">
+    <div class="kpi-head"><div class="kpi-lbl">Facturas</div></div>
+    <div class="kpi-val"><span class="cur">S/</span>{{ number_format($montoFacturas, 2) }}</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-head"><div class="kpi-lbl">Boletas</div></div>
+    <div class="kpi-val"><span class="cur">S/</span>{{ number_format($montoBoletas, 2) }}</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-head"><div class="kpi-lbl">Notas de Venta</div></div>
+    <div class="kpi-val"><span class="cur">S/</span>{{ number_format($montoNotasVenta, 2) }}</div>
+  </div>
+</div>
+
+{{-- ══ UTILIDADES ══ --}}
+<div class="sec-head" style="margin-top:28px">
+  <h3>Utilidades</h3><div class="rule"></div>
+  <div class="meta">
+    {{ $utilidadModo === 'dia' ? \Carbon\Carbon::parse($utilidadFecha)->format('d/m/Y') : \Carbon\Carbon::createFromFormat('Y-m', $utilidadMes)->translatedFormat('F Y') }}
+  </div>
+  <a href="{{ route('admin.reportes.utilidad') }}" class="btn-ghost">Ver detalle <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></a>
+</div>
+<div class="dash-utilidad-filtros">
+  <form method="GET" class="dash-utilidad-form">
+    <input type="hidden" name="periodo" value="{{ $periodo }}">
+    <label for="utilidadFecha">Un día</label>
+    <input type="date" id="utilidadFecha" name="utilidad_fecha" value="{{ $utilidadModo === 'dia' ? $utilidadFecha : '' }}">
+    <button type="submit" class="btn btn-secondary btn-sm">Ver</button>
+  </form>
+  <form method="GET" class="dash-utilidad-form">
+    <input type="hidden" name="periodo" value="{{ $periodo }}">
+    <label for="utilidadMes">Un mes</label>
+    <input type="month" id="utilidadMes" name="utilidad_mes" value="{{ $utilidadModo === 'mes' ? $utilidadMes : '' }}">
+    <button type="submit" class="btn btn-secondary btn-sm">Ver</button>
+  </form>
+</div>
+<div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
+  <div class="kpi">
+    <div class="kpi-head"><div class="kpi-lbl">Ingreso</div></div>
+    <div class="kpi-val"><span class="cur">S/</span>{{ number_format($utilidadIngreso, 2) }}</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-head"><div class="kpi-lbl">Costo</div></div>
+    <div class="kpi-val"><span class="cur">S/</span>{{ number_format($utilidadCosto, 2) }}</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-head"><div class="kpi-lbl">Utilidad</div></div>
+    <div class="kpi-val" style="color:{{ $utilidadTotal >= 0 ? 'var(--pos)' : 'var(--neg)' }}"><span class="cur">S/</span>{{ number_format($utilidadTotal, 2) }}</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-head"><div class="kpi-lbl">Margen</div></div>
+    <div class="kpi-val">{{ number_format($utilidadMargen, 1) }}%</div>
+  </div>
+</div>
+
 {{-- ══ CARTERA ══ --}}
 <div class="sec-head" style="margin-top:28px">
   <h3>Cartera y antigüedad de deuda</h3><div class="rule"></div>
