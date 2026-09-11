@@ -190,11 +190,41 @@ class InventarioTest extends TestCase
         MovimientoAlmacen::create(['producto_id' => $producto->id, 'almacen_id' => $almacen->id, 'tipo' => 'ajuste', 'cantidad' => 90, 'stock_anterior' => 100, 'stock_nuevo' => 90]);
 
         $respuesta = $this->actingAs($this->admin(), 'web')
-            ->get(route('admin.inventario.movimientos', ['tipo' => 'ajuste']));
+            ->get(route('admin.inventario.movimientos.historial', ['tipo' => 'ajuste']));
 
         $respuesta->assertOk();
         $tipos = $respuesta->viewData('movimientos')->pluck('tipo');
         $this->assertSame(['ajuste'], $tipos->unique()->values()->all());
+    }
+
+    public function test_movimientos_lista_una_fila_por_producto_y_almacen_incluidos_los_de_stock_cero(): void
+    {
+        [$almacen1, $almacen2] = $this->dosAlmacenes();
+        $producto = Producto::create(['codigo' => 'P010', 'nombre' => 'Clavo', 'stock' => 0]);
+        StockAlmacen::create(['producto_id' => $producto->id, 'almacen_id' => $almacen1->id, 'stock' => 0]);
+        // Sin fila en StockAlmacen para $almacen2: debe igual aparecer, coalescida a 0.
+
+        $respuesta = $this->actingAs($this->admin(), 'web')->get(route('admin.inventario.movimientos'));
+
+        $respuesta->assertOk();
+        $filas = $respuesta->viewData('items')->where('producto_id', $producto->id);
+        $this->assertCount(2, $filas);
+        $this->assertTrue($filas->every(fn ($f) => $f['stock'] === 0));
+    }
+
+    public function test_movimientos_filtra_por_almacen(): void
+    {
+        [$almacen1, $almacen2] = $this->dosAlmacenes();
+        $producto = Producto::create(['codigo' => 'P011', 'nombre' => 'Tuerca', 'stock' => 5]);
+        StockAlmacen::create(['producto_id' => $producto->id, 'almacen_id' => $almacen1->id, 'stock' => 5]);
+
+        $respuesta = $this->actingAs($this->admin(), 'web')
+            ->get(route('admin.inventario.movimientos', ['almacen_id' => $almacen1->id]));
+
+        $respuesta->assertOk();
+        $filas = $respuesta->viewData('items')->where('producto_id', $producto->id);
+        $this->assertCount(1, $filas);
+        $this->assertSame($almacen1->id, $filas->first()['almacen_id']);
     }
 
     public function test_kardex_muestra_el_saldo_corrido_ya_guardado_por_movimiento(): void

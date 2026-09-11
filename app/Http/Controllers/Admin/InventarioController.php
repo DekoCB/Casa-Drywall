@@ -33,7 +33,49 @@ class InventarioController extends Controller
         private readonly ExportadorReportes $exportador,
     ) {}
 
+    /**
+     * Stock actual, una fila por Producto × Almacén, con acciones rápidas
+     * (Trasladar/Remover/Ajuste) por fila. El historial de movimientos en sí
+     * vive en `historial()` — esta pantalla es la que reemplaza a esa como
+     * entrada principal de "Movimientos" en el menú.
+     */
     public function movimientos(Request $request): View
+    {
+        $almacenId = (int) $request->query('almacen_id', 0);
+        $busqueda = (string) $request->query('q', '');
+
+        return view('admin.inventario.movimientos', $this->centro->stockPorAlmacen(
+            $almacenId > 0 ? $almacenId : null,
+            $busqueda
+        ) + [
+            'almacenes' => Almacen::where('activo', true)->orderBy('nombre')->get(),
+        ]);
+    }
+
+    public function movimientosExcel(Request $request): Response
+    {
+        $almacenId = (int) $request->query('almacen_id', 0);
+
+        return $this->respuestaExcel('Movimientos de Inventario', $this->centro->stockPorAlmacen(
+            $almacenId > 0 ? $almacenId : null,
+            (string) $request->query('q', '')
+        ));
+    }
+
+    public function movimientosPdf(Request $request): Response
+    {
+        $almacenId = (int) $request->query('almacen_id', 0);
+        $reporte = $this->centro->stockPorAlmacen($almacenId > 0 ? $almacenId : null, (string) $request->query('q', ''));
+
+        return $this->respuestaPdf('Movimientos de Inventario', $reporte, [
+            'Productos' => $reporte['resumen']['productos'],
+            'Filas' => $reporte['resumen']['filas'],
+            'Unidades' => $reporte['resumen']['unidades'],
+        ]);
+    }
+
+    /** Historial de movimientos (`MovimientoAlmacen`): lo que antes vivía en `movimientos()`. */
+    public function historial(Request $request): View
     {
         $filtros = [
             'tipo' => (string) $request->query('tipo', ''),
@@ -59,7 +101,7 @@ class InventarioController extends Controller
             ->paginate(30)
             ->withQueryString();
 
-        return view('admin.inventario.movimientos', [
+        return view('admin.inventario.historial', [
             'movimientos' => $movimientos,
             'filtros' => $filtros,
             'almacenes' => Almacen::where('activo', true)->orderBy('nombre')->get(),

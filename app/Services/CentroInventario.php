@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\Almacen;
 use App\Models\MovimientoAlmacen;
 use App\Models\Producto;
+use App\Models\StockAlmacen;
 
 /**
  * Reportes del módulo Inventario: Kardex (historial de un producto, con
@@ -107,6 +109,60 @@ class CentroInventario
                 $f['codigo'], $f['nombre'], $f['categoria'], $f['marca'], $f['unidad'], $f['stock'],
                 number_format($f['costo_ponderado'], 2), number_format($f['costo_producto'], 2),
             ])->all(),
+        ];
+    }
+
+    /**
+     * Una fila por Producto × Almacén activo, con el stock de ese almacén
+     * (0 si el producto nunca tuvo movimiento ahí — `stock_almacen` solo
+     * guarda filas creadas bajo demanda, no una por cada combinación).
+     */
+    public function stockPorAlmacen(?int $almacenId, string $busqueda = ''): array
+    {
+        $busqueda = trim($busqueda);
+
+        $almacenes = Almacen::where('activo', true)
+            ->when($almacenId, fn ($q) => $q->where('id', $almacenId))
+            ->orderBy('nombre')
+            ->get();
+
+        $productos = Producto::activos()
+            ->when($busqueda !== '', fn ($q) => $q->where(
+                fn ($qq) => $qq->where('nombre', 'like', "%{$busqueda}%")->orWhere('codigo', 'like', "%{$busqueda}%")
+            ))
+            ->orderBy('nombre')
+            ->get(['id', 'codigo', 'nombre']);
+
+        $stocks = StockAlmacen::whereIn('producto_id', $productos->pluck('id'))
+            ->whereIn('almacen_id', $almacenes->pluck('id'))
+            ->get()
+            ->keyBy(fn (StockAlmacen $s) => $s->producto_id.'-'.$s->almacen_id);
+
+        $items = collect();
+
+        foreach ($productos as $producto) {
+            foreach ($almacenes as $almacen) {
+                $items->push([
+                    'producto_id' => $producto->id,
+                    'almacen_id' => $almacen->id,
+                    'codigo' => $producto->codigo ?: '—',
+                    'nombre' => $producto->nombre,
+                    'almacen' => $almacen->nombre,
+                    'stock' => (int) ($stocks->get($producto->id.'-'.$almacen->id)?->stock ?? 0),
+                ]);
+            }
+        }
+
+        return [
+            'filtros' => ['almacen' => $almacenId, 'q' => $busqueda],
+            'resumen' => [
+                'productos' => $productos->count(),
+                'filas' => $items->count(),
+                'unidades' => (int) $items->sum('stock'),
+            ],
+            'items' => $items,
+            'columnas' => ['Código', 'Producto', 'Almacén', 'Stock'],
+            'filas' => $items->map(fn ($f) => [$f['codigo'], $f['nombre'], $f['almacen'], $f['stock']])->all(),
         ];
     }
 

@@ -172,6 +172,9 @@ Route::middleware(['auth', 'rol:admin'])
             ->except(['show', 'create', 'edit'])->parameters(['almacenes' => 'almacen']);
 
         Route::get('inventario/movimientos', [InventarioController::class, 'movimientos'])->name('inventario.movimientos');
+        Route::get('inventario/movimientos/excel', [InventarioController::class, 'movimientosExcel'])->name('inventario.movimientos.excel');
+        Route::get('inventario/movimientos/pdf', [InventarioController::class, 'movimientosPdf'])->name('inventario.movimientos.pdf');
+        Route::get('inventario/movimientos/historial', [InventarioController::class, 'historial'])->name('inventario.movimientos.historial');
         Route::post('inventario/traslados', [InventarioController::class, 'storeTraslado'])->name('inventario.traslados.store');
         Route::post('inventario/devoluciones', [InventarioController::class, 'storeDevolucion'])->name('inventario.devoluciones.store');
         Route::patch('inventario/movimientos/{movimiento}/entregado', [InventarioController::class, 'marcarEntregado'])->name('inventario.movimientos.entregado');
