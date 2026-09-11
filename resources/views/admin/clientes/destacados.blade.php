@@ -19,7 +19,7 @@
             <thead>
                 <tr>
                     <th>#</th><th>Cliente</th><th>Compras</th>
-                    <th>Galones</th><th>Última compra</th><th>Total facturado</th>
+                    <th>Última compra</th><th>Total facturado</th>
                 </tr>
             </thead>
             <tbody>
@@ -28,12 +28,11 @@
                     <td><strong>{{ $i + 1 }}</strong></td>
                     <td>{{ $cliente->cliente_nombre }}</td>
                     <td>{{ number_format($cliente->compras) }}</td>
-                    <td>{{ number_format($cliente->galones, 2) }} GL</td>
                     <td>{{ $cliente->ultima_compra ? \Carbon\Carbon::parse($cliente->ultima_compra)->format('d/m/Y') : '—' }}</td>
                     <td><strong>S/ {{ number_format($cliente->total_facturado, 2) }}</strong></td>
                 </tr>
             @empty
-                <tr><td colspan="6" style="text-align:center;padding:40px;color:#666;">Sin ventas registradas todavía</td></tr>
+                <tr><td colspan="5" style="text-align:center;padding:40px;color:#666;">Sin ventas registradas todavía</td></tr>
             @endforelse
             </tbody>
         </table>

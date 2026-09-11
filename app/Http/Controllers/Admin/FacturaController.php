@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Factura;
 use App\Models\Producto;
 use App\Services\AnalizadorFacturaIA;
-use App\Services\MatrizGalonaje;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,7 +22,7 @@ use Illuminate\View\View;
  */
 class FacturaController extends Controller
 {
-    public function index(Request $request, MatrizGalonaje $matriz): View
+    public function index(Request $request): View
     {
         $busqueda = trim((string) $request->query('q', ''));
         $mes      = trim((string) $request->query('mes', ''));    // YYYY-MM
@@ -68,34 +67,18 @@ class FacturaController extends Controller
             'totalSoles' => $activas->sum(fn (Factura $f) => (float) $f->importe * (float) $f->tc),
             // …salvo el galonaje, que acumula todas las facturas.
             'totalGal'   => (float) $facturas->sum('galones'),
-            // El buscador de productos del modal y su factor de galonaje.
-            'catalogo'   => $this->catalogoProductos($matriz),
-            'factores'   => $matriz->productos(),
+            // El buscador de productos del modal.
+            'catalogo'   => $this->catalogoProductos(),
         ]);
     }
 
-    /**
-     * Lista para el autocompletado de productos del modal: los productos
-     * registrados más los de la matriz de galonaje, sin repetir códigos.
-     */
-    private function catalogoProductos(MatrizGalonaje $matriz): array
+    /** Lista para el autocompletado de productos del modal. */
+    private function catalogoProductos(): array
     {
-        $catalogo = [];
-
-        foreach (Producto::orderBy('nombre')->get(['codigo', 'nombre', 'presentacion']) as $p) {
-            $clave = trim((string) $p->codigo).'|'.$p->nombre;
-            $catalogo[$clave] = ['cod' => (string) $p->codigo, 'n' => $p->nombre, 'c' => $p->presentacion ?? ''];
-        }
-
-        foreach ($matriz->productos() as $codigo => $datos) {
-            $clave = $codigo.'|'.($datos['n'] ?? '');
-
-            if (! isset($catalogo[$clave])) {
-                $catalogo[$clave] = ['cod' => (string) $codigo, 'n' => $datos['n'] ?? '', 'c' => $datos['l'] ?? ''];
-            }
-        }
-
-        return array_values($catalogo);
+        return Producto::orderBy('nombre')->get(['codigo', 'nombre', 'presentacion'])
+            ->map(fn (Producto $p) => ['cod' => (string) $p->codigo, 'n' => $p->nombre, 'c' => $p->presentacion ?? ''])
+            ->values()
+            ->all();
     }
 
     public function store(Request $request): RedirectResponse
@@ -262,11 +245,8 @@ class FacturaController extends Controller
         ]);
     }
 
-    /**
-     * Extrae los datos de una factura en PDF con ayuda de un modelo de lenguaje
-     * y les aplica la matriz de galonaje, igual que `analizar_factura.php`.
-     */
-    public function analizar(Request $request, AnalizadorFacturaIA $analizador, MatrizGalonaje $matriz): JsonResponse
+    /** Extrae los datos de una factura en PDF con ayuda de un modelo de lenguaje. */
+    public function analizar(Request $request, AnalizadorFacturaIA $analizador): JsonResponse
     {
         $request->validate(['pdf_file' => ['required', 'file', 'mimes:pdf', 'max:10240']]);
 
@@ -275,17 +255,6 @@ class FacturaController extends Controller
         if (! ($resultado['ok'] ?? false)) {
             return response()->json($resultado, 422);
         }
-
-        // Se enriquece cada ítem con su factor de galonaje y su línea de producto.
-        $resultado['items'] = array_map(
-            fn (array $item) => $item + $matriz->datosDe($item['codigo'] ?? ''),
-            $resultado['items'] ?? []
-        );
-
-        $resultado['galones_total'] = array_sum(array_map(
-            fn (array $item) => (float) ($item['cantidad'] ?? 0) * (float) ($item['factor_galones'] ?? 0),
-            $resultado['items']
-        ));
 
         return response()->json($resultado);
     }

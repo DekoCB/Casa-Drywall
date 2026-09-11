@@ -39,7 +39,7 @@ class Venta extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'numero_venta', 'tipo_comprobante', 'subtotal', 'igv', 'total', 'galones_total',
+        'numero_venta', 'tipo_comprobante', 'subtotal', 'igv', 'total',
         'metodo_pago', 'fecha', 'observaciones', 'usuario_id', 'almacen_id', 'estado',
         'cliente_id', 'cliente_nombre', 'cliente_ruc', 'cliente_telefono', 'cliente_correo',
         'cliente_direccion', 'cliente_distrito',
@@ -69,7 +69,6 @@ class Venta extends Model
             'subtotal' => 'decimal:2',
             'igv' => 'decimal:2',
             'total' => 'decimal:2',
-            'galones_total' => 'decimal:3',
             'costo_transporte' => 'decimal:2',
             'gasto_gasolina' => 'decimal:2',
             'tipo_cambio' => 'decimal:4',

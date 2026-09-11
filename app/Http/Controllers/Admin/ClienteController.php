@@ -215,7 +215,7 @@ class ClienteController extends Controller
     /** Clientes con mayor facturación acumulada. */
     public function destacados(): View
     {
-        $destacados = Venta::selectRaw('cliente_nombre, COUNT(*) AS compras, SUM(total) AS total_facturado, SUM(galones_total) AS galones, MAX(fecha) AS ultima_compra')
+        $destacados = Venta::selectRaw('cliente_nombre, COUNT(*) AS compras, SUM(total) AS total_facturado, MAX(fecha) AS ultima_compra')
             ->where('estado', 'completada')
             ->whereNotNull('cliente_nombre')
             ->where('cliente_nombre', '!=', '')

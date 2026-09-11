@@ -127,10 +127,6 @@
                         ['route' => 'admin.personal.index', 'titulo' => 'Personal', 'desc' => 'Altas, bajas y accesos al sistema del equipo.', 'icon' => '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'],
                         ['route' => 'admin.cargos.index', 'titulo' => 'Cargos', 'desc' => 'Lista de cargos disponibles al dar de alta a un colaborador.', 'icon' => '<path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/>'],
                     ],
-                    'Galonaje' => [
-                        ['route' => 'admin.galonaje.categorias.index', 'titulo' => 'Líneas de producto', 'desc' => 'Categorías de la matriz de lubricantes Kendall / P66.', 'icon' => '<path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/>'],
-                        ['route' => 'admin.galonaje.presentaciones.index', 'titulo' => 'Presentaciones', 'desc' => 'Envases (galones, cuartos, cajas) de la matriz.', 'icon' => '<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>'],
-                    ],
                 ];
             @endphp
             <div class="modal-body" style="padding-top:0;">

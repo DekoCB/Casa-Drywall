@@ -87,26 +87,6 @@
 .chart-legend .item{display:flex;align-items:center;gap:6px;}
 .chart-legend .swatch{width:8px;height:8px;border-radius:2px;}
 
-/* galonaje */
-.gal-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:14px;}
-.gal-hero{background:var(--side);border-radius:var(--r);padding:20px 22px;color:var(--side-text);position:relative;overflow:hidden;border:1px solid var(--side-line);}
-.gal-hero .lbl{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--side-mute);}
-.gal-hero .ttl{font-family:var(--font-sans);font-weight:600;font-size:19px;margin:4px 0 14px;line-height:1.2;}
-.gal-hero .ttl em{color:#93C5FD;font-style:normal;}
-.gal-hero .stats{display:flex;gap:22px;flex-wrap:wrap;}
-.gal-hero .s .v{font-family:var(--font-mono);font-size:19px;font-weight:600;}
-.gal-hero .s .v small{font-size:11px;color:var(--side-mute);margin-left:3px;}
-.gal-hero .s .k{font-size:11px;color:var(--side-mute);margin-top:2px;}
-.gal-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;}
-.gal-card .row{display:flex;align-items:baseline;justify-content:space-between;}
-.gal-card .name{font-size:13px;font-weight:500;color:var(--ink);}
-.gal-card .code{font-family:var(--font-mono);font-size:10.5px;color:var(--ink-3);}
-.gal-card .qty{font-family:var(--font-mono);font-size:20px;font-weight:600;margin-top:10px;color:var(--ink);}
-.gal-card .qty small{font-size:11px;color:var(--ink-3);margin-left:3px;font-weight:400;}
-.gal-card .bar{height:4px;border-radius:2px;background:var(--surface-2);margin-top:10px;overflow:hidden;}
-.gal-card .bar i{display:block;height:100%;border-radius:2px;}
-.gal-card .meta{display:flex;justify-content:space-between;margin-top:7px;font-size:11px;color:var(--ink-3);}
-
 /* activity */
 .twocol{display:grid;grid-template-columns:2fr 1fr;gap:14px;}
 .tbl-panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;}

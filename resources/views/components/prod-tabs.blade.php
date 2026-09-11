@@ -2,10 +2,8 @@
 
 @php
     $pestanas = [
-        'productos'      => ['ruta' => 'admin.productos.index',          'ico' => '📦', 'txt' => 'Productos'],
-        'categorias'     => ['ruta' => 'admin.productos.categorias',     'ico' => '🗂', 'txt' => 'Categorías'],
-        'presentaciones' => ['ruta' => 'admin.productos.presentaciones', 'ico' => '🧴', 'txt' => 'Presentaciones'],
-        'almacenes'      => ['ruta' => 'admin.productos.almacenes',      'ico' => '🏠', 'txt' => 'Almacenes'],
+        'productos' => ['ruta' => 'admin.productos.index',     'ico' => '📦', 'txt' => 'Productos'],
+        'almacenes' => ['ruta' => 'admin.productos.almacenes', 'ico' => '🏠', 'txt' => 'Almacenes'],
     ];
 @endphp
 

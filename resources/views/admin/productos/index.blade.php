@@ -200,7 +200,6 @@
                     <th>Presentación</th>
                     <th>Viscosidad</th>
                     <th>Stock por almacén</th>
-                    <th>Galonaje stock</th>
                     <th>Vendidos</th>
                     <th>Precio venta</th>
                     <th>Acciones</th>
@@ -211,8 +210,6 @@
                 @php
                     $porAlmacen = $producto->stockPorAlmacen->keyBy('almacen_id');
                     $codigo     = trim((string) $producto->codigo);
-                    $matriz     = $factores[$codigo] ?? null;
-                    $galones    = $matriz ? $producto->stock_almacen * (float) ($matriz['f'] ?? 0) : null;
                     $venta      = $vendidos[$codigo !== '' ? $codigo : '#'.$producto->id] ?? null;
 
                     // Todo lo que el modal necesita para precargarse, en un solo atributo.
@@ -231,7 +228,6 @@
                         'peso'             => $producto->peso,
                         'descripcion'      => $producto->descripcion,
                         'especificaciones' => $producto->especificaciones,
-                        'factor_gl'        => (float) ($matriz['f'] ?? 0),
                         'stocks'           => $almacenes->mapWithKeys(
                             fn ($a) => [$a->id => (int) ($porAlmacen[$a->id]->stock ?? 0)]
                         ),
@@ -258,22 +254,9 @@
                             @endforeach
                         </span>
                     </td>
-                    <td>
-                        @if ($matriz)
-                            <span class="prod-gal">{{ number_format($galones, 2) }} GL</span>
-                        @else
-                            <button type="button" class="prod-agregar"
-                                    data-modal="modalGalonaje"
-                                    data-campo-codigo="{{ $producto->codigo }}"
-                                    data-campo-nombre="{{ $producto->nombre }}">
-                                ＋ agregar
-                            </button>
-                        @endif
-                    </td>
                     <td class="prod-vendido">
                         @if ($venta)
                             <b>{{ number_format($venta['unidades']) }} uds</b>
-                            <span>{{ number_format($venta['galones'], 2) }} GL</span>
                         @else
                             <span class="prod-mudo">—</span>
                         @endif
@@ -365,16 +348,7 @@
                     </div>
                     <div class="form-group">
                         <label for="presentacion">Presentación</label>
-                        <select id="presentacion" name="presentacion">
-                            <option value="">Seleccionar presentación…</option>
-                            @foreach ($presentaciones as $codigo => $datos)
-                                <option value="{{ $codigo }}"
-                                        data-gl="{{ $datos['gl'] ?? 0 }}"
-                                        data-desc="{{ $datos['descripcion'] ?? '' }}">
-                                    {{ $codigo }} — {{ $datos['gl'] ?? 0 }} GL
-                                </option>
-                            @endforeach
-                        </select>
+                        <input type="text" id="presentacion" name="presentacion" maxlength="100" placeholder="CAJA X20, BOLSA X50KG…">
                     </div>
 
                     <div class="form-group">
@@ -402,31 +376,6 @@
                         <label for="peso">Peso por unidad (kg)</label>
                         <input type="number" id="peso" name="peso" step="0.001" min="0" placeholder="0.00">
                     </div>
-                </div>
-
-                {{-- Aparece al elegir presentación; el factor queda editable a mano. --}}
-                <div class="prod-galonaje" id="panelGalonaje">
-                    <div class="prod-galonaje-tit">Conversión a Galones</div>
-                    <div class="prod-galonaje-fila">
-                        <div class="prod-galonaje-campo">
-                            <span>Factor GL por unidad</span>
-                            <div class="prod-galonaje-calc">
-                                <b id="galEtiqueta">1 UND =</b>
-                                <input type="number" id="galFactor" name="factor_gl" step="0.0001" min="0"
-                                       title="Puedes editar el factor manualmente">
-                                <b>GL</b>
-                            </div>
-                            <div class="prod-galonaje-desc" id="galDescripcion"></div>
-                        </div>
-                        <div class="prod-galonaje-res">
-                            <span>Conversión</span>
-                            <b id="galFormula">—</b>
-                        </div>
-                    </div>
-                    <p class="prod-galonaje-pie">
-                        El valor se autocompleta según la presentación. Puedes editarlo si este producto
-                        tiene un factor distinto.
-                    </p>
                 </div>
 
                 <div class="prod-stock-panel">
@@ -522,54 +471,6 @@
     </form>
 </x-modal>
 
-{{-- Alta en la matriz para los productos que aún no tienen factor de galones. --}}
-<x-modal id="modalGalonaje" titulo="Registrar galonaje del producto">
-    <form id="formGalonaje">
-        <div class="form-grid">
-            <div class="form-group">
-                <label for="gal_codigo">Código <span>*</span></label>
-                <input type="text" id="gal_codigo" name="codigo" required maxlength="50">
-            </div>
-            <div class="form-group">
-                <label for="gal_nombre">Nombre <span>*</span></label>
-                <input type="text" id="gal_nombre" name="nombre" required maxlength="255">
-            </div>
-            <div class="form-group">
-                <label for="gal_presentacion">Presentación <span>*</span></label>
-                <select id="gal_presentacion" name="presentacion" required>
-                    <option value="">Elegir…</option>
-                    @foreach ($presentaciones as $codigo => $datos)
-                        <option value="{{ $codigo }}" data-gl="{{ $datos['gl'] ?? 0 }}">
-                            {{ $codigo }} — {{ $datos['descripcion'] ?? '' }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="gal_linea">Línea <span>*</span></label>
-                <select id="gal_linea" name="linea" required>
-                    <option value="">Elegir…</option>
-                    @foreach ($lineas as $linea)
-                        <option value="{{ $linea }}">{{ $linea }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="gal_factor">Galones por unidad <span>*</span></label>
-                <input type="number" id="gal_factor" name="factor" step="0.0001" min="0" required>
-            </div>
-        </div>
-
-        <p class="prod-mudo" style="font-size:13px;margin:4px 0 0;">
-            Al elegir una presentación se completa el factor automáticamente; puedes ajustarlo a mano.
-        </p>
-
-        <div class="header-btns" style="justify-content:flex-end;">
-            <button type="button" class="btn btn-secondary" data-cerrar="modalGalonaje">Cancelar</button>
-            <button type="submit" class="btn btn-primary">Guardar en la matriz</button>
-        </div>
-    </form>
-</x-modal>
 
 </div>{{-- /prod-wrapper --}}
 @endsection
@@ -577,9 +478,6 @@
 @push('scripts')
 <script>
 const formProducto = document.getElementById('formProducto');
-const selPresent   = document.getElementById('presentacion');
-const inpFactor    = document.getElementById('galFactor');
-const panelGal     = document.getElementById('panelGalonaje');
 
 // ── Stock por almacén: el total se recalcula al teclear ──────────────────
 function actualizarTotalStock() {
@@ -593,36 +491,6 @@ function actualizarTotalStock() {
 document.querySelectorAll('[data-stock-almacen]').forEach((campo) => {
     campo.addEventListener('input', actualizarTotalStock);
 });
-
-// ── Conversión a galones ─────────────────────────────────────────────────
-function actualizarFormula() {
-    const codigo = selPresent.value || '?';
-    const gl     = parseFloat(inpFactor.value) || 0;
-    document.getElementById('galFormula').textContent = gl > 0 ? `1 ${codigo} = ${gl} GL` : '—';
-}
-
-/** Muestra el panel con el factor de la presentación; `factor` lo sobreescribe. */
-function sincronizarGalonaje(factor = null) {
-    const opcion = selPresent.selectedOptions[0];
-    const codigo = selPresent.value;
-    const base   = opcion ? parseFloat(opcion.dataset.gl) || 0 : 0;
-    const valor  = factor && factor > 0 ? factor : base;
-
-    if (!codigo || valor <= 0) {
-        panelGal.classList.remove('is-visible');
-        inpFactor.value = '';
-        return;
-    }
-
-    inpFactor.value = valor;
-    document.getElementById('galEtiqueta').textContent = `1 ${codigo} =`;
-    document.getElementById('galDescripcion').textContent = opcion?.dataset.desc || '';
-    panelGal.classList.add('is-visible');
-    actualizarFormula();
-}
-
-selPresent.addEventListener('change', () => sincronizarGalonaje());
-inpFactor.addEventListener('input', actualizarFormula);
 
 // ── Apertura del modal ───────────────────────────────────────────────────
 document.addEventListener('click', (e) => {
@@ -649,7 +517,6 @@ document.addEventListener('click', (e) => {
     });
 
     actualizarTotalStock();
-    sincronizarGalonaje(datos?.factor_gl ?? null);
 });
 
 @if ($errors->any() && old('nombre') !== null)
@@ -673,7 +540,6 @@ document.addEventListener('click', (e) => {
     });
 
     actualizarTotalStock();
-    sincronizarGalonaje(parseFloat(previos.factor_gl) || null);
 
     document.getElementById('modalProducto').classList.add('active');
     document.body.style.overflow = 'hidden';
@@ -699,39 +565,6 @@ formProducto.addEventListener('submit', function () {
 document.getElementById('formStock').addEventListener('submit', function () {
     const id = this.querySelector('[name="producto_id"]').value;
     this.action = '{{ url('admin/productos') }}/' + id + '/stock';
-});
-
-// La presentación elegida propone el factor de galones de la matriz.
-const selPresentacion = document.getElementById('gal_presentacion');
-selPresentacion.addEventListener('change', function () {
-    const gl = this.selectedOptions[0]?.dataset.gl;
-    if (gl) document.getElementById('gal_factor').value = gl;
-});
-
-document.getElementById('formGalonaje').addEventListener('submit', async function (e) {
-    e.preventDefault();
-
-    const boton = this.querySelector('[type="submit"]');
-    boton.disabled = true;
-
-    try {
-        const respuesta = await fetch('{{ route('admin.galonaje.productos.store') }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-            },
-            body: JSON.stringify(Object.fromEntries(new FormData(this))),
-        });
-
-        if (!respuesta.ok) throw new Error('No se pudo guardar');
-
-        window.location.reload();
-    } catch (error) {
-        alert('No se pudo registrar el galonaje: ' + error.message);
-        boton.disabled = false;
-    }
 });
 </script>
 @endpush

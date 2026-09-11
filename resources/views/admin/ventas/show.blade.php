@@ -42,7 +42,7 @@
         <div class="table-container">
             <table class="table">
                 <thead>
-                    <tr><th>Código</th><th>Producto</th><th>Cantidad</th><th>Galones</th><th>P. unitario</th><th>Subtotal</th></tr>
+                    <tr><th>Código</th><th>Producto</th><th>Cantidad</th><th>P. unitario</th><th>Subtotal</th></tr>
                 </thead>
                 <tbody>
                 @foreach ($venta->detalles as $detalle)
@@ -50,7 +50,6 @@
                         <td>{{ $detalle->prod_codigo ?: '—' }}</td>
                         <td>{{ $detalle->prod_nombre }}</td>
                         <td>{{ number_format($detalle->cantidad) }}</td>
-                        <td>{{ number_format($detalle->galones, 2) }}</td>
                         <td>S/ {{ number_format($detalle->precio_unitario, 2) }}</td>
                         <td><strong>S/ {{ number_format($detalle->subtotal, 2) }}</strong></td>
                     </tr>

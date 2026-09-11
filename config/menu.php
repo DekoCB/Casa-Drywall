@@ -31,7 +31,7 @@ $iconos = [
 return [
     'admin' => [
         'Principal' => [
-            ['route' => 'admin.index', 'label' => 'Dashboard', 'icon' => $iconos['dashboard'], 'active' => ['admin.index', 'admin.galonaje.dashboard']],
+            ['route' => 'admin.index', 'label' => 'Dashboard', 'icon' => $iconos['dashboard']],
             // Solo Ventas: su "Dashboard" real es /ventas (admin.index no le
             // pertenece), y si no aparece acá no tiene forma de volver ahí
             // una vez que entra a Cotizaciones/Boletas/etc.
@@ -107,8 +107,7 @@ return [
                 'route' => 'admin.productos.index', 'label' => 'Productos/Servicios', 'icon' => $iconos['caja'],
                 'submenu' => [
                     ['route' => 'admin.productos.index', 'label' => 'Productos', 'active' => [
-                        'admin.productos.index', 'admin.productos.categorias',
-                        'admin.productos.presentaciones', 'admin.productos.almacenes',
+                        'admin.productos.index', 'admin.productos.almacenes',
                     ]],
                     ['route' => 'admin.categorias.index', 'label' => 'Categorías'],
                     ['route' => 'admin.marcas.index', 'label' => 'Marcas'],
@@ -139,8 +138,7 @@ return [
         ],
 
         'Análisis' => [
-            ['route' => 'admin.reportes.index',           'label' => 'Reportes',           'icon' => $iconos['grafico']],
-            ['route' => 'admin.galonaje.productos.index', 'label' => 'Galonaje Productos', 'icon' => $iconos['caja']],
+            ['route' => 'admin.reportes.index', 'label' => 'Reportes', 'icon' => $iconos['grafico']],
         ],
     ],
 ];

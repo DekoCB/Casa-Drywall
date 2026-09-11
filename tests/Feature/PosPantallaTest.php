@@ -95,13 +95,12 @@ class PosPantallaTest extends TestCase
             ->get(route('admin.caja.index'))
             ->assertOk()
             ->assertSee('Catálogo')
-            ->assertSee('Galonaje')
             ->assertSee('href="'.route('admin.categorias.index').'"', false);
 
         $this->actingAs($secretaria, 'web')
             ->get(route('secretaria.index'))
             ->assertOk()
-            ->assertDontSee('Galonaje');
+            ->assertDontSee('Catálogo');
     }
 
     public function test_buscar_productos_ajax_devuelve_json(): void

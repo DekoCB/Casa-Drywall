@@ -14,7 +14,6 @@ export default defineConfig({
                 'resources/css/modules/ordenes-compra.css',
                 'resources/css/modules/facturas.css',
                 'resources/css/modules/productos.css',
-                'resources/css/modules/galonaje.css',
                 'resources/css/modules/historial-pagos.css',
                 'resources/css/modules/transporte.css',
                 'resources/css/modules/pos.css',

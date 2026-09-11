@@ -46,11 +46,11 @@
             <div class="fac-kpi-val">S/ {{ number_format($totalSoles, 2) }}</div>
             <div class="fac-kpi-sub">Al tipo de cambio aplicado · <span>Ver estadísticas →</span></div>
         </a>
-        <a href="{{ route('admin.galonaje.dashboard') }}" class="fac-kpi kpi-galones" title="Ver dashboard de galonaje">
+        <div class="fac-kpi kpi-galones">
             <div class="fac-kpi-label">Total Galones</div>
             <div class="fac-kpi-val">{{ number_format($totalGal, 2) }} GL</div>
-            <div class="fac-kpi-sub">Galonaje total acumulado · <span>Ver dashboard →</span></div>
-        </a>
+            <div class="fac-kpi-sub">Galonaje total acumulado</div>
+        </div>
     </div>
 
     {{-- ══ Listado ══ --}}
@@ -610,10 +610,10 @@ $f('fac-importe').addEventListener('input', actualizarEquivalencia);
 $f('fac-tc').addEventListener('input', actualizarEquivalencia);
 
 // ── Productos de la factura ──────────────────────────────────────────────
-// Cada fila busca en el catálogo; si el código está en la matriz de galonaje
-// se pide la cantidad y el galonaje sale solo, y si no, se escribe a mano.
+// Cada fila busca en el catálogo; el galonaje siempre se escribe a mano
+// (ya no hay matriz de factores que lo calcule solo).
 const CATALOGO_PROD = @json($catalogo);
-const FACTORES = @json($factores);
+const FACTORES = {};
 
 let productosFac = [];
 

@@ -12,7 +12,6 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DocumentoController;
 use App\Http\Controllers\Admin\EgresoController;
 use App\Http\Controllers\Admin\FacturaController;
-use App\Http\Controllers\Admin\GalonajeController;
 use App\Http\Controllers\Admin\GuiaRemisionController;
 use App\Http\Controllers\Admin\HistorialPagoController;
 use App\Http\Controllers\Admin\IngresoController;
@@ -166,9 +165,7 @@ Route::middleware(['auth', 'rol:admin'])
 
         // ── Inventario ──────────────────────────────────────────────────────
         Route::get('productos/buscar', [ProductoController::class, 'buscar'])->name('productos.buscar');
-        // Pestañas del catálogo; van antes del resource para no chocar con {producto}.
-        Route::get('productos/categorias', [ProductoController::class, 'categorias'])->name('productos.categorias');
-        Route::get('productos/presentaciones', [ProductoController::class, 'presentaciones'])->name('productos.presentaciones');
+        // Pestaña del catálogo; va antes del resource para no chocar con {producto}.
         Route::get('productos/almacenes', [ProductoController::class, 'almacenes'])->name('productos.almacenes');
         Route::get('productos/importar', [ProductoController::class, 'formImportar'])->name('productos.importar');
         Route::post('productos/importar', [ProductoController::class, 'importar']);
@@ -235,21 +232,6 @@ Route::middleware(['auth', 'rol:admin'])
         Route::get('reportes/aging', [ReporteController::class, 'aging'])->name('reportes.aging');
         Route::get('reportes/aging/excel', [ReporteController::class, 'agingExcel'])->name('reportes.aging.excel');
         Route::get('reportes/aging/pdf', [ReporteController::class, 'agingPdf'])->name('reportes.aging.pdf');
-
-        Route::prefix('galonaje')->name('galonaje.')->group(function () {
-            Route::get('/', [GalonajeController::class, 'dashboard'])->name('dashboard');
-            Route::get('productos', [GalonajeController::class, 'productos'])->name('productos.index');
-            Route::post('productos', [GalonajeController::class, 'guardarProducto'])->name('productos.store');
-            Route::delete('productos/{codigo}', [GalonajeController::class, 'eliminarProducto'])->name('productos.destroy');
-            Route::get('categorias', [GalonajeController::class, 'categorias'])->name('categorias.index');
-            Route::post('categorias', [GalonajeController::class, 'guardarCategoria'])->name('categorias.store');
-            Route::delete('categorias/{codigo}', [GalonajeController::class, 'eliminarCategoria'])->name('categorias.destroy');
-            Route::get('presentaciones', [GalonajeController::class, 'presentaciones'])->name('presentaciones.index');
-            Route::post('presentaciones', [GalonajeController::class, 'guardarPresentacion'])->name('presentaciones.store');
-            Route::delete('presentaciones/{codigo}', [GalonajeController::class, 'eliminarPresentacion'])->name('presentaciones.destroy');
-            Route::post('metas', [GalonajeController::class, 'guardarMeta'])->name('metas.store');
-            Route::post('metas/anio', [GalonajeController::class, 'guardarMetas'])->name('metas.anio');
-        });
 
         // Catálogo de cajas físicas (crear "Caja 01", etc.) — solo admin.
         // Abrir/cerrar sesión de una caja ya existente es de admin, secretaria

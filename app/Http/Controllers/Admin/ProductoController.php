@@ -10,7 +10,6 @@ use App\Models\MovimientoAlmacen;
 use App\Models\Producto;
 use App\Models\StockAlmacen;
 use App\Services\LectorExcel;
-use App\Services\MatrizGalonaje;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,16 +19,15 @@ use Illuminate\View\View;
 
 /**
  * Catálogo de productos. La sección se navega por pestañas: el inventario
- * (esta clase), las categorías y presentaciones de la matriz Kendall y los
- * almacenes. Las tres últimas viven en métodos aparte para que compartan
- * cabecera y estilo con el listado.
+ * (esta clase) y los almacenes, que vive en un método aparte para que
+ * comparta cabecera y estilo con el listado.
  */
 class ProductoController extends Controller
 {
     /** Mismo tope que el listado original, antes de deduplicar por código. */
     private const TOPE_LISTADO = 500;
 
-    public function index(Request $request, MatrizGalonaje $matriz): View
+    public function index(Request $request): View
     {
         $busqueda  = trim((string) $request->query('q', ''));
         $categoria = $request->query('categoria');
@@ -57,81 +55,12 @@ class ProductoController extends Controller
             'stockAqui'       => (int) $productos->sum('stock_almacen'),
             'stockBajo'       => $productos->filter(fn ($p) => $p->stock_almacen <= $p->stock_minimo)->count(),
             'valorInventario' => (float) $productos->sum(fn ($p) => $p->stock_almacen * (float) $p->precio_venta),
-            'factores'        => $matriz->productos(),
-            'presentaciones'  => $matriz->presentaciones(),
-            'lineas'          => $this->lineasMatriz($matriz),
             'vendidos'        => $this->vendidosPorProducto($periodo),
             'periodo'         => $periodo,
         ]);
     }
 
     // ── Pestañas ────────────────────────────────────────────────────────────
-
-    /** Categorías de la matriz: las declaradas más las líneas ya en uso. */
-    public function categorias(MatrizGalonaje $matriz): View
-    {
-        $enMatriz  = $matriz->productos();
-        $definidas = $matriz->categorias();
-
-        $conteo = [];
-
-        foreach ($enMatriz as $datos) {
-            $linea = trim((string) ($datos['l'] ?? ''));
-
-            if ($linea !== '') {
-                $conteo[$linea] = ($conteo[$linea] ?? 0) + 1;
-            }
-        }
-
-        $categorias = collect(array_keys($conteo + $definidas))
-            ->unique()
-            ->sort(SORT_NATURAL | SORT_FLAG_CASE)
-            ->map(fn (string $codigo) => (object) [
-                'codigo'      => $codigo,
-                'descripcion' => $definidas[$codigo]['descripcion'] ?? '',
-                'productos'   => $conteo[$codigo] ?? 0,
-            ])
-            ->values();
-
-        return view('admin.productos.categorias', [
-            'categorias'    => $categorias,
-            'totalMatriz'   => count($enMatriz),
-            'sinProductos'  => $categorias->where('productos', 0)->count(),
-        ]);
-    }
-
-    /** Presentaciones de la matriz con su factor de galones por unidad. */
-    public function presentaciones(MatrizGalonaje $matriz): View
-    {
-        $enMatriz = $matriz->productos();
-
-        $conteo = [];
-
-        foreach ($enMatriz as $datos) {
-            $codigo = trim((string) ($datos['p'] ?? ''));
-
-            if ($codigo !== '') {
-                $conteo[$codigo] = ($conteo[$codigo] ?? 0) + 1;
-            }
-        }
-
-        $presentaciones = collect($matriz->presentaciones())
-            ->map(fn (array $datos, string $codigo) => (object) [
-                'codigo'      => $codigo,
-                'descripcion' => $datos['descripcion'] ?? ($datos['d'] ?? ''),
-                // El archivo del original guarda el factor bajo la clave `gl`.
-                'factor'      => (float) ($datos['gl'] ?? $datos['factor'] ?? $datos['f'] ?? 0),
-                'productos'   => $conteo[$codigo] ?? 0,
-            ])
-            ->sortBy('codigo', SORT_NATURAL | SORT_FLAG_CASE)
-            ->values();
-
-        return view('admin.productos.presentaciones', [
-            'presentaciones' => $presentaciones,
-            'enUso'          => $presentaciones->where('productos', '>', 0)->count(),
-            'totalMatriz'    => count($enMatriz),
-        ]);
-    }
 
     /** Almacenes con sus unidades, productos y avisos de stock bajo. */
     public function almacenes(): View
@@ -298,23 +227,19 @@ class ProductoController extends Controller
 
     // ── Altas, bajas y stock ────────────────────────────────────────────────
 
-    public function store(Request $request, MatrizGalonaje $matriz): RedirectResponse
+    public function store(Request $request): RedirectResponse
     {
         $datos = $this->validar($request);
 
-        $producto = DB::transaction(function () use ($request, $datos) {
+        DB::transaction(function () use ($request, $datos) {
             $producto = Producto::create($datos + ['stock' => 0]);
             $this->guardarStockPorAlmacen($request, $producto);
-
-            return $producto;
         });
-
-        $this->guardarFactorGalonaje($request, $producto, $matriz);
 
         return redirect()->route('admin.productos.index')->with('mensaje', 'Producto registrado');
     }
 
-    public function update(Request $request, Producto $producto, MatrizGalonaje $matriz): RedirectResponse
+    public function update(Request $request, Producto $producto): RedirectResponse
     {
         $datos = $this->validar($request);
 
@@ -322,8 +247,6 @@ class ProductoController extends Controller
             $producto->update($datos);
             $this->guardarStockPorAlmacen($request, $producto);
         });
-
-        $this->guardarFactorGalonaje($request, $producto, $matriz);
 
         return redirect()->route('admin.productos.index')->with('mensaje', 'Producto actualizado');
     }
@@ -547,7 +470,7 @@ class ProductoController extends Controller
             ->when($periodo['desde'] !== '', fn ($q) => $q->whereDate('v.fecha', '>=', $periodo['desde']))
             ->when($periodo['hasta'] !== '', fn ($q) => $q->whereDate('v.fecha', '<=', $periodo['hasta']))
             ->selectRaw('p.id AS id, p.codigo AS codigo')
-            ->selectRaw('SUM(vd.cantidad) AS unidades, COALESCE(SUM(vd.galones), 0) AS galones')
+            ->selectRaw('SUM(vd.cantidad) AS unidades')
             ->groupBy('p.id', 'p.codigo')
             ->get()
             ->mapWithKeys(function ($fila) {
@@ -556,29 +479,10 @@ class ProductoController extends Controller
                 return [
                     ($codigo !== '' ? $codigo : '#'.$fila->id) => [
                         'unidades' => (int) $fila->unidades,
-                        'galones'  => (float) $fila->galones,
                     ],
                 ];
             })
             ->all();
-    }
-
-    /** Líneas disponibles para clasificar un producto en la matriz. */
-    private function lineasMatriz(MatrizGalonaje $matriz): array
-    {
-        $lineas = array_keys($matriz->categorias());
-
-        foreach ($matriz->productos() as $datos) {
-            $linea = trim((string) ($datos['l'] ?? ''));
-
-            if ($linea !== '' && ! in_array($linea, $lineas, true)) {
-                $lineas[] = $linea;
-            }
-        }
-
-        sort($lineas, SORT_NATURAL | SORT_FLAG_CASE);
-
-        return $lineas;
     }
 
     /** Guarda el stock por almacén enviado como `stock[almacen_id]`. */
@@ -617,30 +521,6 @@ class ProductoController extends Controller
             'precio_alquiler' => ['nullable', 'numeric', 'min:0'],
             'stock_minimo' => ['required', 'integer', 'min:0'],
             'peso' => ['nullable', 'numeric', 'min:0'],
-        ]);
-    }
-
-    /**
-     * Registra en la matriz el factor de galones que trae el modal. De un
-     * código ya conocido sólo se refrescan factor y presentación, para no
-     * perder el nombre ni la línea con que se cargó la matriz.
-     */
-    private function guardarFactorGalonaje(Request $request, Producto $producto, MatrizGalonaje $matriz): void
-    {
-        $factor = (float) str_replace(',', '.', (string) $request->input('factor_gl', '0'));
-        $codigo = trim((string) $producto->codigo);
-
-        if ($factor <= 0 || $codigo === '') {
-            return;
-        }
-
-        $actual = $matriz->productos()[$codigo] ?? null;
-
-        $matriz->guardarProducto($codigo, [
-            'f' => $factor,
-            'p' => (string) ($producto->presentacion ?: ($actual['p'] ?? '')),
-            'n' => (string) ($actual['n'] ?? $producto->nombre),
-            'l' => (string) ($actual['l'] ?? ''),
         ]);
     }
 }
