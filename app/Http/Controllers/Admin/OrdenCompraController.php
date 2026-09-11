@@ -10,7 +10,6 @@ use App\Models\OrdenCompra;
 use App\Models\OrdenToken;
 use App\Models\PedidoCliente;
 use App\Models\Proveedor;
-use App\Services\CatalogoKendall;
 use App\Services\ExcelOrdenCompra;
 use App\Services\GeneradorCorrelativo;
 use App\Services\MerchInventario;
@@ -123,7 +122,7 @@ class OrdenCompraController extends Controller
         return response()->json(['ok' => true, 'valor' => $orden->{$datos['campo']}]);
     }
 
-    public function create(CatalogoKendall $catalogo): View
+    public function create(): View
     {
         // Se pueden registrar varias órdenes seguidas. Cada una es su propia
         // hoja de Excel; la tanda abierta se arrastra en sesión mientras el
@@ -135,10 +134,6 @@ class OrdenCompraController extends Controller
             'previos'     => session(self::LOTE_DATOS, []),
             'estados'     => self::ESTADOS,
             'correlativo' => $this->correlativo->ordenCompra(),
-            'catalogo'    => $catalogo->productos(),
-            'lineas'      => CatalogoKendall::LINEAS,
-            'bases'       => CatalogoKendall::BASES,
-            'ejemplos'    => CatalogoKendall::EJEMPLOS,
             'proveedores' => Proveedor::where('estado', 'activo')->orderBy('razon_social')->get(),
             'empresas'    => EmpresaTransporte::where('estado', 'activo')->orderBy('nombre')->get(),
             'catalogoMerch' => Merch::orderBy('nombre')->get(),
@@ -342,13 +337,30 @@ class OrdenCompraController extends Controller
         return back()->with('mensaje', 'Datos actualizados. Gracias.');
     }
 
-    /** Recalcula el total en soles a partir del total en dólares y el TC. */
+    /**
+     * Recalcula el total en soles a partir del total en dólares y el TC.
+     *
+     * Las órdenes nuevas ya no piden tipo de cambio (el catálogo Kendall en
+     * dólares se quitó del sistema): sin `tc`, la orden es en soles puros y
+     * se guarda como si `tc = 1` — así el resto del sistema (comprobante,
+     * Excel), que todavía sabe mostrar órdenes históricas reales en USD, no
+     * necesita ninguna rama nueva para diferenciarlas.
+     */
     private function conTotales(array $datos): array
     {
         $totalUsd = (float) ($datos['total_usd'] ?? 0);
         $tc = (float) ($datos['tc'] ?? 0);
 
-        if (empty($datos['total_soles']) && $totalUsd > 0 && $tc > 0) {
+        if ($tc <= 0) {
+            $totalSoles = (float) ($datos['total_soles'] ?? $totalUsd);
+            $datos['tc'] = 1;
+            $datos['total_usd'] = $totalSoles;
+            $datos['total_soles'] = $totalSoles;
+
+            return $datos;
+        }
+
+        if (empty($datos['total_soles']) && $totalUsd > 0) {
             $datos['total_soles'] = round($totalUsd * $tc, 2);
         }
 

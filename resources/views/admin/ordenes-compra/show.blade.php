@@ -26,6 +26,11 @@
         str_contains($estado, 'cancel') => 'cancelado',
         default => 'pendiente',
     };
+
+    // El catálogo Kendall (en dólares) ya no existe: las órdenes nuevas
+    // se guardan con tc=1 (ver OrdenCompraController::conTotales()), así
+    // que solo las órdenes históricas reales muestran el desglose en USD.
+    $esSolesNativo = abs((float) $orden->tc - 1.0) < 0.0001;
 @endphp
 
 <div class="oc-wrapper ocm oc-hoja-wrap">
@@ -100,7 +105,7 @@
                     <div class="ocd-tit">Productos</div>
                     <div class="ocd-sub">{{ count($productos) }} línea(s) de la orden</div>
                 </div>
-                <span class="ocd-etiqueta">Dólares</span>
+                <span class="ocd-etiqueta">{{ $esSolesNativo ? 'Soles' : 'Dólares' }}</span>
             </div>
 
             @if ($productos)
@@ -124,8 +129,8 @@
                                 <td class="ocm-mono">{{ $producto['codigo'] ?? '—' }}</td>
                                 <td>{{ $producto['descripcion'] ?? ($producto['nombre'] ?? '—') }}</td>
                                 <td class="num">{{ number_format($producto['cantidad'] ?? 0) }}</td>
-                                <td class="num">$ {{ number_format($precio, 2) }}</td>
-                                <td class="num"><strong>$ {{ number_format(($producto['cantidad'] ?? 0) * $precio, 2) }}</strong></td>
+                                <td class="num">{{ $esSolesNativo ? 'S/' : '$' }} {{ number_format($precio, 2) }}</td>
+                                <td class="num"><strong>{{ $esSolesNativo ? 'S/' : '$' }} {{ number_format(($producto['cantidad'] ?? 0) * $precio, 2) }}</strong></td>
                             </tr>
                         @endforeach
                         </tbody>
@@ -196,7 +201,7 @@
                         <span class="ocd-lleva-punto"></span>
                         <span class="ocd-lleva-nombre">Productos</span>
                         <span class="ocd-lleva-det">
-                            <span class="ocd-lleva-monto">$ {{ number_format($orden->total_usd, 2) }}</span>
+                            <span class="ocd-lleva-monto">{{ $esSolesNativo ? 'S/' : '$' }} {{ number_format($orden->total_usd, 2) }}</span>
                             <span class="ocd-lleva-sub">{{ count($productos) }} línea(s)</span>
                         </span>
                     </div>
@@ -212,8 +217,10 @@
                 </div>
 
                 <div class="ocd-totales">
-                    <div class="ocd-tfila"><span>Total en dólares</span><strong>$ {{ number_format($orden->total_usd, 2) }}</strong></div>
-                    <div class="ocd-tfila"><span>Tipo de cambio</span><strong>{{ number_format($orden->tc, 4) }}</strong></div>
+                    @unless ($esSolesNativo)
+                        <div class="ocd-tfila"><span>Total en dólares</span><strong>$ {{ number_format($orden->total_usd, 2) }}</strong></div>
+                        <div class="ocd-tfila"><span>Tipo de cambio</span><strong>{{ number_format($orden->tc, 4) }}</strong></div>
+                    @endunless
                     <div class="ocd-tgran">
                         <span>Total en soles</span>
                         <b>S/ {{ number_format($orden->total_soles, 2) }}</b>
@@ -235,9 +242,9 @@
                 @php
                     $barraSoles = (float) $orden->total_soles + $totalMerch;
                     // El merch se paga en soles: se devuelve a dólares con el mismo tipo de cambio de la orden.
-                    $barraUsd   = $orden->tc > 0 ? $barraSoles / $orden->tc : null;
+                    $barraUsd   = ! $esSolesNativo && $orden->tc > 0 ? $barraSoles / $orden->tc : null;
                 @endphp
-                <div class="ocd-barra-total">S/ {{ number_format($barraSoles, 2) }}<span class="ocd-barra-usd">{{ $barraUsd !== null ? '$ '.number_format($barraUsd, 2) : '$ —' }}</span></div>
+                <div class="ocd-barra-total">S/ {{ number_format($barraSoles, 2) }}@if ($barraUsd !== null)<span class="ocd-barra-usd">$ {{ number_format($barraUsd, 2) }}</span>@endif</div>
                 <div class="ocd-barra-det">
                     {{ count($productos) }} producto(s){{ $lineasMerch ? ' · '.count($lineasMerch).' merch' : '' }}
                 </div>

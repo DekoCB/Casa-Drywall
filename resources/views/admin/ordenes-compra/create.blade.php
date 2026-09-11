@@ -38,7 +38,7 @@
                     <span class="oc-lote-chip">
                         <b>Orden {{ $i + 1 }}</b>
                         {{ $pedido->numero_orden }}
-                        <small>{{ $pedido->cliente_ref ?: 'Sin cliente' }} · $ {{ number_format($pedido->total_usd, 2) }}</small>
+                        <small>{{ $pedido->cliente_ref ?: 'Sin cliente' }} · S/ {{ number_format($pedido->total_soles, 2) }}</small>
                     </span>
                 @endforeach
                 <span class="oc-lote-chip pendiente"><b>Orden {{ $lote->count() + 1 }}</b> en curso</span>
@@ -177,7 +177,7 @@
                 <div class="ocd-tit">Productos</div>
                 <div class="ocd-sub">Busca en el catálogo y agrega las líneas de la orden</div>
             </div>
-            <span class="ocd-etiqueta">Dólares</span>
+            <span class="ocd-etiqueta">Soles</span>
         </div>
 
         <div class="oc-campo" style="margin-bottom:6px;">
@@ -185,15 +185,12 @@
             <div class="oc-buscador">
                 <span class="lupa">🔍</span>
                 <input type="text" class="oc-input" id="oc-buscar" autocomplete="off"
-                       placeholder="Ej: 0W16,12/1  ó  20W50  ó  SUPER-D 3  ó  GT-1 HP  ó  1053771">
+                       placeholder="Nombre o código del producto…">
                 <div class="oc-dropdown" id="oc-prod-dd"></div>
             </div>
-            <div class="oc-ejemplos">
-                <span class="oc-ejemplos-lbl">Ejemplos:</span>
-                @foreach ($ejemplos as $ejemplo)
-                    <span class="oc-ejemplo">{{ $ejemplo }}</span>
-                @endforeach
-            </div>
+            <p class="oc-hint" id="oc-buscar-hint">
+                Elegí un proveedor registrado arriba para acotar la búsqueda a sus productos, o buscá en todo el catálogo.
+            </p>
         </div>
 
         <div class="oc-lista-prods" id="oc-lista-prods"></div>
@@ -219,9 +216,9 @@
                 <div class="oc-resumen-sub"><span id="oc-resumen-cant">0</span> producto(s) agregado(s)</div>
             </div>
             <div class="oc-resumen-der">
-                <div class="oc-resumen-moneda">USD</div>
+                <div class="oc-resumen-moneda">SOLES</div>
                 <div class="oc-resumen-fila">
-                    <span>$</span>
+                    <span>S/</span>
                     <input type="number" class="oc-total-input" id="oc-total-editable" step="0.01" min="0" value="0">
                 </div>
             </div>
@@ -394,16 +391,17 @@
             <span class="ocd-num">5</span>
             <div>
                 <div class="ocd-tit">Costos</div>
-                <div class="ocd-sub">Tipo de cambio, precio de venta y condición de pago</div>
+                <div class="ocd-sub">Precio de venta y condición de pago</div>
             </div>
         </div>
 
+        {{-- El tipo de cambio del catálogo Kendall ya no aplica (todo el
+             formulario trabaja en soles); se deja fijo en 1 para que el
+             resto del cálculo (compartido con órdenes históricas en
+             dólares) no necesite ninguna rama nueva. --}}
+        <input type="hidden" id="oc-tc" name="tc" value="1">
+
         <div class="oc-form-grid">
-            <div class="oc-campo">
-                <label class="oc-label" for="oc-tc">Tipo de Cambio (S/$)</label>
-                <input type="number" class="oc-input mono" id="oc-tc" name="tc" step="0.0001" min="0"
-                       value="{{ $previos['tc'] ?? number_format(config('rentaltech.tipo_cambio'), 2, '.', '') }}">
-            </div>
             <div class="oc-campo">
                 <label class="oc-label" for="oc-pventa">Precio Venta Unitario (S/)</label>
                 <input type="number" class="oc-input mono" id="oc-pventa" name="precio_venta"
@@ -417,31 +415,15 @@
                 <div class="oc-pago-card activa" id="oc-pago-contado" data-tipo="contado">
                     <div class="oc-pago-icono">💵</div>
                     <div class="oc-pago-nombre">CONTADO</div>
-                    <div class="oc-pago-total" id="oc-total-contado">Total: $ 0.00</div>
                 </div>
                 <div class="oc-pago-card" id="oc-pago-credito" data-tipo="credito">
                     <div class="oc-pago-icono">🏦</div>
                     <div class="oc-pago-nombre">CRÉDITO</div>
-                    <div class="oc-pago-total" id="oc-total-credito">Total: $ 0.00</div>
                 </div>
             </div>
             <div class="oc-dias" id="oc-dias-wrap">
                 <div class="oc-label" style="margin-bottom:8px;">📅 Días de crédito</div>
                 <input type="number" class="oc-input mono" id="oc-dias" min="1" max="365" placeholder="Ej: 45" style="width:160px;">
-            </div>
-        </div>
-
-        <div class="oc-costo-panel" id="oc-costo-panel">
-            <div class="oc-costo-titulo">📊 Resumen de Costo</div>
-            <div class="oc-costo-grid">
-                <div>
-                    <div class="oc-costo-lbl">Galonaje</div>
-                    <div class="oc-costo-val" id="oc-galonaje">—</div>
-                </div>
-                <div>
-                    <div class="oc-costo-lbl">Costo Promedio / Galón</div>
-                    <div class="oc-costo-val" id="oc-costo-galon">—</div>
-                </div>
             </div>
         </div>
 
@@ -468,7 +450,7 @@
                         <span class="ocd-lleva-punto"></span>
                         <span class="ocd-lleva-nombre">Productos</span>
                         <span class="ocd-lleva-det">
-                            <span class="ocd-lleva-monto" id="ocr-prod-total">$ 0.00</span>
+                            <span class="ocd-lleva-monto" id="ocr-prod-total">S/ 0.00</span>
                             <span class="ocd-lleva-sub"><span id="ocr-prod-lineas">0 líneas</span> · <span id="ocr-prod-sub">sin agregar</span></span>
                         </span>
                     </div>
@@ -484,8 +466,6 @@
                 </div>
 
                 <div class="ocd-totales">
-                    <div class="ocd-tfila"><span>Total en dólares</span><strong id="ocr-total-usd">$ 0.00</strong></div>
-                    <div class="ocd-tfila"><span>Tipo de cambio</span><strong id="ocr-tc">—</strong></div>
                     <div class="ocd-tgran">
                         <span>Total en soles</span>
                         <b id="ocr-total-soles">S/ 0.00</b>
@@ -503,7 +483,7 @@
         <div class="ocd-barra">
             <div class="ocd-barra-info">
                 <div class="ocd-barra-lbl">Total de la orden</div>
-                <div class="ocd-barra-total"><span id="ocr-barra-total">S/ 0.00</span><span class="ocd-barra-usd" id="ocr-barra-usd">$ 0.00</span></div>
+                <div class="ocd-barra-total"><span id="ocr-barra-total">S/ 0.00</span></div>
                 <div class="ocd-barra-det" id="ocr-barra-det">Sin productos ni merch</div>
             </div>
 
@@ -557,9 +537,7 @@
 
 @push('scripts')
 <script>
-const CATALOGO = @json($catalogo);
-const LINEAS   = @json($lineas);
-const BASES    = @json($bases);
+const URL_PRODUCTOS_BUSCAR = '{{ route('admin.productos.buscar') }}';
 const URL_VERIFICAR = '{{ route('admin.ordenes-compra.verificar-numero') }}';
 const URL_CLIENTES  = '{{ route('admin.clientes.buscar') }}';
 
@@ -599,9 +577,12 @@ function pintarMembreteProveedor() {
     $(campo).addEventListener('input', pintarMembreteProveedor);
 });
 
-// ── Buscador de productos ────────────────────────────────────────────────
+// ── Buscador de productos: AJAX contra el catálogo real, acotado al
+//    proveedor elegido arriba si es uno registrado (mismo patrón de
+//    búsqueda con debounce que el autocompletado de cliente, más abajo) ──
 let resultados = [];
 let indice = -1;
+let esperaProducto;
 
 function resaltar(texto, termino) {
     const i = texto.toUpperCase().indexOf(termino.toUpperCase());
@@ -617,15 +598,29 @@ function cerrarBuscador() {
 }
 
 function buscarProducto(termino) {
-    const dd = $('oc-prod-dd');
+    clearTimeout(esperaProducto);
     termino = termino.trim();
 
-    if (termino.length < 1) { cerrarBuscador(); return; }
+    if (termino.length < 2) { cerrarBuscador(); return; }
 
-    const busqueda = termino.toUpperCase();
-    resultados = CATALOGO.filter((p) =>
-        p.descripcion.toUpperCase().includes(busqueda) || p.codigo.includes(busqueda)
-    ).slice(0, 15);
+    esperaProducto = setTimeout(async () => {
+        const proveedorId = $('proveedor_select').value || '';
+        const url = URL_PRODUCTOS_BUSCAR + '?q=' + encodeURIComponent(termino)
+            + (proveedorId ? '&proveedor_id=' + proveedorId : '');
+
+        try {
+            const respuesta = await fetch(url, { headers: { Accept: 'application/json' } });
+            resultados = await respuesta.json();
+        } catch (e) {
+            resultados = [];
+        }
+
+        pintarResultados(termino);
+    }, 220);
+}
+
+function pintarResultados(termino) {
+    const dd = $('oc-prod-dd');
 
     if (!resultados.length) {
         dd.innerHTML = '<div class="oc-sin-resultados">🔍 Sin resultados para "<b>' + termino + '</b>"</div>';
@@ -633,20 +628,16 @@ function buscarProducto(termino) {
         return;
     }
 
-    dd.innerHTML = resultados.map((p, i) => {
-        const precio = p.pc
-            ? '<span class="oc-chip">$' + p.pc.toFixed(2) + ' / $' + (p.pcr || 0).toFixed(2) + '</span>'
-            : '';
-
-        return '<div class="oc-item" data-idx="' + i + '">' +
-            '<div class="oc-item-top"><span class="oc-item-cod">' + p.codigo + '</span>' +
-            '<span class="oc-item-desc">' + resaltar(p.descripcion, termino) + '</span></div>' +
+    dd.innerHTML = resultados.map((p, i) =>
+        '<div class="oc-item" data-idx="' + i + '">' +
+            '<div class="oc-item-top"><span class="oc-item-cod">' + (p.codigo || '—') + '</span>' +
+            '<span class="oc-item-desc">' + resaltar(p.nombre, termino) + '</span></div>' +
             '<div class="oc-item-meta">' +
-                '<span class="oc-chip">' + (LINEAS[p.linea] || p.linea) + '</span>' +
-                '<span class="oc-chip">' + (BASES[p.base] || p.base) + '</span>' +
-                '<span class="oc-chip">' + p.presentacion + '</span>' + precio +
-            '</div></div>';
-    }).join('');
+                '<span class="oc-chip">' + (p.presentacion || 'Und.') + '</span>' +
+                '<span class="oc-chip">S/ ' + (parseFloat(p.precio_venta) || 0).toFixed(2) + '</span>' +
+                '<span class="oc-chip">Stock: ' + (p.stock ?? 0) + '</span>' +
+            '</div></div>'
+    ).join('');
 
     dd.querySelectorAll('.oc-item').forEach((item) => {
         item.addEventListener('click', () => elegirProducto(Number(item.dataset.idx)));
@@ -661,13 +652,19 @@ function elegirProducto(i) {
 
     if (!p) { return; }
 
-    seleccionado = p;
+    seleccionado = {
+        codigo: p.codigo || '',
+        descripcion: p.nombre,
+        presentacion: p.presentacion || '',
+        precio_unit: parseFloat(p.precio_venta) || 0,
+        peso_unit: parseFloat(p.peso) || 0,
+    };
     $('oc-buscar').value = '';
     cerrarBuscador();
 
-    $('oc-pc-codigo').textContent = p.codigo;
-    $('oc-pc-desc').textContent   = p.descripcion;
-    $('oc-pc-meta').textContent   = (LINEAS[p.linea] || p.linea) + ' · ' + (BASES[p.base] || p.base) + ' · ' + p.presentacion;
+    $('oc-pc-codigo').textContent = seleccionado.codigo || '—';
+    $('oc-pc-desc').textContent   = seleccionado.descripcion;
+    $('oc-pc-meta').textContent   = seleccionado.presentacion || 'Sin presentación';
     $('oc-prod-card').classList.add('visible');
     $('oc-qty').value = '';
 
@@ -699,14 +696,6 @@ $('oc-buscar').addEventListener('keydown', (e) => {
     items[indice]?.scrollIntoView({ block: 'nearest' });
 });
 
-document.querySelectorAll('.oc-ejemplo').forEach((chip) => {
-    chip.addEventListener('click', () => {
-        $('oc-buscar').value = chip.textContent;
-        $('oc-buscar').focus();
-        buscarProducto(chip.textContent);
-    });
-});
-
 document.addEventListener('click', (e) => {
     if (!e.target.closest('.oc-buscador')) { cerrarBuscador(); }
 });
@@ -729,14 +718,10 @@ function agregarProducto() {
         codigo:          seleccionado.codigo,
         descripcion:     seleccionado.descripcion,
         unidad:          seleccionado.presentacion,
-        precio_unit_usd: condicion === 'credito' ? (seleccionado.pcr || 0) : (seleccionado.pc || 0),
+        precio_unit_usd: seleccionado.precio_unit,
         precio_editado:  false,
-        tipo_precio:     condicion,
         cantidad:        cantidad,
-        linea:           seleccionado.linea,
-        base:            seleccionado.base,
-        factor_gl:       seleccionado.factor_gl || 0,
-        peso_unit:       seleccionado.peso || 0,
+        peso_unit:       seleccionado.peso_unit || 0,
     });
 
     pintarLineas();
@@ -748,20 +733,17 @@ function pintarLineas() {
     const lista = $('oc-lista-prods');
 
     lista.innerHTML = productos.map((p, i) => {
-        const etiqueta = p.tipo_precio === 'credito' ? 'CRÉDITO' : 'CONTADO';
         const editado = p.precio_editado ? ' ✏️' : '';
 
         return '<div class="oc-linea">' +
             '<div class="oc-linea-num">' + (i + 1) + '</div>' +
             '<div class="oc-linea-info">' +
                 '<div class="oc-linea-desc">' + p.descripcion + '</div>' +
-                '<div class="oc-linea-meta"><span class="cod">' + p.codigo + '</span><span>' + p.unidad + '</span>' +
-                '<span class="tipo">' + etiqueta + '</span></div>' +
+                '<div class="oc-linea-meta"><span class="cod">' + p.codigo + '</span><span>' + p.unidad + '</span></div>' +
             '</div>' +
-            '<div class="oc-linea-col"><div class="oc-linea-lbl">P.Unit USD' + editado + '</div>' +
+            '<div class="oc-linea-col"><div class="oc-linea-lbl">P.Unit S/' + editado + '</div>' +
                 '<input type="number" class="oc-precio-input" data-campo="precio" data-idx="' + i + '" ' +
-                // El precio de lista llega con 4 decimales, así que no se acota el paso.
-                'value="' + p.precio_unit_usd.toFixed(4) + '" min="0" step="any"></div>' +
+                'value="' + p.precio_unit_usd.toFixed(2) + '" min="0" step="0.01"></div>' +
             '<div class="oc-linea-col"><div class="oc-linea-lbl">Cant.</div>' +
                 '<input type="number" class="oc-cant-input" data-campo="cantidad" data-idx="' + i + '" ' +
                 'value="' + p.cantidad + '" min="1" step="1"></div>' +
@@ -769,8 +751,8 @@ function pintarLineas() {
                 '<input type="number" class="oc-peso-input" data-campo="peso" data-idx="' + i + '" ' +
                 // El peso se guarda con 3 decimales en `productos`.
                 'value="' + (p.peso_unit || '') + '" min="0" step="0.001" placeholder="0.000"></div>' +
-            '<div class="oc-linea-col oc-linea-total"><div class="oc-linea-lbl">Total USD</div>' +
-                '<div>$' + (p.precio_unit_usd * p.cantidad).toFixed(2) + '</div></div>' +
+            '<div class="oc-linea-col oc-linea-total"><div class="oc-linea-lbl">Total S/</div>' +
+                '<div>S/ ' + (p.precio_unit_usd * p.cantidad).toFixed(2) + '</div></div>' +
             '<button type="button" class="btn-borrar-linea" data-borrar="' + i + '">✕</button>' +
         '</div>';
     }).join('');
@@ -807,7 +789,8 @@ function pintarLineas() {
 }
 
 // ── Condición de pago ────────────────────────────────────────────────────
-// Cambiarla reescribe el precio de cada línea con la tarifa correspondiente.
+// Solo afecta cuándo se paga (dato del proveedor), ya no hay tarifas
+// distintas por condición como en el catálogo Kendall.
 function elegirCondicion(tipo) {
     condicion = tipo;
 
@@ -815,20 +798,6 @@ function elegirCondicion(tipo) {
     $('oc-pago-credito').classList.toggle('activa', tipo === 'credito');
     $('oc-dias-wrap').classList.toggle('visible', tipo === 'credito');
     $('oc-condicion').value = tipo === 'credito' ? 'credito-' + dias : 'contado';
-
-    productos.forEach((p) => {
-        const original = CATALOGO.find((c) => c.codigo === p.codigo);
-
-        if (original) {
-            p.precio_unit_usd = tipo === 'credito' ? (original.pcr || 0) : (original.pc || 0);
-            p.tipo_precio = tipo;
-            p.precio_editado = false;
-        }
-    });
-
-    $('oc-pventa').value = '';
-    pintarLineas();
-    recalcular();
 }
 
 document.querySelectorAll('.oc-pago-card').forEach((card) => {
@@ -842,27 +811,8 @@ $('oc-dias').addEventListener('input', (e) => {
 
 // ── Totales y resumen ────────────────────────────────────────────────────
 function recalcular() {
-    const tc = parseFloat($('oc-tc').value) || {{ config('rentaltech.tipo_cambio') }};
-
-    const sumaUsd = productos.reduce((a, p) => a + p.precio_unit_usd * p.cantidad, 0);
-    const cantidadTotal = productos.reduce((a, p) => a + p.cantidad, 0);
-    const galones = productos.reduce((a, p) => a + p.cantidad * (p.factor_gl || 0), 0);
+    const sumaSoles = productos.reduce((a, p) => a + p.precio_unit_usd * p.cantidad, 0);
     const pesoTotal = productos.reduce((a, p) => a + p.cantidad * (p.peso_unit || 0), 0);
-
-    // Totales de cada tarifa, para las dos tarjetas de condición de pago.
-    const totalContado = productos.reduce((a, p) => {
-        const c = CATALOGO.find((x) => x.codigo === p.codigo);
-        return a + (c ? (c.pc || 0) : p.precio_unit_usd) * p.cantidad;
-    }, 0);
-    const totalCredito = productos.reduce((a, p) => {
-        const c = CATALOGO.find((x) => x.codigo === p.codigo);
-        return a + (c ? (c.pcr || 0) : p.precio_unit_usd) * p.cantidad;
-    }, 0);
-
-    $('oc-total-contado').textContent = 'Total: $ ' + totalContado.toFixed(2);
-    $('oc-total-credito').textContent = 'Total: $ ' + totalCredito.toFixed(2);
-    $('oc-total-contado').classList.toggle('lleno', totalContado > 0);
-    $('oc-total-credito').classList.toggle('lleno', totalCredito > 0);
 
     const resumen = $('oc-resumen');
     resumen.classList.toggle('visible', productos.length > 0);
@@ -872,30 +822,18 @@ function recalcular() {
         totalManual = false;
         $('oc-total-editable').value = '0';
     } else if (!totalManual) {
-        $('oc-total-editable').value = sumaUsd.toFixed(2);
+        $('oc-total-editable').value = sumaSoles.toFixed(2);
     }
 
     // El precio de venta se sugiere una sola vez, mientras siga en cero.
     if (productos.length > 0 && (parseFloat($('oc-pventa').value) || 0) === 0) {
-        $('oc-pventa').value = (productos[0].precio_unit_usd * tc).toFixed(2);
+        $('oc-pventa').value = productos[0].precio_unit_usd.toFixed(2);
     }
 
     // Peso total, que va al campo oculto que se guarda.
     $('oc-peso').value = pesoTotal > 0 ? pesoTotal.toFixed(2) : '';
     $('oc-peso-display').textContent = pesoTotal > 0 ? pesoTotal.toFixed(2) + ' kg' : '—';
     $('oc-peso-display').classList.toggle('lleno', pesoTotal > 0);
-
-    // Resumen de costo por galón.
-    const panel = $('oc-costo-panel');
-    panel.classList.toggle('visible', productos.length > 0);
-
-    if (productos.length > 0) {
-        const totalUsd = parseFloat($('oc-total-editable').value) || sumaUsd;
-        const totalSoles = totalUsd * tc;
-
-        $('oc-galonaje').textContent = galones > 0 ? galones.toFixed(2) + ' GL' : '×' + cantidadTotal + ' und.';
-        $('oc-costo-galon').textContent = 'S/ ' + (galones > 0 ? totalSoles / galones : 0).toFixed(2);
-    }
 
     pintarPanel();
 }
@@ -904,11 +842,9 @@ function recalcular() {
 // Espejo de lo que se guardará. No calcula nada nuevo: lee el mismo estado
 // que ya manejan `productos` y `merchLineas`.
 function pintarPanel() {
-    const tc       = parseFloat($('oc-tc').value) || {{ config('rentaltech.tipo_cambio') }};
-    const totalUsd = parseFloat($('oc-total-editable').value) || 0;
+    const totalSoles = parseFloat($('oc-total-editable').value) || 0;
 
     const unidades   = productos.reduce((a, p) => a + p.cantidad, 0);
-    const galones    = productos.reduce((a, p) => a + p.cantidad * (p.factor_gl || 0), 0);
     const merchUnds  = merchLineas.reduce((a, m) => a + m.cantidad, 0);
     const merchTotal = merchLineas.reduce((a, m) => a + m.cantidad * m.costo_unit, 0);
 
@@ -927,10 +863,8 @@ function pintarPanel() {
     const bloqueProd = $('ocr-item-productos');
     bloqueProd.classList.toggle('lleno', productos.length > 0);
     $('ocr-prod-lineas').textContent = productos.length + (productos.length === 1 ? ' línea' : ' líneas');
-    $('ocr-prod-total').textContent = '$ ' + totalUsd.toFixed(2);
-    $('ocr-prod-sub').textContent = productos.length === 0
-        ? 'sin agregar'
-        : unidades + ' unidad(es)' + (galones > 0 ? ' · ' + galones.toFixed(2) + ' GL' : '');
+    $('ocr-prod-total').textContent = 'S/ ' + totalSoles.toFixed(2);
+    $('ocr-prod-sub').textContent = productos.length === 0 ? 'sin agregar' : unidades + ' unidad(es)';
 
     // Merch
     const bloqueMerch = $('ocr-item-merch');
@@ -942,20 +876,15 @@ function pintarPanel() {
         : merchUnds + ' unidad(es) para clientes';
 
     // Totales
-    $('ocr-total-usd').textContent = '$ ' + totalUsd.toFixed(2);
-    $('ocr-tc').textContent = tc.toFixed(4);
-    $('ocr-total-soles').textContent = 'S/ ' + (totalUsd * tc).toFixed(2);
+    $('ocr-total-soles').textContent = 'S/ ' + totalSoles.toFixed(2);
 
-    // El merch se cobra en soles y no entra en el total de la orden.
     const nota = $('ocr-nota-merch');
     nota.classList.toggle('oculta', merchTotal <= 0);
     nota.textContent = 'Más S/ ' + merchTotal.toFixed(2) + ' de merch, que se registra aparte como egreso de promoción.';
 
     // Barra fija: el total incluye el merch, porque es plata que igual sale.
-    const barraSoles = totalUsd * tc + merchTotal;
+    const barraSoles = totalSoles + merchTotal;
     $('ocr-barra-total').textContent = 'S/ ' + barraSoles.toFixed(2);
-    // El merch se paga en soles: para verlo en dólares se devuelve con el mismo tipo de cambio.
-    $('ocr-barra-usd').textContent = tc > 0 ? '$ ' + (barraSoles / tc).toFixed(2) : '$ —';
     $('ocr-barra-det').textContent = productos.length === 0 && merchLineas.length === 0
         ? 'Sin productos ni merch'
         : productos.length + ' producto(s)' + (merchLineas.length ? ' · ' + merchUnds + ' de merch' : '');
@@ -998,7 +927,7 @@ async function verificarNumero() {
             '<div class="oc-duplicado"><span style="font-size:18px;">⚠️</span>' +
             '<div style="flex:1;"><strong>Número repetido</strong>' +
             'Ya existe la orden ' + datos.orden.numero + ' · ' + datos.orden.proveedor +
-            ' · ' + datos.orden.fecha + ' · $' + datos.orden.total_usd.toFixed(2) + '</div>' +
+            ' · ' + datos.orden.fecha + ' · S/ ' + datos.orden.total_usd.toFixed(2) + '</div>' +
             '<button type="button" id="oc-btn-siguiente-libre">Usar el siguiente</button></div>';
 
         $('oc-btn-siguiente-libre').addEventListener('click', () => {
@@ -1176,12 +1105,14 @@ $('formOrden').addEventListener('submit', (evento) => {
         return;
     }
 
-    const tc = parseFloat($('oc-tc').value) || {{ config('rentaltech.tipo_cambio') }};
-    const totalUsd = parseFloat($('oc-total-editable').value)
+    const totalSoles = parseFloat($('oc-total-editable').value)
         || productos.reduce((a, p) => a + p.precio_unit_usd * p.cantidad, 0);
 
-    $('oc-total-usd').value   = totalUsd.toFixed(2);
-    $('oc-total-soles').value = (totalUsd * tc).toFixed(2);
+    // `tc` se guarda fijo en 1 (ver el campo oculto): así el resto del
+    // sistema, que todavía sabe leer órdenes históricas reales en dólares,
+    // no necesita ninguna rama nueva para las órdenes en soles de ahora.
+    $('oc-total-usd').value   = totalSoles.toFixed(2);
+    $('oc-total-soles').value = totalSoles.toFixed(2);
     $('oc-productos-json').value = JSON.stringify(productos);
     $('oc-merch-json').value = JSON.stringify(merchLineas);
 

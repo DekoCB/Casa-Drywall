@@ -83,6 +83,10 @@ class ExcelOrdenCompra
         $mes = $fecha->format('m');
         $anio = $fecha->format('Y');
         $totalUsd = (float) $o->total_usd;
+        // El catálogo Kendall (en dólares) ya no existe: las órdenes nuevas se
+        // guardan con tc=1, así que solo las órdenes históricas reales van en USD.
+        $esSolesNativo = abs((float) $o->tc - 1.0) < 0.0001;
+        $simbolo = $esSolesNativo ? 'S/' : '$';
 
         // La DIRECCION del formato clásico va completa; sólo se añade lo que falte.
         $direccion = trim((string) $o->direccion);
@@ -213,7 +217,7 @@ class ExcelOrdenCompra
         $hoja->setCellValue('E16', 'TOTAL FACTURADO');
         $this->caja($hoja, 'E16', array_merge($this->fuente(self::ROJO, 10, true), $this->alineado(Alignment::HORIZONTAL_CENTER)), self::ROJO, Border::BORDER_DASHED);
         $hoja->setCellValue('F16', $totalUsd);
-        $hoja->getStyle('F16')->getNumberFormat()->setFormatCode('"$"* #,##0.00');
+        $hoja->getStyle('F16')->getNumberFormat()->setFormatCode('"'.$simbolo.'"* #,##0.00');
         $this->caja($hoja, 'F16', array_merge($this->fuente(self::ROJO, 10, true), $this->alineado(Alignment::HORIZONTAL_RIGHT)), self::ROJO, Border::BORDER_DASHED);
 
         $hoja->getRowDimension(17)->setRowHeight(18);
@@ -294,7 +298,7 @@ class ExcelOrdenCompra
         $hoja->setCellValue("E{$f}", $o->empresa_transporte);
         $hoja->getStyle("E{$f}:F{$f}")->applyFromArray(array_merge($this->fuente(self::VERDE, 10, true), $this->alineado()));
         $hoja->mergeCells("E{$f}:F{$f}");
-        $hoja->setCellValue("H{$f}", '$');
+        $hoja->setCellValue("H{$f}", $simbolo);
         $hoja->getStyle("H{$f}")->applyFromArray($etiqueta);
         $hoja->setCellValue("I{$f}", $totalUsd);
         $hoja->getStyle("I{$f}")->getNumberFormat()->setFormatCode('#,##0.00');
@@ -361,6 +365,9 @@ class ExcelOrdenCompra
         $totalUsd = (float) $o->total_usd;
         $totalSoles = (float) $o->total_soles ?: round($totalUsd * $tc, 2);
         $pventa = (float) $o->precio_venta;
+        // El catálogo Kendall (en dólares) ya no existe: las órdenes nuevas se
+        // guardan con tc=1, así que solo las órdenes históricas reales van en USD.
+        $esSolesNativo = abs($tc - 1.0) < 0.0001;
 
         foreach (['A' => 14, 'B' => 38, 'C' => 10, 'D' => 12, 'E' => 13, 'F' => 13, 'G' => 14] as $col => $ancho) {
             $hoja->getColumnDimension($col)->setWidth($ancho);
@@ -393,7 +400,7 @@ class ExcelOrdenCompra
 
         $hoja->setCellValue("A{$f}", 'T/C:');
         $this->caja($hoja, "A{$f}", $etiqueta);
-        $hoja->setCellValue("B{$f}", $tc);
+        $hoja->setCellValue("B{$f}", $esSolesNativo ? '—' : $tc);
         $this->caja($hoja, "B{$f}", array_merge($this->fuente('111111', 10), $this->alineado()));
         $hoja->setCellValue("C{$f}", 'N° Guía:');
         $this->caja($hoja, "C{$f}", $etiqueta);
@@ -404,7 +411,7 @@ class ExcelOrdenCompra
 
         $cabecera = array_merge($this->fuente('FFFFFF', 10, true), $this->fondo(self::MORADO), $this->alineado(Alignment::HORIZONTAL_CENTER));
 
-        foreach (['A' => 'Código', 'B' => 'Producto', 'C' => 'Unidad', 'D' => 'Cantidad', 'E' => 'Costo USD', 'F' => 'Costo S/', 'G' => 'P.Venta S/'] as $col => $texto) {
+        foreach (['A' => 'Código', 'B' => 'Producto', 'C' => 'Unidad', 'D' => 'Cantidad', 'E' => ($esSolesNativo ? '—' : 'Costo USD'), 'F' => 'Costo S/', 'G' => 'P.Venta S/'] as $col => $texto) {
             $hoja->setCellValue("{$col}{$f}", $texto);
             $this->caja($hoja, "{$col}{$f}", $cabecera, self::MORADO);
         }
@@ -427,7 +434,7 @@ class ExcelOrdenCompra
             $this->caja($hoja, "C{$f}", array_merge($this->fuente('374151', 9), $this->alineado(Alignment::HORIZONTAL_CENTER)), $fondo);
             $hoja->setCellValue("D{$f}", $cantidad);
             $this->caja($hoja, "D{$f}", array_merge($this->fuente('111111', 10, true), $this->alineado(Alignment::HORIZONTAL_CENTER)), $fondo);
-            $hoja->setCellValue("E{$f}", '$'.number_format($unitario, 4));
+            $hoja->setCellValue("E{$f}", $esSolesNativo ? '' : '$'.number_format($unitario, 4));
             $this->caja($hoja, "E{$f}", array_merge($this->fuente('374151', 9), $this->alineado(Alignment::HORIZONTAL_RIGHT)), $fondo);
             $hoja->setCellValue("F{$f}", 'S/ '.number_format($unitario * $tc, 2));
             $this->caja($hoja, "F{$f}", array_merge($this->fuente('374151', 9), $this->alineado(Alignment::HORIZONTAL_RIGHT)), $fondo);
@@ -440,7 +447,7 @@ class ExcelOrdenCompra
         $f++;
         $hoja->setCellValue("D{$f}", $cantidadTotal);
         $this->caja($hoja, "D{$f}", array_merge($this->fuente(self::MORADO, 11, true), $this->fondo('EDE9FE'), $this->alineado(Alignment::HORIZONTAL_CENTER)), self::MORADO);
-        $hoja->setCellValue("E{$f}", '$ '.number_format($totalUsd, 2));
+        $hoja->setCellValue("E{$f}", $esSolesNativo ? '' : '$ '.number_format($totalUsd, 2));
         $this->caja($hoja, "E{$f}", array_merge($this->fuente('111111', 11, true), $this->fondo('EDE9FE'), $this->alineado(Alignment::HORIZONTAL_RIGHT)), self::MORADO);
         $hoja->setCellValue("F{$f}", 'S/ '.number_format($totalSoles, 2));
         $this->caja($hoja, "F{$f}", array_merge($this->fuente('111111', 11, true), $this->fondo('EDE9FE'), $this->alineado(Alignment::HORIZONTAL_RIGHT)), self::MORADO);

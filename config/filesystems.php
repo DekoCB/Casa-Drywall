@@ -38,17 +38,6 @@ return [
             'report' => false,
         ],
 
-        /*
-        | Archivos de datos heredados del proyecto original: la matriz de
-        | galonaje, las presentaciones, las categorías y el catálogo Kendall.
-        */
-        'galonaje' => [
-            'driver' => 'local',
-            'root' => storage_path('app/galonaje'),
-            'throw' => false,
-            'report' => false,
-        ],
-
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
