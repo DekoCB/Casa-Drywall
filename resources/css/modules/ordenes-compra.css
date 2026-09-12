@@ -260,8 +260,8 @@
     padding: 6px 13px;
     border: none;
     border-radius: 8px;
-    background: linear-gradient(135deg, #217346, #185a38);
-    color: #fff;
+    background: linear-gradient(135deg, var(--brand), var(--brand-2));
+    color: var(--on-brand);
     font-family: inherit;
     font-size: 11px;
     font-weight: 700;
@@ -411,7 +411,7 @@
     cursor: pointer;
     transition: all .2s ease;
 }
-.btn-excel-oc { background: linear-gradient(135deg,#217346,#185a38); box-shadow: 0 2px 6px rgba(33,115,70,.4); }
+.btn-excel-oc { background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: var(--on-brand); box-shadow: 0 2px 6px rgba(217,203,22,.4); }
 .btn-email-oc { background: var(--brand-2); color: var(--on-brand); box-shadow: 0 2px 6px rgba(184,172,19,.4); }
 .btn-del-oc   { background: var(--neg); }
 .btn-excel-oc:hover, .btn-email-oc:hover { transform: translateY(-1px); }

@@ -32,7 +32,7 @@
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                     <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
                 </svg>
-                📄 Descargar todo
+                PDF (todo)
             </button>
         </div>
     </div>
@@ -176,7 +176,7 @@
                                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                                     <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
                                 </svg>
-                                📄 Descargar ({{ $nDia }})
+                                PDF ({{ $nDia }})
                             </button>
                         </div>
 
@@ -256,7 +256,7 @@
                                     <td>
                                         <div class="oc-acciones">
                                             <button type="button" class="btn-excel-oc btn-excel-menu"
-                                                    data-ids="{{ $orden->id }}" title="Descargar PDF o Excel">📄 Descargar ▾</button>
+                                                    data-ids="{{ $orden->id }}" title="Descargar PDF o Excel">PDF ▾</button>
                                             <button type="button" class="btn-email-oc btn-enviar-oc"
                                                     data-orden="{{ $orden->id }}"
                                                     data-numero="{{ $orden->numero_orden }}"
@@ -362,7 +362,7 @@
             <small id="oc-sel-det">En PDF cada orden ocupa su propia página; en Excel, su propia hoja.</small>
         </div>
         <button type="button" class="btn-excel-dia btn-excel-menu" id="oc-sel-excel" data-ids="">
-            📄 Descargar (0)
+            PDF (0)
         </button>
         <button type="button" class="oc-sel-limpiar" id="oc-sel-limpiar">Limpiar</button>
     </div>
@@ -585,7 +585,7 @@ function pintarSeleccion(aviso) {
     const ids   = [...seleccionOc].join(',');
 
     btnSelExcel.dataset.ids   = ids;
-    btnSelExcel.textContent   = '📄 Descargar (' + total + ')';
+    btnSelExcel.textContent   = 'PDF (' + total + ')';
     btnSelExcel.disabled      = total === 0;
 
     document.getElementById('oc-sel-count').textContent =
