@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\CategoriaController;
 use App\Http\Controllers\Admin\ClienteController;
 use App\Http\Controllers\Admin\CotizacionProveedorController;
 use App\Http\Controllers\Admin\CobranzaController;
+use App\Http\Controllers\Admin\ConfiguracionController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DocumentoController;
 use App\Http\Controllers\Admin\EgresoController;
@@ -271,6 +272,11 @@ Route::middleware(['auth', 'rol:admin,ventas'])
         Route::get('reportes/utilidad', [ReporteController::class, 'utilidad'])->name('reportes.utilidad');
         Route::get('reportes/utilidad/excel', [ReporteController::class, 'utilidadExcel'])->name('reportes.utilidad.excel');
         Route::get('reportes/utilidad/pdf', [ReporteController::class, 'utilidadPdf'])->name('reportes.utilidad.pdf');
+
+        // ── Configuración ───────────────────────────────────────────────────
+        Route::get('configuracion', [ConfiguracionController::class, 'index'])->name('configuracion.index');
+        Route::get('configuracion/empresa', [ConfiguracionController::class, 'empresa'])->name('configuracion.empresa');
+        Route::get('configuracion/pagos', [ConfiguracionController::class, 'pagos'])->name('configuracion.pagos');
     });
 
 /*
