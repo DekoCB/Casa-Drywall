@@ -17,8 +17,8 @@
         .cab-izq { width:62%; }
         .cab-marca { width:100%; }
         .cab-marca td { vertical-align:middle; }
-        .cab-logo-cel { width:64px; }
-        .cab-logo-cel img { width:54px; height:54px; }
+        .cab-logo-cel { width:100px; }
+        .cab-logo-cel img { width:84px; height:84px; }
         .cab-emp-cel { padding-left:12px; }
         .cab-emp-cel b { font-size:12px; }
         .cab-emp-cel p { font-size:8.7px; color:#333; line-height:1.55; margin-top:1px; }
@@ -80,9 +80,11 @@
         // Desglose de IGV sobre el total en soles, al mismo % que usa el resto
         // del sistema para comprobantes (config('rentaltech.igv')) — la orden
         // no guarda un monto de IGV propio, se calcula igual que en una Boleta/
-        // Nota de Venta a partir del total.
+        // Nota de Venta a partir del total. El total a pagar incluye el merch:
+        // si la orden es solo de merch (sin productos), total_soles por sí solo
+        // queda en 0 y "TOTAL A PAGAR" no puede ignorar lo que sí se está pagando.
         $igvPct = (float) config('rentaltech.igv', 0.18);
-        $totalPagar = (float) $orden->total_soles;
+        $totalPagar = (float) $orden->total_soles + (float) $totalMerch;
         $opGravadas = round($totalPagar / (1 + $igvPct), 2);
         $igvMonto = round($totalPagar - $opGravadas, 2);
     @endphp
@@ -211,12 +213,12 @@
 
         {{-- ══ Totales: OP. GRAVADAS + IGV, igual que en Boletas/Notas de Venta ══ --}}
         <table class="totales">
-            @unless ($esSolesNativo)
+            @if (! $esSolesNativo && (float) $orden->total_usd > 0)
                 <tr><td class="lbl">Total en dólares</td><td class="val">$ {{ number_format($orden->total_usd, 2) }}</td></tr>
                 <tr><td class="lbl">Tipo de cambio</td><td class="val">{{ number_format($orden->tc, 4) }}</td></tr>
-            @endunless
+            @endif
             @if ($totalMerch > 0)
-                <tr><td class="lbl">Merch (aparte)</td><td class="val">S/ {{ number_format($totalMerch, 2) }}</td></tr>
+                <tr><td class="lbl">Merch</td><td class="val">S/ {{ number_format($totalMerch, 2) }}</td></tr>
             @endif
             <tr><td class="lbl">OP. GRAVADAS</td><td class="val">S/ {{ number_format($opGravadas, 2) }}</td></tr>
             <tr><td class="lbl">IGV</td><td class="val">S/ {{ number_format($igvMonto, 2) }}</td></tr>

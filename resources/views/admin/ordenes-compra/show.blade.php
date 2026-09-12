@@ -235,10 +235,10 @@
                 </div>
 
                 <div class="ocd-totales">
-                    @unless ($esSolesNativo)
+                    @if (! $esSolesNativo && (float) $orden->total_usd > 0)
                         <div class="ocd-tfila"><span>Total en dólares</span><strong>$ {{ number_format($orden->total_usd, 2) }}</strong></div>
                         <div class="ocd-tfila"><span>Tipo de cambio</span><strong>{{ number_format($orden->tc, 4) }}</strong></div>
-                    @endunless
+                    @endif
                     <div class="ocd-tgran">
                         <span>Total en soles</span>
                         <b>S/ {{ number_format($orden->total_soles, 2) }}</b>
