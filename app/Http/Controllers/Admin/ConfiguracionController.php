@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\CuentaBancaria;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
@@ -17,19 +20,31 @@ class ConfiguracionController extends Controller
     {
         $secciones = [
             'Mi Negocio' => [
-                ['route' => 'admin.configuracion.empresa', 'titulo' => 'Mi Empresa', 'desc' => 'RUC, razón social, dirección y datos de contacto.', 'icon' => 'empresa'],
-                ['route' => 'admin.locales.index', 'titulo' => 'Mi Local', 'desc' => 'Locales y establecimientos registrados ante SUNAT.', 'icon' => 'local'],
-                ['route' => 'admin.configuracion.pagos', 'titulo' => 'Pagos y Bancos', 'desc' => 'Cuentas bancarias para que te paguen tus clientes.', 'icon' => 'pagos'],
+                'icono' => 'empresa', 'color' => '#7c3aed',
+                'sub' => 'Información de tu empresa y canales de cobro',
+                'items' => [
+                    ['route' => 'admin.configuracion.empresa', 'titulo' => 'Mi Empresa', 'desc' => 'RUC, razón social, dirección y datos de contacto.', 'icon' => 'empresa'],
+                    ['route' => 'admin.locales.index', 'titulo' => 'Mi Local', 'desc' => 'Locales y establecimientos registrados ante SUNAT.', 'icon' => 'local'],
+                    ['route' => 'admin.configuracion.pagos', 'titulo' => 'Pagos y Bancos', 'desc' => 'Cuentas bancarias para que te paguen tus clientes.', 'icon' => 'pagos'],
+                ],
             ],
             'Catálogo' => [
-                ['route' => 'admin.categorias.index', 'titulo' => 'Categorías', 'desc' => 'Categorías de productos del catálogo general.', 'icon' => 'categoria'],
-                ['route' => 'admin.marcas.index', 'titulo' => 'Marcas', 'desc' => 'Marcas asociadas a los productos.', 'icon' => 'marca'],
-                ['route' => 'admin.productos.almacenes', 'titulo' => 'Almacenes', 'desc' => 'Almacenes y su stock por ubicación.', 'icon' => 'almacen'],
+                'icono' => 'almacen', 'color' => '#1F4A86',
+                'sub' => 'Categorías, marcas y almacenes del catálogo general',
+                'items' => [
+                    ['route' => 'admin.categorias.index', 'titulo' => 'Categorías', 'desc' => 'Categorías de productos del catálogo general.', 'icon' => 'categoria'],
+                    ['route' => 'admin.marcas.index', 'titulo' => 'Marcas', 'desc' => 'Marcas asociadas a los productos.', 'icon' => 'marca'],
+                    ['route' => 'admin.productos.almacenes', 'titulo' => 'Almacenes', 'desc' => 'Almacenes y su stock por ubicación.', 'icon' => 'almacen'],
+                ],
             ],
             'Comercial' => [
-                ['route' => 'admin.caja.index', 'titulo' => 'Cajas', 'desc' => 'Catálogo de cajas del Punto de Venta y su historial.', 'icon' => 'almacen'],
-                ['route' => 'admin.personal.index', 'titulo' => 'Personal', 'desc' => 'Altas, bajas y accesos al sistema del equipo.', 'icon' => 'personal'],
-                ['route' => 'admin.cargos.index', 'titulo' => 'Cargos', 'desc' => 'Lista de cargos disponibles al dar de alta a un colaborador.', 'icon' => 'categoria'],
+                'icono' => 'maletin', 'color' => '#11704A',
+                'sub' => 'Cajas del Punto de Venta y accesos del equipo',
+                'items' => [
+                    ['route' => 'admin.caja.index', 'titulo' => 'Cajas', 'desc' => 'Catálogo de cajas del Punto de Venta y su historial.', 'icon' => 'almacen'],
+                    ['route' => 'admin.personal.index', 'titulo' => 'Personal', 'desc' => 'Altas, bajas y accesos al sistema del equipo.', 'icon' => 'personal'],
+                    ['route' => 'admin.cargos.index', 'titulo' => 'Cargos', 'desc' => 'Lista de cargos disponibles al dar de alta a un colaborador.', 'icon' => 'categoria'],
+                ],
             ],
         ];
 
@@ -44,11 +59,33 @@ class ConfiguracionController extends Controller
         ]);
     }
 
-    /** Solo lectura por ahora — las cuentas bancarias viven en config/rentaltech.php. */
     public function pagos(): View
     {
         return view('admin.configuracion.pagos', [
-            'cuentas' => config('rentaltech.cuentas_bancarias', []),
+            'cuentas' => CuentaBancaria::orderBy('id')->get(),
         ]);
+    }
+
+    public function storeCuenta(Request $request): RedirectResponse
+    {
+        CuentaBancaria::create($request->validate([
+            'banco' => ['required', 'string', 'max:60'],
+            'abrev' => ['required', 'string', 'max:10'],
+            'moneda' => ['required', 'string', 'max:30'],
+            'titular' => ['required', 'string', 'max:150'],
+            'cuenta' => ['required', 'string', 'max:60'],
+            'cci' => ['required', 'string', 'max:60'],
+            'color' => ['required', 'string', 'max:9'],
+            'bg' => ['required', 'string', 'max:9'],
+        ]));
+
+        return back()->with('mensaje', 'Cuenta bancaria registrada correctamente');
+    }
+
+    public function destroyCuenta(CuentaBancaria $cuenta): RedirectResponse
+    {
+        $cuenta->delete();
+
+        return back()->with('mensaje', 'Cuenta bancaria eliminada correctamente');
     }
 }

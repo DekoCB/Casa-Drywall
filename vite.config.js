@@ -17,6 +17,7 @@ export default defineConfig({
                 'resources/css/modules/transporte.css',
                 'resources/css/modules/pos.css',
                 'resources/css/modules/reportes.css',
+                'resources/css/modules/configuracion.css',
                 'resources/js/app.js',
                 'resources/js/glow-cursor.js',
             ],

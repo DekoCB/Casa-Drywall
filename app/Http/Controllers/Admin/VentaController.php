@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Cliente;
 use App\Models\Cobranza;
+use App\Models\CuentaBancaria;
 use App\Models\Producto;
 use App\Models\Venta;
 use App\Models\VentaDetalle;
@@ -623,7 +624,7 @@ class VentaController extends Controller
             return view('admin.ventas.cotizacion', [
                 'venta' => $venta,
                 'tipos' => self::TIPOS,
-                'cuentasBancarias' => config('rentaltech.cuentas_bancarias'),
+                'cuentasBancarias' => CuentaBancaria::orderBy('id')->get(),
             ]);
         }
 

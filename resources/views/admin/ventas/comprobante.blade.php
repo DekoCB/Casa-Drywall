@@ -315,18 +315,19 @@
     </div>
 
     {{-- ══ Cuentas bancarias ══ --}}
-    @if (! empty(config('rentaltech.cuentas_bancarias')))
+    @php $cuentasBancarias = \App\Models\CuentaBancaria::orderBy('id')->get(); @endphp
+    @if ($cuentasBancarias->isNotEmpty())
         <div class="cb-tit">CUENTAS BANCARIAS</div>
         <div class="cb-grid">
-            @foreach (config('rentaltech.cuentas_bancarias') as $cuenta)
+            @foreach ($cuentasBancarias as $cuenta)
                 <div class="cb-caja">
                     <div class="cb-fila">
-                        <div class="cb-icono" style="background:{{ $cuenta['color'] }};">{{ $cuenta['abrev'] }}</div>
+                        <div class="cb-icono" style="background:{{ $cuenta->color }};">{{ $cuenta->abrev }}</div>
                         <div class="cb-info">
-                            <b>{{ $cuenta['banco'] }} {{ $cuenta['moneda'] }}</b><br>
-                            {{ $cuenta['titular'] }}<br>
-                            <span class="cuenta">{{ $cuenta['cuenta'] }}</span><br>
-                            CCI: {{ $cuenta['cci'] }}
+                            <b>{{ $cuenta->banco }} {{ $cuenta->moneda }}</b><br>
+                            {{ $cuenta->titular }}<br>
+                            <span class="cuenta">{{ $cuenta->cuenta }}</span><br>
+                            CCI: {{ $cuenta->cci }}
                         </div>
                     </div>
                 </div>
