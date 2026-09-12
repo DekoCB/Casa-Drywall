@@ -104,7 +104,7 @@
   <div class="meta">Periodo: <span class="mono">{{ $desde->format('d/m/Y') }} – {{ $hasta->format('d/m/Y') }}</span></div>
   <a href="{{ route('admin.ventas.index') }}" class="btn-ghost">Ver ventas <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></a>
 </div>
-<div class="kpi-grid">
+<div class="kpi-grid" style="grid-template-columns:repeat(5,1fr)">
 
   @php $d = $delta($cobradoPct); @endphp
   <div class="kpi">
@@ -166,26 +166,26 @@
   <h3>Por tipo de comprobante</h3><div class="rule"></div>
 </div>
 <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+  @php $d = $delta($montoNotasVentaPct); @endphp
+  <div class="kpi">
+    <div class="kpi-head"><div class="kpi-lbl">Notas de Venta</div></div>
+    <div class="kpi-val"><span class="cur">S/</span>{{ number_format($montoNotasVenta, 2) }}</div>
+    <div class="kpi-sub"><span class="delta {{ $d['clase'] }}">{{ $d['texto'] }}</span> vs período previo</div>
+    <div class="kpi-spark"><svg viewBox="0 0 200 40" preserveAspectRatio="none"><path d="M0,36 L50,30 L100,24 L150,14 L200,10" fill="none" stroke="#11704A" stroke-width="1.4"/></svg></div>
+  </div>
+  @php $d = $delta($montoBoletasPct); @endphp
+  <div class="kpi">
+    <div class="kpi-head"><div class="kpi-lbl">Boletas</div></div>
+    <div class="kpi-val"><span class="cur">S/</span>{{ number_format($montoBoletas, 2) }}</div>
+    <div class="kpi-sub"><span class="delta {{ $d['clase'] }}">{{ $d['texto'] }}</span> vs período previo</div>
+    <div class="kpi-spark"><svg viewBox="0 0 200 40" preserveAspectRatio="none"><path d="M0,36 L50,30 L100,24 L150,14 L200,10" fill="none" stroke="#11704A" stroke-width="1.4"/></svg></div>
+  </div>
   @php $d = $delta($montoFacturasPct); @endphp
   <div class="kpi">
     <div class="kpi-head"><div class="kpi-lbl">Facturas</div></div>
     <div class="kpi-val"><span class="cur">S/</span>{{ number_format($montoFacturas, 2) }}</div>
     <div class="kpi-sub"><span class="delta {{ $d['clase'] }}">{{ $d['texto'] }}</span> vs período previo</div>
     <div class="kpi-spark"><svg viewBox="0 0 200 40" preserveAspectRatio="none"><path d="M0,34 L50,28 L100,20 L150,14 L200,8" fill="none" stroke="#1F4A86" stroke-width="1.4"/></svg></div>
-  </div>
-  @php $d = $delta($montoBoletasPct); @endphp
-  <div class="kpi">
-    <div class="kpi-head"><div class="kpi-lbl">Boletas</div></div>
-    <div class="kpi-val"><span class="cur">S/</span>{{ number_format($montoBoletas, 2) }}</div>
-    <div class="kpi-sub"><span class="delta {{ $d['clase'] }}">{{ $d['texto'] }}</span> cobrado vs período previo</div>
-    <div class="kpi-spark"><svg viewBox="0 0 200 40" preserveAspectRatio="none"><path d="M0,36 L50,30 L100,24 L150,14 L200,10" fill="none" stroke="#11704A" stroke-width="1.4"/></svg></div>
-  </div>
-  @php $d = $delta($montoNotasVentaPct); @endphp
-  <div class="kpi">
-    <div class="kpi-head"><div class="kpi-lbl">Notas de Venta</div></div>
-    <div class="kpi-val"><span class="cur">S/</span>{{ number_format($montoNotasVenta, 2) }}</div>
-    <div class="kpi-sub"><span class="delta {{ $d['clase'] }}">{{ $d['texto'] }}</span> cobrado vs período previo</div>
-    <div class="kpi-spark"><svg viewBox="0 0 200 40" preserveAspectRatio="none"><path d="M0,36 L50,30 L100,24 L150,14 L200,10" fill="none" stroke="#11704A" stroke-width="1.4"/></svg></div>
   </div>
 </div>
 

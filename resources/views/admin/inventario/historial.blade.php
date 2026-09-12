@@ -22,7 +22,7 @@
 
 <x-page-header :titulo="$tituloPagina" subtitulo="Historial de movimientos de stock por almacén">
     <x-slot:acciones>
-        <a href="{{ route('admin.inventario.reporte') }}" class="btn btn-secondary btn-sm"><span class="btn-text">← Inventario</span></a>
+        <a href="{{ route('admin.inventario.movimientos') }}" class="btn btn-secondary btn-sm"><span class="btn-text">← Inventario</span></a>
         @if ($filtros['tipo'] === 'traslado')
             <button type="button" class="btn btn-primary" data-modal="modalTraslado"><span class="btn-text">＋ Nuevo traslado</span></button>
         @elseif ($filtros['tipo'] === 'devolucion')

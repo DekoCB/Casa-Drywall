@@ -76,6 +76,15 @@
         $simbolo = $esSolesNativo ? 'S/' : '$';
 
         $direccionOrden = trim(implode(', ', array_filter([$orden->direccion, $orden->distrito, $orden->provincia])));
+
+        // Desglose de IGV sobre el total en soles, al mismo % que usa el resto
+        // del sistema para comprobantes (config('rentaltech.igv')) — la orden
+        // no guarda un monto de IGV propio, se calcula igual que en una Boleta/
+        // Nota de Venta a partir del total.
+        $igvPct = (float) config('rentaltech.igv', 0.18);
+        $totalPagar = (float) $orden->total_soles;
+        $opGravadas = round($totalPagar / (1 + $igvPct), 2);
+        $igvMonto = round($totalPagar - $opGravadas, 2);
     @endphp
 
     <div class="hoja">
@@ -200,8 +209,7 @@
             </table>
         @endif
 
-        {{-- ══ Totales: solo lo que hay datos reales para mostrar — sin inventar
-             un desglose de IGV que esta orden no tiene guardado en ningún lado. ══ --}}
+        {{-- ══ Totales: OP. GRAVADAS + IGV, igual que en Boletas/Notas de Venta ══ --}}
         <table class="totales">
             @unless ($esSolesNativo)
                 <tr><td class="lbl">Total en dólares</td><td class="val">$ {{ number_format($orden->total_usd, 2) }}</td></tr>
@@ -210,7 +218,9 @@
             @if ($totalMerch > 0)
                 <tr><td class="lbl">Merch (aparte)</td><td class="val">S/ {{ number_format($totalMerch, 2) }}</td></tr>
             @endif
-            <tr class="gran"><td class="lbl">TOTAL A PAGAR</td><td class="val">S/ {{ number_format($orden->total_soles, 2) }}</td></tr>
+            <tr><td class="lbl">OP. GRAVADAS</td><td class="val">S/ {{ number_format($opGravadas, 2) }}</td></tr>
+            <tr><td class="lbl">IGV</td><td class="val">S/ {{ number_format($igvMonto, 2) }}</td></tr>
+            <tr class="gran"><td class="lbl">TOTAL A PAGAR</td><td class="val">S/ {{ number_format($totalPagar, 2) }}</td></tr>
         </table>
 
         @if ($orden->observaciones)

@@ -11,7 +11,7 @@
 
 <x-page-header titulo="Kardex Valorizado" subtitulo="Costo y valor de stock por producto, a costo de compra actual">
     <x-slot:acciones>
-        <a href="{{ route('admin.inventario.reporte') }}" class="btn btn-secondary btn-sm"><span class="btn-text">← Inventario</span></a>
+        <a href="{{ route('admin.inventario.movimientos') }}" class="btn btn-secondary btn-sm"><span class="btn-text">← Inventario</span></a>
     </x-slot:acciones>
 </x-page-header>
 

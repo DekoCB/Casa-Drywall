@@ -56,21 +56,21 @@ class DashboardController extends Controller
         $facturado = (float) $actual->facturado;
         $cobrado = (float) $actual->cobrado;
 
-        // Facturas: cuánto se facturó (documento tributario formal). Boletas y
-        // Notas de Venta: cuánto entró en caja por esa vía (monto_pagado), no
-        // lo facturado — son ventas más informales donde importa el cobro real.
-        $montoFacturas = $this->agregadosPorTipo($desde, $hasta, '01', 'total');
-        $montoBoletas = $this->agregadosPorTipo($desde, $hasta, '03', 'monto_pagado');
-        $montoNotasVenta = $this->agregadosPorTipo($desde, $hasta, 'NV', 'monto_pagado');
+        // Lo generado (facturado) por cada tipo de comprobante, mismo criterio
+        // para los tres — así se pueden comparar entre sí sin mezclar
+        // "facturado" con "cobrado" en la misma fila.
+        $montoFacturas = $this->agregadosPorTipo($desde, $hasta, '01');
+        $montoBoletas = $this->agregadosPorTipo($desde, $hasta, '03');
+        $montoNotasVenta = $this->agregadosPorTipo($desde, $hasta, 'NV');
 
         $montoFacturasPct = null;
         $montoBoletasPct = null;
         $montoNotasVentaPct = null;
 
         if ($desdePrev) {
-            $montoFacturasPct = $this->variacion($montoFacturas, $this->agregadosPorTipo($desdePrev, $hastaPrev, '01', 'total'));
-            $montoBoletasPct = $this->variacion($montoBoletas, $this->agregadosPorTipo($desdePrev, $hastaPrev, '03', 'monto_pagado'));
-            $montoNotasVentaPct = $this->variacion($montoNotasVenta, $this->agregadosPorTipo($desdePrev, $hastaPrev, 'NV', 'monto_pagado'));
+            $montoFacturasPct = $this->variacion($montoFacturas, $this->agregadosPorTipo($desdePrev, $hastaPrev, '01'));
+            $montoBoletasPct = $this->variacion($montoBoletas, $this->agregadosPorTipo($desdePrev, $hastaPrev, '03'));
+            $montoNotasVentaPct = $this->variacion($montoNotasVenta, $this->agregadosPorTipo($desdePrev, $hastaPrev, 'NV'));
         }
 
         $antiguedad = $this->antiguedadDeuda();
@@ -201,12 +201,13 @@ class DashboardController extends Controller
      * Monto de un solo tipo de comprobante (01 Factura, 03 Boleta, NV Nota de
      * Venta): `total` para lo facturado, `monto_pagado` para lo cobrado.
      */
-    private function agregadosPorTipo(Carbon $desde, Carbon $hasta, string $tipcomp, string $campo): float
+    /** Monto facturado de un solo tipo de comprobante (01 Factura, 03 Boleta, NV Nota de Venta). */
+    private function agregadosPorTipo(Carbon $desde, Carbon $hasta, string $tipcomp): float
     {
         return (float) $this->ventasVigentes()
             ->where('tipcomp', $tipcomp)
             ->whereBetween('fecha', [$desde->toDateString(), $hasta->toDateString()])
-            ->sum($campo);
+            ->sum('total');
     }
 
     /**

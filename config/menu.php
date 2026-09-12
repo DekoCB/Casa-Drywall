@@ -113,10 +113,10 @@ return [
                 ],
             ],
             [
-                'route' => 'admin.inventario.reporte', 'label' => 'Inventario', 'icon' => $iconos['inventario'],
+                'route' => 'admin.inventario.movimientos', 'label' => 'Inventario', 'icon' => $iconos['inventario'],
                 'submenu' => [
-                    ['route' => 'admin.inventario.reporte', 'label' => 'Reporte Inventario'],
                     ['route' => 'admin.inventario.movimientos', 'label' => 'Movimientos'],
+                    ['route' => 'admin.inventario.reporte', 'label' => 'Reporte Inventario'],
                     ['route' => 'admin.inventario.movimientos.historial', 'label' => 'Historial de Movimientos'],
                     ['route' => 'admin.inventario.movimientos.historial', 'query' => ['tipo' => 'traslado'], 'label' => 'Traslados'],
                     ['route' => 'admin.inventario.movimientos.historial', 'query' => ['tipo' => 'devolucion'], 'label' => 'Devolución a proveedor'],

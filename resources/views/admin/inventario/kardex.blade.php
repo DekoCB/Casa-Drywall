@@ -17,7 +17,7 @@
 
 <x-page-header titulo="Reporte Kardex" subtitulo="Historial de movimientos de un producto, con saldo corrido">
     <x-slot:acciones>
-        <a href="{{ route('admin.inventario.reporte') }}" class="btn btn-secondary btn-sm"><span class="btn-text">← Inventario</span></a>
+        <a href="{{ route('admin.inventario.movimientos') }}" class="btn btn-secondary btn-sm"><span class="btn-text">← Inventario</span></a>
     </x-slot:acciones>
 </x-page-header>
 
