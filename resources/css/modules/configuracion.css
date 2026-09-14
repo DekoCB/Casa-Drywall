@@ -65,3 +65,51 @@
 @media (max-width: 600px) {
     .cfgp-grid { grid-template-columns: 1fr; }
 }
+
+/* ═══════════════════════════════════════════════════════
+   Estilos y temas — selector de color de acento y tipografía
+   ═══════════════════════════════════════════════════════ */
+
+.cfgp-form-seccion { margin-bottom: 28px; }
+.cfgp-form-titulo { font-size: 13.5px; font-weight: 700; color: var(--ink); margin-bottom: 3px; }
+.cfgp-form-sub { font-size: 12px; color: var(--ink-3); margin-bottom: 14px; }
+
+.cfgp-paletas { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.cfgp-paleta { position: relative; }
+.cfgp-paleta input {
+    position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer;
+}
+.cfgp-paleta-card {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 14px; border: 2px solid var(--line); border-radius: 10px;
+    background: var(--surface); transition: border-color .15s, background .15s;
+}
+.cfgp-paleta input:checked + .cfgp-paleta-card {
+    border-color: var(--pal-brand); background: var(--surface-2);
+}
+.cfgp-paleta input:focus-visible + .cfgp-paleta-card { outline: 2px solid var(--pal-brand); outline-offset: 2px; }
+.cfgp-paleta-dot {
+    flex: 0 0 auto; width: 24px; height: 24px; border-radius: 50%;
+    background: var(--pal-brand); box-shadow: inset 0 0 0 3px var(--pal-brand-2);
+}
+.cfgp-paleta-nombre { font-size: 12.5px; font-weight: 600; color: var(--ink); }
+
+.cfgp-fuentes { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.cfgp-fuente { position: relative; }
+.cfgp-fuente input {
+    position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer;
+}
+.cfgp-fuente-card {
+    padding: 16px; border: 2px solid var(--line); border-radius: 10px;
+    background: var(--surface); transition: border-color .15s, background .15s;
+}
+.cfgp-fuente input:checked + .cfgp-fuente-card { border-color: var(--brand); background: var(--surface-2); }
+.cfgp-fuente input:focus-visible + .cfgp-fuente-card { outline: 2px solid var(--brand); outline-offset: 2px; }
+.cfgp-fuente-preview { font-size: 21px; color: var(--ink); margin-bottom: 6px; line-height: 1.2; }
+.cfgp-fuente-preview span { font-size: 12.5px; display: block; color: var(--ink-2); margin-top: 3px; }
+.cfgp-fuente-nombre { font-size: 11.5px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em; }
+
+@media (max-width: 600px) {
+    .cfgp-paletas { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+    .cfgp-fuentes { grid-template-columns: 1fr; }
+}

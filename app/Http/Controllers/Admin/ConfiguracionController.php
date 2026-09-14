@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\CuentaBancaria;
+use App\Models\EstiloSistema;
 use App\Services\ApiGoCompanies;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
@@ -23,7 +25,6 @@ class ConfiguracionController extends Controller
      * una se define más adelante, a pedido.
      */
     private const PROXIMAMENTE = [
-        'estilos' => ['seccion' => 'Mi Negocio', 'titulo' => 'Estilos y temas', 'desc' => 'Personaliza colores y apariencia del sistema.', 'icon' => 'paleta'],
         'avanzada' => ['seccion' => 'Mi Negocio', 'titulo' => 'Configuración avanzada', 'desc' => 'Opciones generales del sistema.', 'icon' => 'controles'],
         'plantillas-pdf' => ['seccion' => 'Plantillas de Impresión', 'titulo' => 'Plantillas PDF', 'desc' => 'Diseño de tus facturas y boletas en formato PDF.', 'icon' => 'documento'],
         'tickets-venta' => ['seccion' => 'Plantillas de Impresión', 'titulo' => 'Tickets de venta', 'desc' => 'Diseño de tu ticket de venta en formato 80mm.', 'icon' => 'documento'],
@@ -39,6 +40,7 @@ class ConfiguracionController extends Controller
                     [
                         ['route' => 'admin.configuracion.datos-empresa', 'titulo' => 'Datos de la Empresa', 'desc' => 'Mi Empresa, Mi Local y Pagos y Bancos.', 'icon' => 'empresa'],
                         ['route' => 'admin.configuracion.credenciales', 'titulo' => 'Credenciales y certificados', 'desc' => 'Usuario y certificado SOL, credenciales de Guías Electrónicas.', 'icon' => 'llave'],
+                        ['route' => 'admin.configuracion.estilos', 'titulo' => 'Estilos y temas', 'desc' => 'Color de acento y tipografía del sistema.', 'icon' => 'paleta'],
                     ],
                     $this->itemsProximamente('Mi Negocio'),
                 ),
@@ -105,6 +107,26 @@ class ConfiguracionController extends Controller
         return view('admin.configuracion.credenciales', [
             'empresa' => $apiGo->obtener((int) config('services.api_go.company_id')),
         ]);
+    }
+
+    /** Color de acento y tipografía de todo el sistema — ver App\Models\EstiloSistema. */
+    public function estilos(): View
+    {
+        return view('admin.configuracion.estilos', [
+            'estilo' => EstiloSistema::actual(),
+        ]);
+    }
+
+    public function storeEstilos(Request $request): RedirectResponse
+    {
+        $datos = $request->validate([
+            'color' => ['required', Rule::in(array_keys(EstiloSistema::PALETAS))],
+            'fuente' => ['required', Rule::in(array_keys(EstiloSistema::FUENTES))],
+        ]);
+
+        EstiloSistema::updateOrCreate(['id' => 1], $datos);
+
+        return back()->with('mensaje', 'Estilos actualizados correctamente');
     }
 
     /** Tarjetas de self::PROXIMAMENTE que pertenecen a una sección dada, en formato de item de grilla. */

@@ -16,10 +16,10 @@
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     @vite(['resources/css/admin.css', 'resources/js/app.js'])
     @stack('styles')
     @include('partials.brand-color')
+    @include('partials.estilo-sistema')
 </head>
 <body>
 <div class="app @if(request()->cookie('sidebarColapsada') === '1') sidebar-collapsed @endif" id="appShell">
