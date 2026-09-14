@@ -23,8 +23,10 @@ class ConfiguracionController extends Controller
      * una se define más adelante, a pedido.
      */
     private const PROXIMAMENTE = [
-        'estilos' => ['titulo' => 'Estilos y temas', 'desc' => 'Personaliza colores y apariencia del sistema.', 'icon' => 'paleta'],
-        'avanzada' => ['titulo' => 'Configuración avanzada', 'desc' => 'Opciones generales del sistema.', 'icon' => 'controles'],
+        'estilos' => ['seccion' => 'Mi Negocio', 'titulo' => 'Estilos y temas', 'desc' => 'Personaliza colores y apariencia del sistema.', 'icon' => 'paleta'],
+        'avanzada' => ['seccion' => 'Mi Negocio', 'titulo' => 'Configuración avanzada', 'desc' => 'Opciones generales del sistema.', 'icon' => 'controles'],
+        'plantillas-pdf' => ['seccion' => 'Plantillas de Impresión', 'titulo' => 'Plantillas PDF', 'desc' => 'Diseño de tus facturas y boletas en formato PDF.', 'icon' => 'documento'],
+        'tickets-venta' => ['seccion' => 'Plantillas de Impresión', 'titulo' => 'Tickets de venta', 'desc' => 'Diseño de tu ticket de venta en formato 80mm.', 'icon' => 'documento'],
     ];
 
     public function index(): View
@@ -38,14 +40,13 @@ class ConfiguracionController extends Controller
                         ['route' => 'admin.configuracion.datos-empresa', 'titulo' => 'Datos de la Empresa', 'desc' => 'Mi Empresa, Mi Local y Pagos y Bancos.', 'icon' => 'empresa'],
                         ['route' => 'admin.configuracion.credenciales', 'titulo' => 'Credenciales y certificados', 'desc' => 'Usuario y certificado SOL, credenciales de Guías Electrónicas.', 'icon' => 'llave'],
                     ],
-                    collect(self::PROXIMAMENTE)->map(fn ($item, $clave) => [
-                        'route' => 'admin.configuracion.proximamente',
-                        'query' => ['clave' => $clave],
-                        'titulo' => $item['titulo'],
-                        'desc' => $item['desc'],
-                        'icon' => $item['icon'],
-                    ])->values()->all(),
+                    $this->itemsProximamente('Mi Negocio'),
                 ),
+            ],
+            'Plantillas de Impresión' => [
+                'icono' => 'impresora', 'color' => '#C2410C',
+                'sub' => 'Diseño de tus facturas, boletas y tickets de venta',
+                'items' => $this->itemsProximamente('Plantillas de Impresión'),
             ],
             'Catálogo' => [
                 'icono' => 'almacen', 'color' => '#1F4A86',
@@ -94,7 +95,23 @@ class ConfiguracionController extends Controller
         ]);
     }
 
-    /** Tarjetas de "Mi Negocio" sin contenido todavía — ver self::PROXIMAMENTE. */
+    /** Tarjetas de self::PROXIMAMENTE que pertenecen a una sección dada, en formato de item de grilla. */
+    private function itemsProximamente(string $seccion): array
+    {
+        return collect(self::PROXIMAMENTE)
+            ->filter(fn ($item) => $item['seccion'] === $seccion)
+            ->map(fn ($item, $clave) => [
+                'route' => 'admin.configuracion.proximamente',
+                'query' => ['clave' => $clave],
+                'titulo' => $item['titulo'],
+                'desc' => $item['desc'],
+                'icon' => $item['icon'],
+            ])
+            ->values()
+            ->all();
+    }
+
+    /** Tarjetas sin contenido todavía — ver self::PROXIMAMENTE. */
     public function proximamente(Request $request): View
     {
         $clave = $request->query('clave');
