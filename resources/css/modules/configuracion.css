@@ -44,6 +44,7 @@
     transition: background .15s;
 }
 .cfgp-item:hover { background: var(--surface-2); }
+.cfgp-item[hidden], .cfgp-seccion[hidden] { display: none; }
 .cfgp-item-icono {
     flex: 0 0 auto;
     width: 34px;

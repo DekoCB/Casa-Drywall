@@ -285,6 +285,7 @@ Route::middleware(['auth', 'rol:admin,ventas'])
         Route::get('configuracion/credenciales', [ConfiguracionController::class, 'credenciales'])->name('configuracion.credenciales');
         Route::get('configuracion/estilos', [ConfiguracionController::class, 'estilos'])->name('configuracion.estilos');
         Route::post('configuracion/estilos', [ConfiguracionController::class, 'storeEstilos'])->name('configuracion.estilos.store');
+        Route::get('configuracion/avanzada', [ConfiguracionController::class, 'avanzada'])->name('configuracion.avanzada');
         Route::get('configuracion/empresa', [ConfiguracionController::class, 'empresa'])->name('configuracion.empresa');
         Route::get('configuracion/pagos', [ConfiguracionController::class, 'pagos'])->name('configuracion.pagos');
         Route::post('configuracion/pagos', [ConfiguracionController::class, 'storeCuenta'])->name('configuracion.pagos.store');

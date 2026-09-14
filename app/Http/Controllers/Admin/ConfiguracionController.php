@@ -25,9 +25,42 @@ class ConfiguracionController extends Controller
      * una se define más adelante, a pedido.
      */
     private const PROXIMAMENTE = [
-        'avanzada' => ['seccion' => 'Mi Negocio', 'titulo' => 'Configuración avanzada', 'desc' => 'Opciones generales del sistema.', 'icon' => 'controles'],
         'plantillas-pdf' => ['seccion' => 'Plantillas de Impresión', 'titulo' => 'Plantillas PDF', 'desc' => 'Diseño de tus facturas y boletas en formato PDF.', 'icon' => 'documento'],
         'tickets-venta' => ['seccion' => 'Plantillas de Impresión', 'titulo' => 'Tickets de venta', 'desc' => 'Diseño de tu ticket de venta en formato 80mm.', 'icon' => 'documento'],
+    ];
+
+    /**
+     * Accesos rápidos de "Configuración avanzada": solo las áreas que ya
+     * existen de verdad en el sistema (ninguna es una página nueva — cada
+     * una abre la sección real donde ya vive esa función). Se dejaron
+     * afuera "Servicios", "Visual", "S.Puntos" y "Farmacia" porque no
+     * tienen ninguna base real en el código (no hay sistema de puntos ni
+     * rubro farmacia en Casa Drywall), y "Datos" por ser demasiado
+     * angosto (solo existe "importar productos").
+     */
+    private const AVANZADA = [
+        'Principal' => [
+            ['route' => 'admin.ordenes-compra.index', 'titulo' => 'Compras', 'desc' => 'Órdenes de compra, proveedores y activos fijos.', 'icon' => 'bolsa'],
+        ],
+        'Documentos' => [
+            ['route' => 'admin.historial-pagos.index', 'titulo' => 'Contable', 'desc' => 'Historial de pagos y cobranzas registradas.', 'icon' => 'documento'],
+            ['route' => 'admin.configuracion.proximamente', 'query' => ['clave' => 'plantillas-pdf'], 'titulo' => 'PDF y Tickets', 'desc' => 'Diseño de facturas, boletas y tickets de venta.', 'icon' => 'impresora'],
+        ],
+        'Ventas' => [
+            ['route' => 'admin.pedidos.index', 'titulo' => 'Pedidos', 'desc' => 'Pedidos de clientes y su seguimiento.', 'icon' => 'carrito'],
+            ['route' => 'admin.pos.index', 'titulo' => 'POS', 'desc' => 'Punto de Venta y cajas.', 'icon' => 'pos'],
+        ],
+        'Finanzas' => [
+            ['route' => 'admin.cobranzas.index', 'titulo' => 'Finanzas', 'desc' => 'Cobranzas, ingresos y egresos.', 'icon' => 'dinero'],
+        ],
+        'Sistema' => [
+            ['route' => 'admin.index', 'titulo' => 'Dashboard', 'desc' => 'Resumen general del negocio.', 'icon' => 'dashboard'],
+            ['route' => 'admin.personal.index', 'titulo' => 'Usuario', 'desc' => 'Altas, bajas y accesos del equipo.', 'icon' => 'usuarios'],
+            ['route' => 'admin.inventario.movimientos', 'titulo' => 'Inventario', 'desc' => 'Movimientos, kardex y almacenes.', 'icon' => 'inventario'],
+        ],
+        'Módulos' => [
+            ['route' => 'admin.transporte.index', 'titulo' => 'Envíos', 'desc' => 'Empresas de transporte y tarifas.', 'icon' => 'camion'],
+        ],
     ];
 
     public function index(): View
@@ -41,6 +74,7 @@ class ConfiguracionController extends Controller
                         ['route' => 'admin.configuracion.datos-empresa', 'titulo' => 'Datos de la Empresa', 'desc' => 'Mi Empresa, Mi Local y Pagos y Bancos.', 'icon' => 'empresa'],
                         ['route' => 'admin.configuracion.credenciales', 'titulo' => 'Credenciales y certificados', 'desc' => 'Usuario y certificado SOL, credenciales de Guías Electrónicas.', 'icon' => 'llave'],
                         ['route' => 'admin.configuracion.estilos', 'titulo' => 'Estilos y temas', 'desc' => 'Color de acento y tipografía del sistema.', 'icon' => 'paleta'],
+                        ['route' => 'admin.configuracion.avanzada', 'titulo' => 'Configuración avanzada', 'desc' => 'Acceso rápido a compras, ventas, finanzas e inventario.', 'icon' => 'controles'],
                     ],
                     $this->itemsProximamente('Mi Negocio'),
                 ),
@@ -127,6 +161,12 @@ class ConfiguracionController extends Controller
         EstiloSistema::updateOrCreate(['id' => 1], $datos);
 
         return back()->with('mensaje', 'Estilos actualizados correctamente');
+    }
+
+    /** Buscador de accesos rápidos a áreas del sistema que ya existen — ver self::AVANZADA. */
+    public function avanzada(): View
+    {
+        return view('admin.configuracion.avanzada', ['secciones' => self::AVANZADA]);
     }
 
     /** Tarjetas de self::PROXIMAMENTE que pertenecen a una sección dada, en formato de item de grilla. */
