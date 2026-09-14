@@ -94,19 +94,28 @@
 }
 .cfgp-paleta-nombre { font-size: 12.5px; font-weight: 600; color: var(--ink); }
 
-.cfgp-fuentes { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.cfgp-fuentes { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 16px; }
 .cfgp-fuente { position: relative; }
 .cfgp-fuente input {
     position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer;
 }
 .cfgp-fuente-card {
-    padding: 16px; border: 2px solid var(--line); border-radius: 10px;
+    display: flex; flex-direction: column; justify-content: center; gap: 10px;
+    min-height: 118px;
+    padding: 20px 20px 16px; border: 2px solid var(--line); border-radius: 10px;
     background: var(--surface); transition: border-color .15s, background .15s;
+    overflow: hidden;
 }
 .cfgp-fuente input:checked + .cfgp-fuente-card { border-color: var(--brand); background: var(--surface-2); }
 .cfgp-fuente input:focus-visible + .cfgp-fuente-card { outline: 2px solid var(--brand); outline-offset: 2px; }
-.cfgp-fuente-preview { font-size: 21px; color: var(--ink); margin-bottom: 6px; line-height: 1.2; }
-.cfgp-fuente-preview span { font-size: 12.5px; display: block; color: var(--ink-2); margin-top: 3px; }
+.cfgp-fuente-preview {
+    font-size: 23px; color: var(--ink); line-height: 1.35;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cfgp-fuente-preview span {
+    font-size: 13px; display: block; color: var(--ink-2); margin-top: 8px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .cfgp-fuente-nombre { font-size: 11.5px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em; }
 
 @media (max-width: 600px) {
