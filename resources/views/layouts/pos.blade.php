@@ -9,8 +9,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Punto de Venta') — {{ config('rentaltech.empresa.razon_social') }}</title>
-    <link rel="icon" href="{{ asset('img/Logo.png') }}" type="image/png">
+    @php $perfilNegocio = \App\Models\PerfilNegocio::actual(); @endphp
+    <title>@yield('title', 'Punto de Venta') — {{ $perfilNegocio->tituloWeb() ?? config('rentaltech.empresa.razon_social') }}</title>
+    <link rel="icon" href="{{ $perfilNegocio->faviconUrl() ?? asset('img/Logo.png') }}" type="image/png">
     <script>
         (function () {
             var guardado = localStorage.getItem('tema');

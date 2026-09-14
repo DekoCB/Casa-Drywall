@@ -123,3 +123,28 @@
     .cfgp-paletas { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
     .cfgp-fuentes { grid-template-columns: 1fr; }
 }
+
+/* ═══════════════════════════════════════════════════════
+   Mi Empresa — logos con arrastrar y soltar
+   ═══════════════════════════════════════════════════════ */
+
+.cfgp-dropzones { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
+
+.cfgp-dropzone {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 150px; padding: 18px; margin-top: 8px;
+    border: 2px dashed var(--line-2); border-radius: 10px;
+    background: var(--surface); cursor: pointer; text-align: center;
+    transition: border-color .15s, background .15s;
+}
+.cfgp-dropzone:hover, .cfgp-dropzone.is-dragover { border-color: var(--brand); background: var(--surface-2); }
+.cfgp-dropzone img { max-width: 100%; max-height: 130px; object-fit: contain; border-radius: 6px; }
+.cfgp-dropzone-vacio { display: flex; flex-direction: column; align-items: center; }
+.cfgp-dropzone-vacio svg { color: var(--ink-4); }
+.cfgp-dropzone-vacio p { font-size: 12.5px; color: var(--ink-2); margin: 10px 0 4px; max-width: 220px; }
+.cfgp-dropzone-vacio span { font-size: 11px; color: var(--ink-3); }
+.cfgp-dropzone-btn {
+    display: inline-block; margin-top: 10px; padding: 6px 14px; border-radius: 8px;
+    background: var(--surface-2); border: 1px solid var(--line);
+    font-size: 12px; font-weight: 600; color: var(--ink-2);
+}

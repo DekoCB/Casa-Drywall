@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\CuentaBancaria;
 use App\Models\EstiloSistema;
+use App\Models\PerfilNegocio;
 use App\Services\ApiGoCompanies;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -195,12 +197,51 @@ class ConfiguracionController extends Controller
         return view('admin.configuracion.proximamente', self::PROXIMAMENTE[$clave] + ['clave' => $clave]);
     }
 
-    /** Solo lectura por ahora — los datos de la empresa viven en config/rentaltech.php (.env). */
+    /**
+     * RUC/dirección/teléfono/correo siguen viniendo de config/rentaltech.php
+     * (.env) — no se editan acá, igual que el RUC en la imagen de
+     * referencia. Razón social, nombre comercial, título web y logos sí
+     * son editables — ver App\Models\PerfilNegocio.
+     */
     public function empresa(): View
     {
         return view('admin.configuracion.empresa', [
+            'perfil' => PerfilNegocio::actual(),
             'empresa' => config('rentaltech.empresa'),
         ]);
+    }
+
+    public function storeEmpresa(Request $request): RedirectResponse
+    {
+        $datos = $request->validate([
+            'razon_social' => ['required', 'string', 'max:150'],
+            'nombre_comercial' => ['required', 'string', 'max:150'],
+            'titulo_web' => ['nullable', 'string', 'max:60'],
+            'logo_claro' => ['nullable', 'image', 'max:2048'],
+            'logo_oscuro' => ['nullable', 'image', 'max:2048'],
+            'favicon' => ['nullable', 'image', 'max:512'],
+            'logo_app' => ['nullable', 'image', 'max:2048'],
+        ]);
+
+        $perfil = PerfilNegocio::actual();
+
+        foreach (['logo_claro', 'logo_oscuro', 'favicon', 'logo_app'] as $campo) {
+            if (! $request->hasFile($campo)) {
+                unset($datos[$campo]);
+
+                continue;
+            }
+
+            if ($perfil->$campo) {
+                Storage::disk('public')->delete($perfil->$campo);
+            }
+
+            $datos[$campo] = $request->file($campo)->store('empresa', 'public');
+        }
+
+        PerfilNegocio::updateOrCreate(['id' => 1], $datos);
+
+        return back()->with('mensaje', 'Datos de la empresa actualizados correctamente');
     }
 
     public function pagos(): View

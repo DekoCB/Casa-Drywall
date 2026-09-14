@@ -1,3 +1,9 @@
+@php
+    // "Logo (modo claro)" de Mi Empresa, si se subió uno — dompdf necesita
+    // una ruta de archivo real, no la URL de /storage.
+    $perfilLogoClaro = \App\Models\PerfilNegocio::actual()->logo_claro;
+    $logoClaroPdf = $perfilLogoClaro ? \Illuminate\Support\Facades\Storage::disk('public')->path($perfilLogoClaro) : public_path('img/Logo-rec.png');
+@endphp
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -97,7 +103,7 @@
                     <table class="cab-marca">
                         <tr>
                             <td class="cab-logo-cel">
-                                <img src="{{ public_path('img/Logo-rec.png') }}" alt="{{ config('rentaltech.empresa.razon_social') }}">
+                                <img src="{{ $logoClaroPdf }}" alt="{{ config('rentaltech.empresa.razon_social') }}">
                             </td>
                             <td class="cab-emp-cel">
                                 <b>{{ config('rentaltech.empresa.razon_social') }}</b>
