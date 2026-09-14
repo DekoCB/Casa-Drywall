@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CuentaBancaria;
 use App\Models\EstiloSistema;
 use App\Models\PerfilNegocio;
+use App\Models\PlantillaImpresion;
 use App\Services\ApiGoCompanies;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -26,10 +27,7 @@ class ConfiguracionController extends Controller
      * una abre `proximamente()` con esta clave. El contenido real de cada
      * una se define más adelante, a pedido.
      */
-    private const PROXIMAMENTE = [
-        'plantillas-pdf' => ['seccion' => 'Plantillas de Impresión', 'titulo' => 'Plantillas PDF', 'desc' => 'Diseño de tus facturas y boletas en formato PDF.', 'icon' => 'documento'],
-        'tickets-venta' => ['seccion' => 'Plantillas de Impresión', 'titulo' => 'Tickets de venta', 'desc' => 'Diseño de tu ticket de venta en formato 80mm.', 'icon' => 'documento'],
-    ];
+    private const PROXIMAMENTE = [];
 
     /**
      * Accesos rápidos de "Configuración avanzada": solo las áreas que ya
@@ -46,7 +44,7 @@ class ConfiguracionController extends Controller
         ],
         'Documentos' => [
             ['route' => 'admin.historial-pagos.index', 'titulo' => 'Contable', 'desc' => 'Historial de pagos y cobranzas registradas.', 'icon' => 'documento'],
-            ['route' => 'admin.configuracion.proximamente', 'query' => ['clave' => 'plantillas-pdf'], 'titulo' => 'PDF y Tickets', 'desc' => 'Diseño de facturas, boletas y tickets de venta.', 'icon' => 'impresora'],
+            ['route' => 'admin.configuracion.plantillas', 'query' => ['tipo' => 'pdf'], 'titulo' => 'PDF y Tickets', 'desc' => 'Diseño de facturas, boletas y tickets de venta.', 'icon' => 'impresora'],
         ],
         'Ventas' => [
             ['route' => 'admin.pedidos.index', 'titulo' => 'Pedidos', 'desc' => 'Pedidos de clientes y su seguimiento.', 'icon' => 'carrito'],
@@ -84,7 +82,10 @@ class ConfiguracionController extends Controller
             'Plantillas de Impresión' => [
                 'icono' => 'impresora', 'color' => '#C2410C',
                 'sub' => 'Diseño de tus facturas, boletas y tickets de venta',
-                'items' => $this->itemsProximamente('Plantillas de Impresión'),
+                'items' => [
+                    ['route' => 'admin.configuracion.plantillas', 'query' => ['tipo' => 'pdf'], 'titulo' => 'Plantillas PDF', 'desc' => 'Diseño de tus facturas y boletas en formato PDF.', 'icon' => 'documento'],
+                    ['route' => 'admin.configuracion.plantillas', 'query' => ['tipo' => 'ticket'], 'titulo' => 'Tickets de venta', 'desc' => 'Diseño de tu ticket de venta en formato 80mm.', 'icon' => 'documento'],
+                ],
             ],
             'Finanzas y Pagos' => [
                 'icono' => 'banco', 'color' => '#0F766E',
@@ -163,6 +164,34 @@ class ConfiguracionController extends Controller
         EstiloSistema::updateOrCreate(['id' => 1], $datos);
 
         return back()->with('mensaje', 'Estilos actualizados correctamente');
+    }
+
+    /**
+     * Plantilla activa del comprobante impreso — $tipo es 'pdf' (A4) o
+     * 'ticket' (80mm). Ambos formatos salen del mismo archivo
+     * `admin/ventas/comprobante.blade.php`; ver App\Models\PlantillaImpresion.
+     */
+    public function plantillas(string $tipo): View
+    {
+        abort_unless(in_array($tipo, ['pdf', 'ticket'], true), 404);
+
+        return view('admin.configuracion.plantillas', [
+            'tipo' => $tipo,
+            'plantillas' => PlantillaImpresion::actual(),
+        ]);
+    }
+
+    public function activarPlantilla(Request $request, string $tipo): RedirectResponse
+    {
+        abort_unless(in_array($tipo, ['pdf', 'ticket'], true), 404);
+
+        $datos = $request->validate([
+            'clave' => ['required', Rule::in(array_keys(PlantillaImpresion::PLANTILLAS))],
+        ]);
+
+        PlantillaImpresion::query()->updateOrCreate(['id' => 1], [$tipo => $datos['clave']]);
+
+        return back()->with('mensaje', 'Plantilla activada correctamente');
     }
 
     /** Buscador de accesos rápidos a áreas del sistema que ya existen — ver self::AVANZADA. */

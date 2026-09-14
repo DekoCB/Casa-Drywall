@@ -13,6 +13,19 @@
         || ($venta->venta_origen_id !== null && in_array($venta->tipcomp, ['07', '08'], true));
     $saldo = $venta->monto_pendiente !== null ? (float) $venta->monto_pendiente : (float) $venta->total;
     $pagado = (float) ($venta->monto_pagado ?? 0);
+
+    // Plantilla "Personalizada" (Configuración > Plantillas de Impresión):
+    // PDF (A4) y Ticket (80mm) salen de este mismo archivo, así que cada
+    // formato consulta su propia elección — ver App\Models\PlantillaImpresion.
+    $plantillas = \App\Models\PlantillaImpresion::actual();
+    $personalizadaPdf = $plantillas->pdf === 'personalizada';
+    $personalizadaTicket = $plantillas->ticket === 'personalizada';
+    if ($personalizadaPdf || $personalizadaTicket) {
+        $perfilNegocio = \App\Models\PerfilNegocio::actual();
+        $colorAcento = \App\Models\EstiloSistema::actual()->paleta()['brand'];
+        $logoPersonalizado = $perfilNegocio->logoClaroUrl() ?? asset('img/Logo-docs.png');
+        $nombrePersonalizado = $perfilNegocio->nombre_comercial ?: ($perfilNegocio->razon_social ?: config('rentaltech.empresa.razon_social'));
+    }
 @endphp
 <!DOCTYPE html>
 <html lang="es">
@@ -137,6 +150,25 @@
         body.formato-80mm .items th:nth-child(3), body.formato-80mm .items td:nth-child(3) { display:none; } /* UND: se omite, no cabe */
         body.formato-80mm .cb-grid { display:block; }
         body.formato-80mm .cb-caja { display:block; width:auto; margin-bottom:8px; }
+
+        /* ── Plantilla "Personalizada": por defecto se ve -pro y se oculta
+           -personalizada en los dos formatos; cada bloque condicional de
+           abajo invierte eso solo para el formato con esa plantilla activa. ── */
+        body:not(.formato-80mm) .cab-marca-personalizada,
+        body.formato-80mm .cab-marca-personalizada { display:none; }
+
+        @if ($personalizadaPdf)
+        body:not(.formato-80mm) .cab-marca-pro { display:none; }
+        body:not(.formato-80mm) .cab-marca-personalizada { display:table; }
+        body:not(.formato-80mm) .marca-acento { color: {{ $colorAcento }}; }
+        body:not(.formato-80mm) .marca-acento-borde { border-color: {{ $colorAcento }}; }
+        @endif
+        @if ($personalizadaTicket)
+        body.formato-80mm .cab-marca-pro { display:none; }
+        body.formato-80mm .cab-marca-personalizada { display:block; }
+        body.formato-80mm .marca-acento { color: {{ $colorAcento }}; }
+        body.formato-80mm .marca-acento-borde { border-color: {{ $colorAcento }}; }
+        @endif
     </style>
 </head>
 <body>
@@ -196,7 +228,7 @@
     {{-- ══ Cabecera ══ --}}
     <div class="cab">
         <div class="cab-izq">
-            <div class="cab-marca">
+            <div class="cab-marca cab-marca-pro">
                 <div class="cab-logo-cel">
                     <img src="{{ asset('img/Logo-docs.png') }}" alt="{{ config('rentaltech.empresa.razon_social') }}">
                 </div>
@@ -217,9 +249,32 @@
                     @endif
                 </div>
             </div>
+            @if ($personalizadaPdf || $personalizadaTicket)
+                <div class="cab-marca cab-marca-personalizada">
+                    <div class="cab-logo-cel">
+                        <img src="{{ $logoPersonalizado }}" alt="{{ $nombrePersonalizado }}">
+                    </div>
+                    <div class="cab-emp-cel cab-emp">
+                        <b>{{ $nombrePersonalizado }}</b>
+                        @if (config('rentaltech.empresa.ruc'))
+                            <p>RUC {{ config('rentaltech.empresa.ruc') }}</p>
+                        @endif
+                        @if (config('rentaltech.empresa.direccion'))
+                            <p>{{ config('rentaltech.empresa.direccion') }}</p>
+                            <p>D. Comercial: {{ config('rentaltech.empresa.direccion') }}</p>
+                        @endif
+                        @if (config('rentaltech.empresa.telefono'))
+                            <p>Central telefónica: {{ config('rentaltech.empresa.telefono') }}</p>
+                        @endif
+                        @if (config('rentaltech.empresa.email'))
+                            <p>Email: {{ config('rentaltech.empresa.email') }}</p>
+                        @endif
+                    </div>
+                </div>
+            @endif
         </div>
         <div class="cab-der">
-            <div class="caja-doc">
+            <div class="caja-doc marca-acento-borde">
                 <div class="tipo">{{ $etiqueta }}</div>
                 <div class="num">{{ $numero }}</div>
             </div>
@@ -305,7 +360,7 @@
         </tbody>
     </table>
 
-    <div class="total-pagar">TOTAL A PAGAR: {{ $simbolo }} {{ number_format($venta->total, 2) }}</div>
+    <div class="total-pagar marca-acento">TOTAL A PAGAR: {{ $simbolo }} {{ number_format($venta->total, 2) }}</div>
 
     {{-- ══ Información adicional y saldo ══ --}}
     <div class="adicional">
