@@ -16,15 +16,36 @@ use Illuminate\View\View;
  */
 class ConfiguracionController extends Controller
 {
+    /**
+     * Tarjetas de "Mi Negocio" que todavía no tienen página propia — cada
+     * una abre `proximamente()` con esta clave. El contenido real de cada
+     * una se define más adelante, a pedido.
+     */
+    private const PROXIMAMENTE = [
+        'credenciales' => ['titulo' => 'Credenciales y certificados', 'desc' => 'SOAP SUNAT, certificado digital, PSE y régimen tributario.', 'icon' => 'llave'],
+        'tipo-negocio' => ['titulo' => 'Tipo de Negocio', 'desc' => 'Activa funciones por rubro: hoteles, restaurantes, grifo, farmacia, venta de ropa y calzado.', 'icon' => 'maletin'],
+        'estilos' => ['titulo' => 'Estilos y temas', 'desc' => 'Personaliza colores y apariencia del sistema.', 'icon' => 'paleta'],
+        'avanzada' => ['titulo' => 'Configuración avanzada', 'desc' => 'Opciones generales del sistema.', 'icon' => 'controles'],
+        'link-pago' => ['titulo' => 'Link de pago', 'desc' => 'Genera enlaces de cobro para tus clientes.', 'icon' => 'enlace'],
+        'tienda-virtual' => ['titulo' => 'Tienda Virtual / Restaurante', 'desc' => 'Configura tu catálogo y canal de ventas online.', 'icon' => 'tienda'],
+    ];
+
     public function index(): View
     {
         $secciones = [
             'Mi Negocio' => [
                 'icono' => 'empresa', 'color' => '#7c3aed',
-                'sub' => 'Información de tu empresa y canales de cobro',
-                'items' => [
-                    ['route' => 'admin.configuracion.datos-empresa', 'titulo' => 'Datos de la Empresa', 'desc' => 'Mi Empresa, Mi Local y Pagos y Bancos.', 'icon' => 'empresa'],
-                ],
+                'sub' => 'Información de tu empresa, apariencia y canales de venta',
+                'items' => array_merge(
+                    [['route' => 'admin.configuracion.datos-empresa', 'titulo' => 'Datos de la Empresa', 'desc' => 'Mi Empresa, Mi Local y Pagos y Bancos.', 'icon' => 'empresa']],
+                    collect(self::PROXIMAMENTE)->map(fn ($item, $clave) => [
+                        'route' => 'admin.configuracion.proximamente',
+                        'query' => ['clave' => $clave],
+                        'titulo' => $item['titulo'],
+                        'desc' => $item['desc'],
+                        'icon' => $item['icon'],
+                    ])->values()->all(),
+                ),
             ],
             'Catálogo' => [
                 'icono' => 'almacen', 'color' => '#1F4A86',
@@ -59,6 +80,16 @@ class ConfiguracionController extends Controller
         ];
 
         return view('admin.configuracion.datos-empresa', ['items' => $items]);
+    }
+
+    /** Tarjetas de "Mi Negocio" sin contenido todavía — ver self::PROXIMAMENTE. */
+    public function proximamente(Request $request): View
+    {
+        $clave = $request->query('clave');
+
+        abort_unless(isset(self::PROXIMAMENTE[$clave]), 404);
+
+        return view('admin.configuracion.proximamente', self::PROXIMAMENTE[$clave] + ['clave' => $clave]);
     }
 
     /** Solo lectura por ahora — los datos de la empresa viven en config/rentaltech.php (.env). */
