@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\ActivoFijoController;
 use App\Http\Controllers\Admin\AlmacenController;
+use App\Http\Controllers\Admin\BancoController;
 use App\Http\Controllers\Admin\CajaController;
 use App\Http\Controllers\Admin\CargoController;
 use App\Http\Controllers\Admin\CategoriaController;
@@ -20,14 +21,18 @@ use App\Http\Controllers\Admin\LiquidacionCompraController;
 use App\Http\Controllers\Admin\LocalController;
 use App\Http\Controllers\Admin\MarcaController;
 use App\Http\Controllers\Admin\MerchController;
+use App\Http\Controllers\Admin\MetodoPagoController;
+use App\Http\Controllers\Admin\MonedaController;
 use App\Http\Controllers\Admin\NotificacionController;
 use App\Http\Controllers\Admin\OrdenCompraController;
 use App\Http\Controllers\Admin\PedidoController;
 use App\Http\Controllers\Admin\PersonalController;
+use App\Http\Controllers\Admin\PlataformaController;
 use App\Http\Controllers\Admin\PosController;
 use App\Http\Controllers\Admin\ProductoController;
 use App\Http\Controllers\Admin\ProveedorController;
 use App\Http\Controllers\Admin\ReporteController;
+use App\Http\Controllers\Admin\TarjetaController;
 use App\Http\Controllers\Admin\TransporteController;
 use App\Http\Controllers\Admin\VentaController;
 use App\Http\Controllers\Auth\LoginController;
@@ -282,6 +287,28 @@ Route::middleware(['auth', 'rol:admin,ventas'])
         Route::get('configuracion/pagos', [ConfiguracionController::class, 'pagos'])->name('configuracion.pagos');
         Route::post('configuracion/pagos', [ConfiguracionController::class, 'storeCuenta'])->name('configuracion.pagos.store');
         Route::delete('configuracion/pagos/{cuenta}', [ConfiguracionController::class, 'destroyCuenta'])->name('configuracion.pagos.destroy');
+
+        // ── Finanzas y Pagos: catálogos de bancos, monedas, tarjetas, ────────
+        // plataformas de venta/cobro y métodos de pago.
+        Route::post('finanzas/bancos/{banco}/estado', [BancoController::class, 'alternarEstado'])->name('finanzas.bancos.estado');
+        Route::resource('finanzas/bancos', BancoController::class)
+            ->except(['show', 'create', 'edit'])->parameters(['finanzas/bancos' => 'banco'])->names('finanzas.bancos');
+
+        Route::post('finanzas/monedas/{moneda}/estado', [MonedaController::class, 'alternarEstado'])->name('finanzas.monedas.estado');
+        Route::resource('finanzas/monedas', MonedaController::class)
+            ->except(['show', 'create', 'edit'])->parameters(['finanzas/monedas' => 'moneda'])->names('finanzas.monedas');
+
+        Route::post('finanzas/tarjetas/{tarjeta}/estado', [TarjetaController::class, 'alternarEstado'])->name('finanzas.tarjetas.estado');
+        Route::resource('finanzas/tarjetas', TarjetaController::class)
+            ->except(['show', 'create', 'edit'])->parameters(['finanzas/tarjetas' => 'tarjeta'])->names('finanzas.tarjetas');
+
+        Route::post('finanzas/plataformas/{plataforma}/estado', [PlataformaController::class, 'alternarEstado'])->name('finanzas.plataformas.estado');
+        Route::resource('finanzas/plataformas', PlataformaController::class)
+            ->except(['show', 'create', 'edit'])->parameters(['finanzas/plataformas' => 'plataforma'])->names('finanzas.plataformas');
+
+        Route::post('finanzas/metodos-pago/{metodos_pago}/estado', [MetodoPagoController::class, 'alternarEstado'])->name('finanzas.metodos-pago.estado');
+        Route::resource('finanzas/metodos-pago', MetodoPagoController::class)
+            ->except(['show', 'create', 'edit'])->names('finanzas.metodos-pago');
     });
 
 /*

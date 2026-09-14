@@ -48,6 +48,18 @@ class ConfiguracionController extends Controller
                 'sub' => 'Diseño de tus facturas, boletas y tickets de venta',
                 'items' => $this->itemsProximamente('Plantillas de Impresión'),
             ],
+            'Finanzas y Pagos' => [
+                'icono' => 'banco', 'color' => '#0F766E',
+                'sub' => 'Bancos, monedas, métodos de pago e ingresos y egresos',
+                'items' => [
+                    ['route' => 'admin.finanzas.bancos.index', 'titulo' => 'Bancos', 'desc' => 'Entidades bancarias disponibles.', 'icon' => 'banco'],
+                    ['route' => 'admin.configuracion.pagos', 'titulo' => 'Cuentas bancarias', 'desc' => 'Cuentas donde recibes pagos de clientes.', 'icon' => 'pagos'],
+                    ['route' => 'admin.finanzas.monedas.index', 'titulo' => 'Monedas', 'desc' => 'Soles, dólares y otras divisas habilitadas.', 'icon' => 'moneda'],
+                    ['route' => 'admin.finanzas.tarjetas.index', 'titulo' => 'Tarjetas', 'desc' => 'Tipos de tarjeta aceptadas como medio de pago.', 'icon' => 'tarjeta'],
+                    ['route' => 'admin.finanzas.plataformas.index', 'titulo' => 'Plataformas', 'desc' => 'Canales de venta y plataformas de cobro.', 'icon' => 'globo'],
+                    ['route' => 'admin.finanzas.metodos-pago.index', 'titulo' => 'Métodos de pago', 'desc' => 'Formas de pago para ingresos y gastos.', 'icon' => 'billete'],
+                ],
+            ],
             'Catálogo' => [
                 'icono' => 'almacen', 'color' => '#1F4A86',
                 'sub' => 'Categorías, marcas y almacenes del catálogo general',
