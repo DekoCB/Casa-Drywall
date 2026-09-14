@@ -11,7 +11,7 @@
 
 <x-page-header titulo="Pagos y Bancos" subtitulo="Cuentas bancarias para que te paguen tus clientes">
     <x-slot:acciones>
-        <a href="{{ route('admin.configuracion.index') }}" class="btn btn-secondary btn-sm"><span class="btn-text">← Configuración</span></a>
+        <a href="{{ route('admin.configuracion.datos-empresa') }}" class="btn btn-secondary btn-sm"><span class="btn-text">← Datos de la Empresa</span></a>
         <button type="button" class="btn btn-primary btn-sm" data-modal="modalCuenta"><span class="btn-text">＋ Agregar cuenta</span></button>
     </x-slot:acciones>
 </x-page-header>

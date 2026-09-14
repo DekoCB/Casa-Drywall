@@ -23,9 +23,7 @@ class ConfiguracionController extends Controller
                 'icono' => 'empresa', 'color' => '#7c3aed',
                 'sub' => 'Información de tu empresa y canales de cobro',
                 'items' => [
-                    ['route' => 'admin.configuracion.empresa', 'titulo' => 'Mi Empresa', 'desc' => 'RUC, razón social, dirección y datos de contacto.', 'icon' => 'empresa'],
-                    ['route' => 'admin.locales.index', 'titulo' => 'Mi Local', 'desc' => 'Locales y establecimientos registrados ante SUNAT.', 'icon' => 'local'],
-                    ['route' => 'admin.configuracion.pagos', 'titulo' => 'Pagos y Bancos', 'desc' => 'Cuentas bancarias para que te paguen tus clientes.', 'icon' => 'pagos'],
+                    ['route' => 'admin.configuracion.datos-empresa', 'titulo' => 'Datos de la Empresa', 'desc' => 'Mi Empresa, Mi Local y Pagos y Bancos.', 'icon' => 'empresa'],
                 ],
             ],
             'Catálogo' => [
@@ -49,6 +47,18 @@ class ConfiguracionController extends Controller
         ];
 
         return view('admin.configuracion.index', ['secciones' => $secciones]);
+    }
+
+    /** Sub-hub dentro de "Mi Negocio": agrupa Mi Empresa, Mi Local y Pagos y Bancos. */
+    public function datosEmpresa(): View
+    {
+        $items = [
+            ['route' => 'admin.configuracion.empresa', 'titulo' => 'Mi Empresa', 'desc' => 'RUC, razón social, dirección y datos de contacto.', 'icon' => 'empresa'],
+            ['route' => 'admin.locales.index', 'titulo' => 'Mi Local', 'desc' => 'Locales y establecimientos registrados ante SUNAT.', 'icon' => 'local'],
+            ['route' => 'admin.configuracion.pagos', 'titulo' => 'Pagos y Bancos', 'desc' => 'Cuentas bancarias para que te paguen tus clientes.', 'icon' => 'pagos'],
+        ];
+
+        return view('admin.configuracion.datos-empresa', ['items' => $items]);
     }
 
     /** Solo lectura por ahora — los datos de la empresa viven en config/rentaltech.php (.env). */
