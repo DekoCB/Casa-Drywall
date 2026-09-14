@@ -23,10 +23,8 @@ class ConfiguracionController extends Controller
      * una se define más adelante, a pedido.
      */
     private const PROXIMAMENTE = [
-        'tipo-negocio' => ['titulo' => 'Tipo de Negocio', 'desc' => 'Activa funciones por rubro: hoteles, restaurantes, grifo, farmacia, venta de ropa y calzado.', 'icon' => 'maletin'],
         'estilos' => ['titulo' => 'Estilos y temas', 'desc' => 'Personaliza colores y apariencia del sistema.', 'icon' => 'paleta'],
         'avanzada' => ['titulo' => 'Configuración avanzada', 'desc' => 'Opciones generales del sistema.', 'icon' => 'controles'],
-        'link-pago' => ['titulo' => 'Link de pago', 'desc' => 'Genera enlaces de cobro para tus clientes.', 'icon' => 'enlace'],
     ];
 
     public function index(): View
