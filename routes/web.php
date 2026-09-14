@@ -277,6 +277,7 @@ Route::middleware(['auth', 'rol:admin,ventas'])
         Route::get('configuracion', [ConfiguracionController::class, 'index'])->name('configuracion.index');
         Route::get('configuracion/datos-empresa', [ConfiguracionController::class, 'datosEmpresa'])->name('configuracion.datos-empresa');
         Route::get('configuracion/proximamente', [ConfiguracionController::class, 'proximamente'])->name('configuracion.proximamente');
+        Route::get('configuracion/credenciales', [ConfiguracionController::class, 'credenciales'])->name('configuracion.credenciales');
         Route::get('configuracion/empresa', [ConfiguracionController::class, 'empresa'])->name('configuracion.empresa');
         Route::get('configuracion/pagos', [ConfiguracionController::class, 'pagos'])->name('configuracion.pagos');
         Route::post('configuracion/pagos', [ConfiguracionController::class, 'storeCuenta'])->name('configuracion.pagos.store');

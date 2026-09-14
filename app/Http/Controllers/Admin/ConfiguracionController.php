@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\CuentaBancaria;
+use App\Services\ApiGoCompanies;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -22,7 +23,6 @@ class ConfiguracionController extends Controller
      * una se define más adelante, a pedido.
      */
     private const PROXIMAMENTE = [
-        'credenciales' => ['titulo' => 'Credenciales y certificados', 'desc' => 'SOAP SUNAT, certificado digital, PSE y régimen tributario.', 'icon' => 'llave'],
         'tipo-negocio' => ['titulo' => 'Tipo de Negocio', 'desc' => 'Activa funciones por rubro: hoteles, restaurantes, grifo, farmacia, venta de ropa y calzado.', 'icon' => 'maletin'],
         'estilos' => ['titulo' => 'Estilos y temas', 'desc' => 'Personaliza colores y apariencia del sistema.', 'icon' => 'paleta'],
         'avanzada' => ['titulo' => 'Configuración avanzada', 'desc' => 'Opciones generales del sistema.', 'icon' => 'controles'],
@@ -36,7 +36,10 @@ class ConfiguracionController extends Controller
                 'icono' => 'empresa', 'color' => '#7c3aed',
                 'sub' => 'Información de tu empresa, apariencia y canales de venta',
                 'items' => array_merge(
-                    [['route' => 'admin.configuracion.datos-empresa', 'titulo' => 'Datos de la Empresa', 'desc' => 'Mi Empresa, Mi Local y Pagos y Bancos.', 'icon' => 'empresa']],
+                    [
+                        ['route' => 'admin.configuracion.datos-empresa', 'titulo' => 'Datos de la Empresa', 'desc' => 'Mi Empresa, Mi Local y Pagos y Bancos.', 'icon' => 'empresa'],
+                        ['route' => 'admin.configuracion.credenciales', 'titulo' => 'Credenciales y certificados', 'desc' => 'Usuario y certificado SOL, credenciales de Guías Electrónicas.', 'icon' => 'llave'],
+                    ],
                     collect(self::PROXIMAMENTE)->map(fn ($item, $clave) => [
                         'route' => 'admin.configuracion.proximamente',
                         'query' => ['clave' => $clave],
@@ -79,6 +82,18 @@ class ConfiguracionController extends Controller
         ];
 
         return view('admin.configuracion.datos-empresa', ['items' => $items]);
+    }
+
+    /**
+     * Solo lectura — trae la empresa real desde API-GO (el servicio que
+     * factura ante SUNAT de verdad). Ningún valor sensible sale de
+     * ApiGoCompanies::obtener() en texto plano, solo si está configurado.
+     */
+    public function credenciales(ApiGoCompanies $apiGo): View
+    {
+        return view('admin.configuracion.credenciales', [
+            'empresa' => $apiGo->obtener((int) config('services.api_go.company_id')),
+        ]);
     }
 
     /** Tarjetas de "Mi Negocio" sin contenido todavía — ver self::PROXIMAMENTE. */
