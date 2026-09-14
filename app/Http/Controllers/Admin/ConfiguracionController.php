@@ -27,7 +27,6 @@ class ConfiguracionController extends Controller
         'estilos' => ['titulo' => 'Estilos y temas', 'desc' => 'Personaliza colores y apariencia del sistema.', 'icon' => 'paleta'],
         'avanzada' => ['titulo' => 'Configuración avanzada', 'desc' => 'Opciones generales del sistema.', 'icon' => 'controles'],
         'link-pago' => ['titulo' => 'Link de pago', 'desc' => 'Genera enlaces de cobro para tus clientes.', 'icon' => 'enlace'],
-        'tienda-virtual' => ['titulo' => 'Tienda Virtual / Restaurante', 'desc' => 'Configura tu catálogo y canal de ventas online.', 'icon' => 'tienda'],
     ];
 
     public function index(): View
