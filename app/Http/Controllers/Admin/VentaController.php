@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Almacen;
 use App\Models\Cliente;
 use App\Models\Cobranza;
 use App\Models\CuentaBancaria;
+use App\Models\MovimientoAlmacen;
 use App\Models\Producto;
+use App\Models\StockAlmacen;
 use App\Models\Venta;
 use App\Models\VentaDetalle;
 use App\Services\GeneradorCorrelativo;
@@ -66,6 +69,7 @@ class VentaController extends Controller
         return view('admin.ventas.factura', [
             'tipos' => self::TIPOS,
             'clientes' => Cliente::orderBy('nombres')->get(['id', 'nombres', 'numero_documento']),
+            'almacenes' => Almacen::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
             'productos' => Producto::activos()->with(['categoria:id,nombre', 'marca:id,nombre'])->orderBy('nombre')
                 ->get(['id', 'codigo', 'nombre', 'presentacion', 'categoria_id', 'marca_id', 'precio_venta', 'stock']),
             // Cotización y Nota de Venta no admiten número libre: se muestra
@@ -248,6 +252,7 @@ class VentaController extends Controller
     {
         $datos = $this->conNumeroInterno($this->validarFactura($request));
         $items = $this->itemsValidos($datos['items'] ?? []);
+        $items = $this->resolverProductoIds($items);
 
         $duplicado = Venta::where('tipcomp', $datos['tipcomp'])
             ->where('n_seri', $datos['n_seri'])
@@ -284,7 +289,35 @@ class VentaController extends Controller
             ? Venta::where('tipcomp', 'COT')->find($datos['origen_id'])
             : null;
 
-        $venta = DB::transaction(function () use ($request, $datos, $items, $importes, $origenCotizacion) {
+        $almacenId = ! empty($datos['almacen_id']) ? (int) $datos['almacen_id'] : null;
+
+        // Una Cotización es un presupuesto: nunca mueve stock, sin importar
+        // si el usuario igual eligió un almacén. Para el resto, si al menos
+        // una línea sí enlazó un producto real del catálogo, hace falta
+        // saber de qué almacén sale para poder descontarlo.
+        $aplicaStock = $datos['tipcomp'] !== 'COT'
+            && collect($items)->contains(fn (array $item) => $item['producto_id'] !== null);
+
+        if ($aplicaStock && ! $almacenId) {
+            throw ValidationException::withMessages([
+                'almacen_id' => 'Selecciona un almacén: hay productos del catálogo en el detalle y su stock debe descontarse.',
+            ]);
+        }
+
+        $venta = DB::transaction(function () use ($request, $datos, $items, $importes, $origenCotizacion, $almacenId, $aplicaStock) {
+            $stockFilas = collect();
+
+            if ($aplicaStock) {
+                $productoIds = collect($items)->pluck('producto_id')->filter()->unique()->values()->all();
+
+                $stockFilas = StockAlmacen::where('almacen_id', $almacenId)
+                    ->whereIn('producto_id', $productoIds)
+                    ->orderBy('producto_id')
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('producto_id');
+            }
+
             $cliente = $this->fichaDelCliente($datos);
 
             // La cobranza dispara `Cobranza::reflejarEnVentas()`, que crea la
@@ -319,6 +352,7 @@ class VentaController extends Controller
                 'cliente_correo' => $cliente?->email,
                 'cliente_distrito' => $cliente?->distrito,
                 'condicion_pago' => $datos['condicion_pago'] ?? null,
+                'almacen_id' => $almacenId,
                 'baseimp' => $importes['baseimp'],
                 'subtotal' => round($importes['baseimp'] + $importes['exonerado'] + $importes['inafecto'], 2),
                 'igv' => $importes['igv'],
@@ -336,17 +370,58 @@ class VentaController extends Controller
             foreach ($items as $item) {
                 VentaDetalle::create([
                     'venta_id' => $venta->id,
-                    // Se enlaza la ficha cuando el código existe, para que el
-                    // comprobante pueda mostrar la unidad del producto.
-                    'producto_id' => $item['producto_codigo']
-                        ? Producto::where('codigo', $item['producto_codigo'])->value('id')
-                        : null,
+                    // Ya viene resuelto por resolverProductoIds(), antes de
+                    // abrir esta transacción — se enlaza cuando el código
+                    // existe, para que el comprobante pueda mostrar la
+                    // unidad del producto.
+                    'producto_id' => $item['producto_id'],
                     'prod_codigo' => $item['producto_codigo'] ?: null,
                     'prod_nombre' => $item['producto_nombre'],
                     'cantidad' => $item['cantidad'],
                     'precio_unitario' => $item['precio_unitario'],
                     'subtotal' => round((float) $item['cantidad'] * (float) $item['precio_unitario'], 2),
                 ]);
+            }
+
+            // Stock: se descuenta recién acá (después de crear el detalle)
+            // para que el mensaje de error, si falta stock, incluya el
+            // nombre real de la línea. Como itemsValidos() no fusiona
+            // líneas repetidas del mismo producto, el chequeo y el
+            // descuento van en el mismo paso por línea — así la segunda
+            // línea de un mismo producto ya ve el descuento de la primera
+            // y no deja pasar una demanda combinada que excede el stock.
+            if ($aplicaStock) {
+                foreach ($items as $item) {
+                    if ($item['producto_id'] === null) {
+                        continue;
+                    }
+
+                    $fila = $stockFilas->get($item['producto_id']);
+                    $disponible = (int) ($fila?->stock ?? 0);
+
+                    if ($disponible < $item['cantidad']) {
+                        throw ValidationException::withMessages([
+                            'items' => "Stock insuficiente para {$item['producto_nombre']}: quedan {$disponible}.",
+                        ]);
+                    }
+
+                    $nuevo = $disponible - $item['cantidad'];
+                    $fila->update(['stock' => $nuevo]);
+
+                    MovimientoAlmacen::create([
+                        'producto_id' => $item['producto_id'],
+                        'almacen_id' => $almacenId,
+                        'tipo' => 'salida',
+                        'cantidad' => $item['cantidad'],
+                        'stock_anterior' => $disponible,
+                        'stock_nuevo' => $nuevo,
+                        'motivo' => "Venta {$venta->numero_venta}",
+                        'referencia' => $venta->numero_venta,
+                        'usuario_id' => $request->user()->id,
+                    ]);
+
+                    Producto::find($item['producto_id'])?->recalcularStock();
+                }
             }
 
             // Una Cotización es un presupuesto, no una deuda real: no debe
@@ -550,8 +625,12 @@ class VentaController extends Controller
      * con una Nota de Crédito (motivo "01 — Anulación de la operación"), el
      * único mecanismo válido ante SUNAT.
      */
-    public function anular(Venta $venta): RedirectResponse
+    public function anular(Request $request, Venta $venta): RedirectResponse
     {
+        if ($venta->estado === 'cancelada') {
+            return back()->with('error', 'Este comprobante ya fue anulado.');
+        }
+
         $esDocumentoInterno = $venta->tipcomp === 'NV';
         // 'pendiente' es el valor por defecto: nunca se intentó registrar en
         // API-GO. Cualquier otro valor ('registrado', 'aceptado', 'rechazado')
@@ -565,7 +644,44 @@ class VentaController extends Controller
             );
         }
 
-        $venta->update(['estado' => 'cancelada']);
+        DB::transaction(function () use ($request, $venta) {
+            // Las ventas viejas tienen almacen_id=null (nunca descontaron
+            // stock, no hay nada que devolver acá) — se saltan limpio.
+            if ($venta->almacen_id) {
+                $venta->loadMissing('detalles');
+
+                foreach ($venta->detalles as $detalle) {
+                    if ($detalle->producto_id === null) {
+                        continue;
+                    }
+
+                    $fila = StockAlmacen::lockForUpdate()->firstOrCreate(
+                        ['producto_id' => $detalle->producto_id, 'almacen_id' => $venta->almacen_id],
+                        ['stock' => 0]
+                    );
+
+                    $anterior = (int) $fila->stock;
+                    $nuevo = $anterior + (int) $detalle->cantidad;
+                    $fila->update(['stock' => $nuevo]);
+
+                    MovimientoAlmacen::create([
+                        'producto_id' => $detalle->producto_id,
+                        'almacen_id' => $venta->almacen_id,
+                        'tipo' => 'entrada',
+                        'cantidad' => (int) $detalle->cantidad,
+                        'stock_anterior' => $anterior,
+                        'stock_nuevo' => $nuevo,
+                        'motivo' => "Anulación de venta {$venta->n_seri}-{$venta->n_comp}",
+                        'referencia' => $venta->numero_venta,
+                        'usuario_id' => $request->user()->id,
+                    ]);
+
+                    Producto::find($detalle->producto_id)?->recalcularStock();
+                }
+            }
+
+            $venta->update(['estado' => 'cancelada']);
+        });
 
         return back()->with('mensaje', "Comprobante {$venta->n_seri}-{$venta->n_comp} anulado.");
     }
@@ -769,6 +885,7 @@ class VentaController extends Controller
             'razonsocial'                  => ['required', 'string', 'max:300'],
             'cliente_id'                   => ['nullable', 'integer', 'exists:clientes,id'],
             'condicion_pago'               => ['nullable', 'string', 'max:100'],
+            'almacen_id'                   => ['nullable', 'integer', 'exists:almacenes,id'],
             'monto'                        => ['nullable', 'numeric', 'min:0'],
             'tipo_operacion'               => ['nullable', Rule::in(['gravada', 'exonerada', 'inafecta'])],
             'items'                        => ['nullable', 'array'],
@@ -825,6 +942,23 @@ class VentaController extends Controller
         $datos['venta_origen'] = $origen;
 
         return $datos;
+    }
+
+    /**
+     * Le pega a cada línea su `producto_id` resuelto por código — una sola
+     * vez, antes de abrir la transacción de `storeFactura()`, porque el
+     * chequeo de stock también lo necesita (además del `VentaDetalle`).
+     * `storeNota()` no usa esto: sigue resolviendo inline como siempre.
+     */
+    private function resolverProductoIds(array $items): array
+    {
+        return array_map(function (array $item) {
+            $item['producto_id'] = $item['producto_codigo']
+                ? Producto::where('codigo', $item['producto_codigo'])->value('id')
+                : null;
+
+            return $item;
+        }, $items);
     }
 
     /** Descarta filas vacías o sin cantidad, y normaliza tipos. */

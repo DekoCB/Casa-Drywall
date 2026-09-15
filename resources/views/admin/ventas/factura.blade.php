@@ -211,6 +211,17 @@
             Los precios ya incluyen IGV (no volver a sumarlo)
         </label>
 
+        <div class="form-group" style="max-width:280px;margin-bottom:14px;">
+            <label for="f-almacen">Almacén de despacho</label>
+            <select id="f-almacen" name="almacen_id">
+                <option value="">— Selecciona si vas a descontar stock —</option>
+                @foreach ($almacenes as $almacen)
+                    <option value="{{ $almacen->id }}" @selected((string) old('almacen_id') === (string) $almacen->id)>{{ $almacen->nombre }}</option>
+                @endforeach
+            </select>
+            <p class="nv-hint" style="margin-top:4px;">Solo hace falta si alguno de los productos que agregues abajo es del catálogo — descuenta su stock.</p>
+        </div>
+
         <div class="nv-buscador" id="nv-buscador-producto">
             <span class="nv-lupa">🔍</span>
             <input type="text" class="nv-buscar-input" id="nv-buscar" autocomplete="off"
