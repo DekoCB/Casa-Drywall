@@ -1,8 +1,8 @@
 @php
     // "Logo (modo claro)" de Mi Empresa, si se subió uno — dompdf necesita
     // una ruta de archivo real, no la URL de /storage.
-    $perfilLogoClaro = \App\Models\PerfilNegocio::actual()->logo_claro;
-    $logoClaroPdf = $perfilLogoClaro ? \Illuminate\Support\Facades\Storage::disk('public')->path($perfilLogoClaro) : public_path('img/Logo-rec.png');
+    $perfil = \App\Models\PerfilNegocio::actual();
+    $logoClaroPdf = $perfil->logo_claro ? \Illuminate\Support\Facades\Storage::disk('public')->path($perfil->logo_claro) : public_path('img/Logo-rec.png');
 @endphp
 <!DOCTYPE html>
 <html lang="es">
@@ -23,9 +23,13 @@
         .cab-izq { width:62%; }
         .cab-marca { width:100%; }
         .cab-marca td { vertical-align:middle; }
-        .cab-logo-cel { width:100px; }
-        .cab-logo-cel img { width:84px; height:84px; }
-        .cab-emp-cel { padding-left:12px; }
+        /* Logo ancho (1020x420): solo se fija el ancho para no deformarlo ni
+           achicarlo en un cuadrado; el bloque de la empresa va centrado, como
+           en el comprobante de Boleta/Nota de Venta. */
+        .cab-logo-cel { width:165px; }
+        .cab-logo-cel img { width:150px; }
+        .cab-emp-cel { padding-left:12px; text-align:center; }
+        .cab-emp-cel .comercial { font-size:13px; color:#000; margin-bottom:2px; }
         .cab-emp-cel b { font-size:12px; }
         .cab-emp-cel p { font-size:8.7px; color:#333; line-height:1.55; margin-top:1px; }
         .cab-der { width:38%; padding-left:16px; text-align:right; }
@@ -106,6 +110,9 @@
                                 <img src="{{ $logoClaroPdf }}" alt="{{ config('rentaltech.empresa.razon_social') }}">
                             </td>
                             <td class="cab-emp-cel">
+                                @if ($perfil->nombre_comercial)
+                                    <p class="comercial">{{ $perfil->nombre_comercial }}</p>
+                                @endif
                                 <b>{{ config('rentaltech.empresa.razon_social') }}</b>
                                 @if (config('rentaltech.empresa.ruc'))
                                     <p>RUC {{ config('rentaltech.empresa.ruc') }}</p>
