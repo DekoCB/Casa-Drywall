@@ -39,6 +39,7 @@ class DocumentRejectedBySunat extends Notification implements ShouldQueue
     {
         $documentTypeName = $this->getDocumentTypeName();
         $simboloMoneda = $this->document->moneda === 'PEN' ? 'S/' : '$';
+        $clienteNombre = $this->document->client?->razon_social ?? 'N/A';
 
         $mail = (new MailMessage)
             ->subject("✗ {$documentTypeName} {$this->document->numero_completo} rechazado por SUNAT")
@@ -48,7 +49,7 @@ class DocumentRejectedBySunat extends Notification implements ShouldQueue
             ->line("**Detalles del documento:**")
             ->line("• Número: {$this->document->numero_completo}")
             ->line("• Fecha de emisión: {$this->document->fecha_emision->format('d/m/Y')}")
-            ->line("• Cliente: {$this->document->client?->razon_social ?? 'N/A'}")
+            ->line("• Cliente: {$clienteNombre}")
             ->line("• Total: {$simboloMoneda} " . number_format($this->document->mto_imp_venta, 2));
 
         if ($this->errorMessage) {
