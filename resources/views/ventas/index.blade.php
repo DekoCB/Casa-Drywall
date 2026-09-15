@@ -34,6 +34,28 @@
 </div>
 
 <div class="content-card">
+    <h3 style="font-size:18px;margin-bottom:14px;">Venta total por rango</h3>
+    <form method="GET" action="{{ route('ventas.index') }}" class="form-grid" style="align-items:end;margin-bottom:0;">
+        <div class="form-group">
+            <label for="ventasDesde">Desde</label>
+            <input type="date" id="ventasDesde" name="desde" value="{{ $desde }}">
+        </div>
+        <div class="form-group">
+            <label for="ventasHasta">Hasta</label>
+            <input type="date" id="ventasHasta" name="hasta" value="{{ $hasta }}">
+        </div>
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary">Ver total</button>
+        </div>
+    </form>
+
+    <div class="stats-grid" style="margin-top:16px;">
+        <x-stat-card :valor="number_format($nVentasRango)" etiqueta="Ventas en el rango" />
+        <x-stat-card valor="S/ {{ number_format($montoRango, 2) }}" etiqueta="Vendido en el rango" />
+    </div>
+</div>
+
+<div class="content-card">
     <h3 style="font-size:18px;margin-bottom:14px;">Módulos habilitados</h3>
     <p style="color:#666;">
         El perfil de Ventas trabaja sobre el Punto de Venta y el módulo de Ventas
