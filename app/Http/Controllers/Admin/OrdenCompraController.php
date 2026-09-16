@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Almacen;
 use App\Models\EmailContacto;
 use App\Models\EmpresaTransporte;
 use App\Models\Merch;
@@ -13,6 +14,7 @@ use App\Models\Proveedor;
 use App\Models\Usuario;
 use App\Services\ExcelOrdenCompra;
 use App\Services\GeneradorCorrelativo;
+use App\Services\InventarioOrdenCompra;
 use App\Services\MerchInventario;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
@@ -36,6 +38,7 @@ class OrdenCompraController extends Controller
     public function __construct(
         private readonly GeneradorCorrelativo $correlativo,
         private readonly MerchInventario $merch,
+        private readonly InventarioOrdenCompra $inventario,
     ) {}
 
     /** Meses del selector, con el número que se usa como filtro. */
@@ -136,6 +139,7 @@ class OrdenCompraController extends Controller
             'estados'     => self::ESTADOS,
             'correlativo' => $this->correlativo->ordenCompra(),
             'proveedores' => Proveedor::where('estado', 'activo')->orderBy('razon_social')->get(),
+            'almacenes'   => Almacen::where('activo', true)->orderBy('nombre')->get(),
         ]);
     }
 
@@ -182,6 +186,7 @@ class OrdenCompraController extends Controller
             'empresas' => EmpresaTransporte::where('estado', 'activo')->orderBy('nombre')->get(),
             'catalogoMerch' => Merch::orderBy('nombre')->get(),
             'aprobadores' => Usuario::orderBy('username')->get(['id', 'username']),
+            'almacenes' => Almacen::where('activo', true)->orderBy('nombre')->get(),
         ]);
     }
 
@@ -197,6 +202,9 @@ class OrdenCompraController extends Controller
 
         // El merch de la orden entra al stock y genera su egreso de promoción.
         $this->merch->sincronizarOrden($orden);
+
+        // Los productos del catálogo entran al Inventario, en el almacén elegido.
+        $this->inventario->sincronizarOrden($orden);
 
         $lote = collect(session(self::LOTE, []))->push($orden->id)->unique()->values();
 
@@ -227,6 +235,7 @@ class OrdenCompraController extends Controller
         $orden->update($this->conTotales($this->validar($request)));
 
         $this->merch->sincronizarOrden($orden);
+        $this->inventario->sincronizarOrden($orden);
 
         return redirect()->route('admin.ordenes-compra.index')
             ->with('mensaje', "Orden de compra {$orden->numero_orden} actualizada");
@@ -235,6 +244,7 @@ class OrdenCompraController extends Controller
     public function destroy(OrdenCompra $orden): RedirectResponse
     {
         $this->merch->eliminarOrden($orden);
+        $this->inventario->eliminarOrden($orden);
 
         $orden->delete();
 
@@ -406,6 +416,7 @@ class OrdenCompraController extends Controller
             'fecha' => ['required', 'date'],
             'fecha_vencimiento' => ['nullable', 'date'],
             'proveedor' => ['required', 'string', 'max:255'],
+            'almacen_id' => ['nullable', 'integer', 'exists:almacenes,id'],
             'ruc' => ['nullable', 'string', 'max:20'],
             'telefono' => ['nullable', 'string', 'max:50'],
             'correo' => ['nullable', 'email', 'max:150'],

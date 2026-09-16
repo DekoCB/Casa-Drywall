@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class OrdenCompra extends Model
@@ -12,7 +13,7 @@ class OrdenCompra extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'numero_orden', 'fecha', 'fecha_vencimiento', 'proveedor', 'ruc', 'telefono', 'correo', 'direccion',
+        'numero_orden', 'fecha', 'fecha_vencimiento', 'proveedor', 'almacen_id', 'ruc', 'telefono', 'correo', 'direccion',
         'distrito', 'provincia', 'departamento', 'nro_factura', 'nro_guia', 'ref_fecha',
         'empresa_transporte', 'cliente_ref', 'referencia_venta', 'vendedor', 'aprobado_por', 'cod_vendedor', 'peso', 'bultos',
         'tc', 'precio_venta', 'gasto_unit', 'estado', 'condicion_pago', 'observaciones',
@@ -38,5 +39,10 @@ class OrdenCompra extends Model
     public function tokens(): HasMany
     {
         return $this->hasMany(OrdenToken::class, 'orden_id');
+    }
+
+    public function almacen(): BelongsTo
+    {
+        return $this->belongsTo(Almacen::class, 'almacen_id');
     }
 }

@@ -219,6 +219,22 @@
             <span class="ocd-etiqueta">{{ $esSolesNativo ? 'Soles' : 'Dólares' }}</span>
         </div>
 
+        @if ($almacenes->isEmpty())
+            <p style="color:#b45309;font-size:13px;margin-bottom:12px;">
+                No hay almacenes activos — crea uno para que el stock de esta compra se sume automático al Inventario.
+            </p>
+        @else
+            <div class="oc-campo" style="margin-bottom:12px;max-width:320px;">
+                <label class="oc-label" for="almacen_id">Almacén destino</label>
+                <select class="oc-input" id="almacen_id" name="almacen_id">
+                    @foreach ($almacenes as $almacen)
+                        <option value="{{ $almacen->id }}" @selected((string) old('almacen_id', $orden?->almacen_id ?? $almacenes->first()->id) === (string) $almacen->id)>{{ $almacen->nombre }}</option>
+                    @endforeach
+                </select>
+                <p style="color:var(--ocm-suave);font-size:13px;margin-top:4px;">A dónde entra el stock de esta compra — se recalcula automático al guardar.</p>
+            </div>
+        @endif
+
         <div style="margin-bottom:12px;">
             <button type="button" class="ocm-btn oscuro" id="btnAgregarItem">＋ Agregar línea</button>
         </div>

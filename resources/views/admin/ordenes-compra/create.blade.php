@@ -179,6 +179,22 @@
             <span class="ocd-etiqueta">Soles</span>
         </div>
 
+        @if ($almacenes->isEmpty())
+            <p class="oc-hint" style="color:#b45309;margin-bottom:12px;">
+                No hay almacenes activos — crea uno para que el stock de esta compra se sume automático al Inventario.
+            </p>
+        @else
+            <div class="oc-campo" style="margin-bottom:12px;max-width:320px;">
+                <label class="oc-label" for="almacen_id">Almacén destino</label>
+                <select class="oc-input" id="almacen_id" name="almacen_id">
+                    @foreach ($almacenes as $almacen)
+                        <option value="{{ $almacen->id }}" @selected((string) old('almacen_id', $almacenes->first()->id) === (string) $almacen->id)>{{ $almacen->nombre }}</option>
+                    @endforeach
+                </select>
+                <p class="oc-hint">A dónde entra el stock de esta compra — se suma automático al Inventario al guardar.</p>
+            </div>
+        @endif
+
         <div class="oc-campo" style="margin-bottom:6px;">
             <label class="oc-label" for="oc-buscar">🔍 Buscar Producto</label>
             <div class="oc-buscador">
@@ -483,7 +499,7 @@ function pintarResultados(termino) {
             '<span class="oc-item-desc">' + resaltar(p.nombre, termino) + '</span></div>' +
             '<div class="oc-item-meta">' +
                 '<span class="oc-chip">' + (p.presentacion || 'Und.') + '</span>' +
-                '<span class="oc-chip">Compra S/ ' + (parseFloat(p.precio_compra) || 0).toFixed(2) + '</span>' +
+                '<span class="oc-chip">Compra S/ ' + (parseFloat(p.precio_compra) || 0).toFixed(4) + '</span>' +
                 '<span class="oc-chip">Stock: ' + (p.stock ?? 0) + '</span>' +
             '</div></div>'
     ).join('');
@@ -593,7 +609,7 @@ function pintarLineas() {
             '</div>' +
             '<div class="oc-linea-col"><div class="oc-linea-lbl">P.Unit S/' + editado + '</div>' +
                 '<input type="number" class="oc-precio-input" data-campo="precio" data-idx="' + i + '" ' +
-                'value="' + p.precio_unit_usd.toFixed(2) + '" min="0" step="0.01"></div>' +
+                'value="' + p.precio_unit_usd.toFixed(4) + '" min="0" step="0.0001"></div>' +
             '<div class="oc-linea-col"><div class="oc-linea-lbl">Cant.</div>' +
                 '<input type="number" class="oc-cant-input" data-campo="cantidad" data-idx="' + i + '" ' +
                 'value="' + p.cantidad + '" min="1" step="1"></div>' +
@@ -695,7 +711,7 @@ function pintarPanel() {
                 '<span class="ocd-lleva-nombre">' + p.descripcion + (p.codigo ? ' <small>(' + p.codigo + ')</small>' : '') + '</span>' +
                 '<span class="ocd-lleva-det">' +
                     '<span class="ocd-lleva-monto">S/ ' + (p.precio_unit_usd * p.cantidad).toFixed(2) + '</span>' +
-                    '<span class="ocd-lleva-sub">' + p.cantidad + ' x S/ ' + p.precio_unit_usd.toFixed(2) + '</span>' +
+                    '<span class="ocd-lleva-sub">' + p.cantidad + ' x S/ ' + p.precio_unit_usd.toFixed(4) + '</span>' +
                 '</span>' +
             '</div>'
         ).join('');

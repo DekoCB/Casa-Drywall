@@ -14,7 +14,7 @@ class MovimientoAlmacen extends Model
     /** Estados de seguimiento del movimiento; solo 'en_curso' admite editar la cantidad. */
     public const ESTADOS = ['en_curso' => 'En curso', 'entregado' => 'Entregado'];
 
-    protected $fillable = ['producto_id', 'almacen_id', 'tipo', 'cantidad', 'stock_anterior', 'stock_nuevo', 'motivo', 'referencia', 'usuario_id', 'estado'];
+    protected $fillable = ['producto_id', 'almacen_id', 'tipo', 'cantidad', 'stock_anterior', 'stock_nuevo', 'motivo', 'referencia', 'usuario_id', 'orden_compra_id', 'estado'];
 
     protected function casts(): array
     {

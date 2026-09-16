@@ -124,7 +124,7 @@ class OrdenCompraWizardTest extends TestCase
         $respuesta->assertDontSee('id="ocr-item-productos"', false);
         $respuesta->assertDontSee('id="ocr-prod-lineas"', false);
         // La plantilla que arma una fila por línea (nombre, cantidad x precio).
-        $respuesta->assertSee("p.cantidad + ' x S/ ' + p.precio_unit_usd.toFixed(2)", false);
+        $respuesta->assertSee("p.cantidad + ' x S/ ' + p.precio_unit_usd.toFixed(4)", false);
     }
 
     public function test_la_busqueda_de_productos_trae_precio_de_compra(): void
