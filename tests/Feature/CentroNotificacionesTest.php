@@ -78,7 +78,7 @@ class CentroNotificacionesTest extends TestCase
 
     public function test_marcar_todas_leidas_persiste_por_usuario(): void
     {
-        Producto::create(['codigo' => 'P001', 'nombre' => 'Plancha Drywall', 'stock' => 0, 'precio_venta' => 10]);
+        $producto = Producto::create(['codigo' => 'P001', 'nombre' => 'Plancha Drywall', 'stock' => 0, 'precio_venta' => 10]);
         $usuario = $this->admin();
 
         $antes = app(CentroNotificaciones::class)->paraUsuario($usuario);
@@ -90,7 +90,7 @@ class CentroNotificacionesTest extends TestCase
 
         $this->assertDatabaseHas('notificacion_lecturas', [
             'usuario_id' => $usuario->id,
-            'clave' => 'inventario:1',
+            'clave' => "inventario:{$producto->id}",
         ]);
 
         $despues = app(CentroNotificaciones::class)->paraUsuario($usuario);

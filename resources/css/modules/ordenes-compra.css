@@ -1508,14 +1508,14 @@ body.oc-seleccionando .fab-nueva-oc { display: none; }
 /* ═══════════════════════════════════════════════════════
    Nueva orden — pasos guiados
 
-   La orden se llena en tres tramos: qué se compra, para
-   quién es y con qué costos se cierra. Solo se ve el
-   tramo en curso, así la pantalla nunca abruma.
+   La orden se llena en dos tramos: qué se compra, y con
+   qué datos/costos se cierra. Solo se ve el tramo en
+   curso, así la pantalla nunca abruma.
    ═══════════════════════════════════════════════════════ */
 .ocp-pasos {
     position: relative;
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 8px;
     margin: 4px 0 26px;
     padding: 18px 0 0;
@@ -1523,8 +1523,10 @@ body.oc-seleccionando .fab-nueva-oc { display: none; }
 .ocp-riel {
     position: absolute;
     top: 32px;
-    right: 14%;
-    left: 14%;
+    /* La bolita de cada paso queda en el centro de su columna: con 2
+       columnas iguales, esos centros caen justo en 25% y 75%. */
+    right: 25%;
+    left: 25%;
     height: 3px;
     border-radius: 2px;
     background: var(--surface-2);
@@ -1605,7 +1607,6 @@ body.oc-seleccionando .fab-nueva-oc { display: none; }
 @media (max-width: 700px) {
     .ocp-txt small { display: none; }
     .ocp-txt b { font-size: 11.5px; }
-    .ocp-riel { right: 10%; left: 10%; }
 }
 
 /* ── Alta de merch dentro de la orden ────────────────── */

@@ -7,6 +7,12 @@
 
 <x-page-header titulo="Proveedores" subtitulo="Proveedores y condiciones comerciales">
     <x-slot:acciones>
+        {{-- La lista de productos que se compran ya no es por proveedor —
+             es una sola, la misma para cualquiera, y se edita en el
+             catálogo general. --}}
+        <a href="{{ route('admin.productos.index') }}" class="btn btn-secondary">
+            <span class="btn-text">📦 Catálogo de productos</span>
+        </a>
         <button type="button" class="btn btn-primary" id="btnNuevoProveedor">
             <span class="btn-icon">＋</span><span class="btn-text">Nuevo Proveedor</span>
         </button>
@@ -78,10 +84,6 @@
                                 data-productos-suministra="{{ $proveedor->productos_suministra }}"
                         >
                             Editar
-                        </button>
-                        <button type="button" class="btn btn-secondary btn-sm btn-cargar-productos"
-                                data-proveedor="{{ $proveedor->id }}" data-razon-social="{{ $proveedor->razon_social }}">
-                            Productos
                         </button>
                         <form method="POST" action="{{ route('admin.proveedores.destroy', $proveedor) }}"
                               style="display:inline;" data-confirmar="¿Desactivar a este proveedor?">
@@ -212,25 +214,6 @@
     </div>
 </div>
 
-{{-- ── Carga de productos por Excel ── --}}
-<x-modal id="modalProductosProveedor" titulo="Cargar productos del proveedor">
-    <p class="prod-mudo" id="ppTextoProveedor" style="margin:0 0 14px;font-size:13.5px;"></p>
-    <form id="formProductosProveedor" method="POST" enctype="multipart/form-data">
-        @csrf
-        <div class="form-group">
-            <label for="ppArchivo">Archivo Excel (.xlsx)</label>
-            <input type="file" id="ppArchivo" name="archivo" accept=".xlsx" required>
-        </div>
-        <p class="prod-mudo" style="font-size:12px;">
-            Columnas reconocidas: Código, Nombre/Producto, Costo/Precio de compra, Precio de venta.
-            Un producto con un código que ya existe se actualiza y pasa a pertenecer a este proveedor.
-        </p>
-        <div class="header-btns" style="justify-content:flex-end;margin-top:16px;">
-            <button type="button" class="btn btn-secondary" data-cerrar="modalProductosProveedor">Cancelar</button>
-            <button type="submit" class="btn btn-primary">Cargar</button>
-        </div>
-    </form>
-</x-modal>
 @endsection
 
 @push('scripts')
@@ -292,16 +275,6 @@ document.querySelectorAll('.btn-editar').forEach((boton) => {
 
         alternarCredito();
         abrirModal('modalProveedor');
-    });
-});
-
-// ── Carga de productos por Excel ────────────────────────────────────────
-document.querySelectorAll('.btn-cargar-productos').forEach((boton) => {
-    boton.addEventListener('click', () => {
-        document.getElementById('ppTextoProveedor').textContent = 'Proveedor: ' + boton.dataset.razonSocial;
-        document.getElementById('formProductosProveedor').action = URL_PROVEEDORES + '/' + boton.dataset.proveedor + '/productos';
-        document.getElementById('ppArchivo').value = '';
-        abrirModal('modalProductosProveedor');
     });
 });
 

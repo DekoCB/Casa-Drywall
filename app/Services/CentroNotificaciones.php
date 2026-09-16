@@ -125,6 +125,10 @@ class CentroNotificaciones
             ->where('stock', '<=', 0)
             ->withMax('stockPorAlmacen', 'updated_at')
             ->orderByDesc('stock_por_almacen_max_updated_at')
+            // Empate entre varios productos que nunca tuvieron movimiento de
+            // stock (ej. una carga masiva nueva): el más reciente en entrar
+            // al catálogo gana el empate, en vez de un orden indefinido.
+            ->orderByDesc('id')
             ->limit(self::TOPE_POR_CATEGORIA)
             ->get()
             ->map(fn (Producto $p) => [
