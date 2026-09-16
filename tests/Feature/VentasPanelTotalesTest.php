@@ -155,4 +155,42 @@ class VentasPanelTotalesTest extends TestCase
         $this->assertSame(1, $desglose[1]['n']);
         $this->assertSame(100.0, $desglose[1]['monto']);
     }
+
+    public function test_desglose_por_medio_de_pago_engloba_tarjeta_transferencia_y_deposito_como_transferencia(): void
+    {
+        $ella = $this->ventas();
+        $hoy = now()->toDateString();
+
+        Venta::create(['fecha' => $hoy, 'tipcomp' => '03', 'n_seri' => 'B001', 'n_comp' => '00000001', 'estado' => 'activa', 'total' => 100, 'metodo_pago' => 'Efectivo']);
+        Venta::create(['fecha' => $hoy, 'tipcomp' => '03', 'n_seri' => 'B001', 'n_comp' => '00000002', 'estado' => 'activa', 'total' => 50, 'metodo_pago' => 'Yape']);
+        Venta::create(['fecha' => $hoy, 'tipcomp' => '03', 'n_seri' => 'B001', 'n_comp' => '00000003', 'estado' => 'activa', 'total' => 30, 'metodo_pago' => 'Plin']);
+        Venta::create(['fecha' => $hoy, 'tipcomp' => '03', 'n_seri' => 'B001', 'n_comp' => '00000004', 'estado' => 'activa', 'total' => 20, 'metodo_pago' => 'Tarjeta']);
+        Venta::create(['fecha' => $hoy, 'tipcomp' => '03', 'n_seri' => 'B001', 'n_comp' => '00000005', 'estado' => 'activa', 'total' => 15, 'metodo_pago' => 'Transferencia bancaria']);
+        Venta::create(['fecha' => $hoy, 'tipcomp' => '03', 'n_seri' => 'B001', 'n_comp' => '00000006', 'estado' => 'activa', 'total' => 10, 'metodo_pago' => 'Depósito bancario']);
+
+        $respuesta = $this->actingAs($ella, 'web')->get(route('ventas.index'));
+
+        $porMedio = $respuesta->viewData('ventasPorMedioPago')->keyBy('etiqueta');
+
+        $this->assertSame(100.0, $porMedio['Efectivo']['monto']);
+        $this->assertSame(50.0, $porMedio['Yape']['monto']);
+        $this->assertSame(30.0, $porMedio['Plin']['monto']);
+        // Tarjeta + Transferencia bancaria + Depósito bancario = 20+15+10 = 45.
+        $this->assertSame(45.0, $porMedio['Transferencia']['monto']);
+        $this->assertSame(3, $porMedio['Transferencia']['n']);
+        $this->assertArrayNotHasKey('Sin especificar', $porMedio);
+    }
+
+    public function test_desglose_por_medio_de_pago_muestra_sin_especificar_solo_si_hay_algo(): void
+    {
+        $ella = $this->ventas();
+
+        Venta::create(['fecha' => now()->toDateString(), 'tipcomp' => '03', 'n_seri' => 'B001', 'n_comp' => '00000001', 'estado' => 'activa', 'total' => 100, 'metodo_pago' => null]);
+
+        $respuesta = $this->actingAs($ella, 'web')->get(route('ventas.index'));
+        $porMedio = $respuesta->viewData('ventasPorMedioPago')->keyBy('etiqueta');
+
+        $this->assertSame(100.0, $porMedio['Sin especificar']['monto']);
+        $this->assertSame(0.0, $porMedio['Efectivo']['monto']);
+    }
 }

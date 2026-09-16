@@ -14,6 +14,14 @@ use Illuminate\View\View;
  */
 class VentasController extends Controller
 {
+    /**
+     * Medios de pago que se muestran como bucket propio en el desglose —
+     * el resto (Tarjeta, Transferencia bancaria, Depósito bancario, los
+     * bancos fijos del POS como BCP/Interbank/BBVA, "Mixto", etc.) se
+     * engloba en "Transferencia", pedido explícito del negocio.
+     */
+    private const BUCKETS_METODO_PAGO = ['Efectivo', 'Yape', 'Plin'];
+
     public function __construct(private readonly CajaService $cajas) {}
 
     public function index(Request $request): View
@@ -28,7 +36,15 @@ class VentasController extends Controller
         $hasta = $request->query('hasta') ?: now()->toDateString();
 
         $ventasHoy = $this->ventasVigentes()->whereDate('fecha', now()->toDateString())->get();
-        $ventasRango = $this->ventasVigentes()->whereBetween('fecha', [$desde, $hasta])->get();
+        // whereDate() en vez de whereBetween(): 'fecha' es DATE, pero según
+        // el driver puede llegar a comparar con la hora incluida (ej. en el
+        // SQLite de los tests, 'fecha' se guarda como '2026-09-15 00:00:00'
+        // y un whereBetween con $desde === $hasta nunca calzaba) — whereDate()
+        // siempre compara solo la fecha, sin importar cómo se haya guardado.
+        $ventasRango = $this->ventasVigentes()
+            ->whereDate('fecha', '>=', $desde)
+            ->whereDate('fecha', '<=', $hasta)
+            ->get();
 
         return view('ventas.index', [
             'sesion' => $this->cajas->sesionAbiertaDe($usuario),
@@ -39,6 +55,7 @@ class VentasController extends Controller
             'nVentasRango' => $ventasRango->count(),
             'montoRango' => $this->totalConSigno($ventasRango),
             'desglosePorDia' => $this->desglosePorDia($ventasRango),
+            'ventasPorMedioPago' => $this->desglosePorMedioPago($ventasRango),
         ]);
     }
 
@@ -75,6 +92,39 @@ class VentasController extends Controller
                 'monto' => $this->totalConSigno($ventasDelDia),
             ])
             ->sortByDesc('fecha')
+            ->values();
+    }
+
+    /** Efectivo/Yape/Plin quedan sueltos; todo el resto cae en "Transferencia" — ver BUCKETS_METODO_PAGO. */
+    private function bucketMetodoPago(?string $metodo): string
+    {
+        $metodo = trim((string) $metodo);
+
+        if ($metodo === '') {
+            return 'Sin especificar';
+        }
+
+        return in_array($metodo, self::BUCKETS_METODO_PAGO, true) ? $metodo : 'Transferencia';
+    }
+
+    /**
+     * Una fila por medio de pago, en orden fijo (Efectivo/Yape/Plin/
+     * Transferencia siempre aparecen, aunque estén en cero, para que el
+     * cajero vea siempre el mismo layout) — "Sin especificar" solo se
+     * agrega si hay algo ahí (Notas de Crédito, que no tienen medio de
+     * pago propio, o ventas de antes de que este campo existiera).
+     */
+    private function desglosePorMedioPago(Collection $ventasDelRango): Collection
+    {
+        $porBucket = $ventasDelRango->groupBy(fn (Venta $v) => $this->bucketMetodoPago($v->metodo_pago));
+
+        return collect([...self::BUCKETS_METODO_PAGO, 'Transferencia', 'Sin especificar'])
+            ->map(function (string $etiqueta) use ($porBucket) {
+                $grupo = $porBucket->get($etiqueta, collect());
+
+                return ['etiqueta' => $etiqueta, 'n' => $grupo->count(), 'monto' => $this->totalConSigno($grupo)];
+            })
+            ->filter(fn (array $fila) => $fila['etiqueta'] !== 'Sin especificar' || $fila['n'] > 0)
             ->values();
     }
 }

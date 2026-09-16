@@ -77,6 +77,31 @@
 </div>
 
 <div class="content-card">
+    <h3 style="font-size:18px;margin-bottom:4px;">Vendido por medio de pago</h3>
+    <p style="color:#666;margin:0 0 14px;font-size:13px;">
+        Mismo rango de fechas de arriba. Tarjeta, Transferencia bancaria y Depósito bancario se agrupan como "Transferencia".
+    </p>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Medio de pago</th>
+                <th>Ventas</th>
+                <th>Total vendido</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach ($ventasPorMedioPago as $fila)
+                <tr>
+                    <td>{{ $fila['etiqueta'] }}</td>
+                    <td>{{ number_format($fila['n']) }}</td>
+                    <td>S/ {{ number_format($fila['monto'], 2) }}</td>
+                </tr>
+            @endforeach
+        </tbody>
+    </table>
+</div>
+
+<div class="content-card">
     <h3 style="font-size:18px;margin-bottom:14px;">Módulos habilitados</h3>
     <p style="color:#666;">
         El perfil de Ventas trabaja sobre el Punto de Venta y el módulo de Ventas
