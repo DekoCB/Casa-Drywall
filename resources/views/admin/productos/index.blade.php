@@ -20,8 +20,8 @@
 
 <div class="prod-hero prod-hero-verde">
     <div class="prod-hero-texto">
-        <h2>Catálogo KENDALL</h2>
-        <p>Productos Kendall, P66 y Royal Purple</p>
+        <h2>Catálogo de Productos</h2>
+        <p>Productos que la empresa compra y vende</p>
     </div>
     <div class="prod-hero-acciones">
         <a href="{{ route('admin.productos.importar') }}" class="pbtn" style="background:#fff;color:#1f6b3a;">
@@ -331,7 +331,7 @@
                     <div class="form-group prod-campo-ancho">
                         <label for="nombre">Nombre del Producto <span>*</span></label>
                         <input type="text" id="nombre" name="nombre" required maxlength="255"
-                               placeholder="KENDALL SUPER-D XA (Ti,CK4)">
+                               placeholder="PLACA STD 244X122 X 12.7MM(1/2&quot;) GYPLAC">
                     </div>
 
                     {{-- Categoría quitada del formulario por ahora, a pedido; el campo
