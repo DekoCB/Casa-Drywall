@@ -16,8 +16,12 @@
 
 @php
     $productosJs = \App\Models\Producto::activos()->orderBy('nombre')
+        ->with('stockPorAlmacen')
         ->get(['id', 'codigo', 'nombre'])
-        ->map(fn ($p) => ['id' => $p->id, 'codigo' => $p->codigo, 'nombre' => $p->nombre])->values();
+        ->map(fn ($p) => [
+            'id' => $p->id, 'codigo' => $p->codigo, 'nombre' => $p->nombre,
+            'stocks' => $p->stockPorAlmacen->pluck('stock', 'almacen_id'),
+        ])->values();
 @endphp
 
 <x-page-header :titulo="$tituloPagina" subtitulo="Historial de movimientos de stock por almacén">
@@ -92,7 +96,7 @@
                     <td><span class="rep-badge estado-{{ in_array($m->tipo, ['entrada','traslado'], true) ? 'alta' : ($m->tipo === 'ajuste' ? 'media' : 'baja') }}">{{ ucfirst($m->tipo) }}</span></td>
                     <td class="num">{{ number_format($m->cantidad) }}</td>
                     <td class="num">{{ $m->stock_anterior }} → {{ $m->stock_nuevo }}</td>
-                    <td class="num" title="Suma en todos los almacenes, a hoy">{{ number_format((int) ($m->producto?->stock ?? 0)) }}</td>
+                    <td class="num" title="En ese almacén, a hoy — el mismo número que muestra Inventario">{{ number_format((int) $m->stock_actual_almacen) }}</td>
                     <td>{{ $m->motivo ?: ($m->referencia ?: '—') }}</td>
                     <td>{{ $m->usuario?->username ?? '—' }}</td>
                     <td>
@@ -137,7 +141,7 @@
         <div class="form-grid">
             <div class="form-group">
                 <label>Almacén <span>*</span></label>
-                <select name="almacen_id" required>
+                <select name="almacen_id" data-campo-stock-almacen required>
                     @foreach ($almacenes as $almacen)
                         <option value="{{ $almacen->id }}">{{ $almacen->nombre }}</option>
                     @endforeach
@@ -152,6 +156,7 @@
                 </select>
             </div>
             <div class="form-group">
+                <div class="stock-actual-hint" data-stock-actual>Stock actual: —</div>
                 <label>Cantidad <span>*</span></label>
                 <input type="number" name="cantidad" min="1" required>
             </div>
@@ -182,7 +187,7 @@
         <div class="form-grid">
             <div class="form-group">
                 <label>Almacén de origen <span>*</span></label>
-                <select name="almacen_origen_id" required>
+                <select name="almacen_origen_id" data-campo-stock-almacen required>
                     @foreach ($almacenes as $almacen)
                         <option value="{{ $almacen->id }}">{{ $almacen->nombre }}</option>
                     @endforeach
@@ -197,6 +202,7 @@
                 </select>
             </div>
             <div class="form-group">
+                <div class="stock-actual-hint" data-stock-actual>Stock actual (origen): —</div>
                 <label>Cantidad <span>*</span></label>
                 <input type="number" name="cantidad" min="1" required>
             </div>
@@ -227,7 +233,7 @@
         <div class="form-grid">
             <div class="form-group">
                 <label>Almacén <span>*</span></label>
-                <select name="almacen_id" required>
+                <select name="almacen_id" data-campo-stock-almacen required>
                     @foreach ($almacenes as $almacen)
                         <option value="{{ $almacen->id }}">{{ $almacen->nombre }}</option>
                     @endforeach
@@ -243,6 +249,7 @@
                 </select>
             </div>
             <div class="form-group">
+                <div class="stock-actual-hint" data-stock-actual>Stock actual: —</div>
                 <label>Cantidad <span>*</span></label>
                 <input type="number" name="cantidad" min="1" required>
             </div>
@@ -280,6 +287,34 @@
 const PRODUCTOS_INV = @json($productosJs);
 const URL_STOCK = '{{ url('admin/productos') }}';
 
+// Muestra, encima del campo Cantidad, cuánto hay AHORA en el almacén
+// elegido — el mismo número que Inventario, para no tener que ir a mirar
+// otra pantalla antes de escribir cuánto trasladar/remover/ajustar.
+function actualizarStockHint(form) {
+    const hint = form.querySelector('[data-stock-actual]');
+    if (!hint) return;
+
+    const input = form.querySelector('[data-buscar-producto]');
+    const stocksRaw = input?.dataset.productoStocks;
+    const almacenSelect = form.querySelector('[data-campo-stock-almacen]');
+
+    if (!stocksRaw || !almacenSelect) {
+        hint.textContent = hint.dataset.etiqueta + ': —';
+        return;
+    }
+
+    const stocks = JSON.parse(stocksRaw);
+    hint.textContent = hint.dataset.etiqueta + ': ' + (stocks[almacenSelect.value] ?? 0);
+}
+
+document.querySelectorAll('[data-stock-actual]').forEach((hint) => {
+    hint.dataset.etiqueta = hint.textContent.replace(/:\s*—$/, '');
+});
+
+document.querySelectorAll('[data-campo-stock-almacen]').forEach((select) => {
+    select.addEventListener('change', () => actualizarStockHint(select.closest('form')));
+});
+
 // Un solo buscador reutilizado por los 3 modales (Movimiento/Traslado/Devolución).
 document.querySelectorAll('[data-buscar-producto]').forEach((input) => {
     const contenedor = input.closest('.nv-buscador');
@@ -288,6 +323,7 @@ document.querySelectorAll('[data-buscar-producto]').forEach((input) => {
 
     function elegir(p) {
         input.value = p.nombre;
+        input.dataset.productoStocks = JSON.stringify(p.stocks || {});
         dropdown.classList.remove('activo');
 
         const campoId = form.querySelector('[data-campo-producto-id]');
@@ -298,6 +334,8 @@ document.querySelectorAll('[data-buscar-producto]').forEach((input) => {
             // necesita el {producto} en la URL, no como campo del form.
             form.action = URL_STOCK + '/' + p.id + '/stock';
         }
+
+        actualizarStockHint(form);
     }
 
     input.addEventListener('input', () => {

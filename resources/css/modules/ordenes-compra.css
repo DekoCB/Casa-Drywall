@@ -395,7 +395,7 @@
 
 /* ── Acciones por fila ───────────────────────────────── */
 .oc-acciones { display: flex; align-items: center; gap: 4px; }
-.btn-excel-oc, .btn-email-oc, .btn-del-oc {
+.btn-excel-oc, .btn-email-oc, .btn-del-oc, .btn-edit-oc {
     display: inline-flex;
     align-items: center;
     gap: 5px;
@@ -413,8 +413,10 @@
 }
 .btn-excel-oc { background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: var(--on-brand); box-shadow: 0 2px 6px rgba(217,203,22,.4); }
 .btn-email-oc { background: var(--brand-2); color: var(--on-brand); box-shadow: 0 2px 6px rgba(184,172,19,.4); }
+.btn-edit-oc  { background: var(--side); color: #fff; }
 .btn-del-oc   { background: var(--neg); }
-.btn-excel-oc:hover, .btn-email-oc:hover { transform: translateY(-1px); }
+.btn-excel-oc:hover, .btn-email-oc:hover, .btn-edit-oc:hover { transform: translateY(-1px); }
+.btn-edit-oc:hover { background: #2b2e36; }
 .btn-del-oc:hover { background: var(--neg); }
 .form-eliminar-oc { display: inline; }
 

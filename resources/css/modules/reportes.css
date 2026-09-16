@@ -91,3 +91,10 @@
 .nv-item-cod { padding: 2px 7px; border-radius: 4px; background: var(--brand-bg); color: var(--brand); font-family: 'Courier New', monospace; font-size: 11px; font-weight: 700; }
 .nv-item-desc { font-size: 12px; font-weight: 500; color: var(--ink); }
 .nv-sin-resultados { padding: 20px; text-align: center; color: var(--ink-3); font-size: 13px; }
+
+/* ── Aviso de stock actual, encima de "Cantidad" en los modales de movimiento ── */
+.stock-actual-hint {
+    display: inline-block; margin-bottom: 6px; padding: 3px 9px;
+    border-radius: 999px; background: var(--brand-bg); color: var(--brand);
+    font-size: 12px; font-weight: 700;
+}

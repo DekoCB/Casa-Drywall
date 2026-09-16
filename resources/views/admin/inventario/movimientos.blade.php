@@ -11,8 +11,12 @@
 
 @php
     $productosJs = \App\Models\Producto::activos()->orderBy('nombre')
+        ->with('stockPorAlmacen')
         ->get(['id', 'codigo', 'nombre'])
-        ->map(fn ($p) => ['id' => $p->id, 'codigo' => $p->codigo, 'nombre' => $p->nombre])->values();
+        ->map(fn ($p) => [
+            'id' => $p->id, 'codigo' => $p->codigo, 'nombre' => $p->nombre,
+            'stocks' => $p->stockPorAlmacen->pluck('stock', 'almacen_id'),
+        ])->values();
 @endphp
 
 <x-page-header titulo="Inventario" subtitulo="Stock actual por almacén, con acciones rápidas">
@@ -113,7 +117,7 @@
         <div class="form-grid">
             <div class="form-group">
                 <label>Almacén <span>*</span></label>
-                <select name="almacen_id" id="movAlmacenId" required>
+                <select name="almacen_id" id="movAlmacenId" data-campo-stock-almacen required>
                     @foreach ($almacenes as $almacen)
                         <option value="{{ $almacen->id }}">{{ $almacen->nombre }}</option>
                     @endforeach
@@ -128,6 +132,7 @@
                 </select>
             </div>
             <div class="form-group">
+                <div class="stock-actual-hint" data-stock-actual>Stock actual: —</div>
                 <label>Cantidad <span>*</span></label>
                 <input type="number" name="cantidad" min="1" required>
             </div>
@@ -158,7 +163,7 @@
         <div class="form-grid">
             <div class="form-group">
                 <label>Almacén de origen <span>*</span></label>
-                <select name="almacen_origen_id" id="trasladoOrigenId" required>
+                <select name="almacen_origen_id" id="trasladoOrigenId" data-campo-stock-almacen required>
                     @foreach ($almacenes as $almacen)
                         <option value="{{ $almacen->id }}">{{ $almacen->nombre }}</option>
                     @endforeach
@@ -173,6 +178,7 @@
                 </select>
             </div>
             <div class="form-group">
+                <div class="stock-actual-hint" data-stock-actual>Stock actual (origen): —</div>
                 <label>Cantidad <span>*</span></label>
                 <input type="number" name="cantidad" min="1" required>
             </div>
@@ -195,6 +201,34 @@
 const PRODUCTOS_INV = @json($productosJs);
 const URL_STOCK = '{{ url('admin/productos') }}';
 
+// Muestra, encima del campo Cantidad, cuánto hay AHORA en el almacén
+// elegido — para no tener que adivinar ni ir a mirar otra pantalla antes
+// de escribir cuánto trasladar/remover/ajustar.
+function actualizarStockHint(form) {
+    const hint = form.querySelector('[data-stock-actual]');
+    if (!hint) return;
+
+    const input = form.querySelector('[data-buscar-producto]');
+    const stocksRaw = input?.dataset.productoStocks;
+    const almacenSelect = form.querySelector('[data-campo-stock-almacen]');
+
+    if (!stocksRaw || !almacenSelect) {
+        hint.textContent = hint.dataset.etiqueta + ': —';
+        return;
+    }
+
+    const stocks = JSON.parse(stocksRaw);
+    hint.textContent = hint.dataset.etiqueta + ': ' + (stocks[almacenSelect.value] ?? 0);
+}
+
+document.querySelectorAll('[data-stock-actual]').forEach((hint) => {
+    hint.dataset.etiqueta = hint.textContent.replace(/:\s*—$/, '');
+});
+
+document.querySelectorAll('[data-campo-stock-almacen]').forEach((select) => {
+    select.addEventListener('change', () => actualizarStockHint(select.closest('form')));
+});
+
 // Un solo buscador reutilizado por los 2 modales (Movimiento/Traslado).
 document.querySelectorAll('[data-buscar-producto]').forEach((input) => {
     const contenedor = input.closest('.nv-buscador');
@@ -203,6 +237,7 @@ document.querySelectorAll('[data-buscar-producto]').forEach((input) => {
 
     function elegir(p) {
         input.value = p.nombre;
+        input.dataset.productoStocks = JSON.stringify(p.stocks || {});
         dropdown.classList.remove('activo');
 
         const campoId = form.querySelector('[data-campo-producto-id]');
@@ -213,6 +248,8 @@ document.querySelectorAll('[data-buscar-producto]').forEach((input) => {
             // necesita el {producto} en la URL, no como campo del form.
             form.action = URL_STOCK + '/' + p.id + '/stock';
         }
+
+        actualizarStockHint(form);
     }
 
     input.addEventListener('input', () => {
@@ -251,9 +288,12 @@ function abrirModal(id) {
 // ── Botones de cabecera: + Ingreso / − Salida, sin producto preseleccionado ──
 document.querySelectorAll('[data-abrir-movimiento]').forEach((boton) => {
     boton.addEventListener('click', () => {
+        const input = document.getElementById('movBuscarInput');
         document.getElementById('formMovimiento').action = '';
-        document.getElementById('movBuscarInput').value = '';
+        input.value = '';
+        delete input.dataset.productoStocks;
         document.getElementById('movTipo').value = boton.dataset.abrirMovimiento;
+        actualizarStockHint(document.getElementById('formMovimiento'));
         abrirModal('modalMovimiento');
     });
 });
@@ -262,19 +302,26 @@ document.querySelectorAll('[data-abrir-movimiento]').forEach((boton) => {
 document.querySelectorAll('[data-accion]').forEach((boton) => {
     boton.addEventListener('click', () => {
         const { accion, productoId, productoNombre, almacenId } = boton.dataset;
+        const stocks = JSON.stringify(PRODUCTOS_INV.find((p) => String(p.id) === productoId)?.stocks || {});
 
         if (accion === 'trasladar') {
+            const formTraslado = document.getElementById('trasladoBuscarInput').closest('form');
             document.getElementById('trasladoProductoId').value = productoId;
             document.getElementById('trasladoBuscarInput').value = productoNombre;
+            document.getElementById('trasladoBuscarInput').dataset.productoStocks = stocks;
             document.getElementById('trasladoOrigenId').value = almacenId;
+            actualizarStockHint(formTraslado);
             abrirModal('modalTraslado');
             return;
         }
 
-        document.getElementById('formMovimiento').action = URL_STOCK + '/' + productoId + '/stock';
+        const formMovimiento = document.getElementById('formMovimiento');
+        formMovimiento.action = URL_STOCK + '/' + productoId + '/stock';
         document.getElementById('movBuscarInput').value = productoNombre;
+        document.getElementById('movBuscarInput').dataset.productoStocks = stocks;
         document.getElementById('movAlmacenId').value = almacenId;
         document.getElementById('movTipo').value = accion === 'remover' ? 'salida' : 'ajuste';
+        actualizarStockHint(formMovimiento);
         abrirModal('modalMovimiento');
     });
 });

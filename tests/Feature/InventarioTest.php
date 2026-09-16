@@ -212,6 +212,42 @@ class InventarioTest extends TestCase
         $this->assertTrue($filas->every(fn ($f) => $f['stock'] === 0));
     }
 
+    /**
+     * Los formularios de Trasladar/Remover/Ajuste/Nuevo movimiento pedían la
+     * cantidad a ciegas, sin decir cuánto había en ese momento en el
+     * almacén elegido. Ahora cada modal trae, por producto, su stock por
+     * almacén embebido (`p.stocks`) y un aviso "Stock actual" que se
+     * actualiza en vivo con JS al elegir producto/almacén — acá solo se
+     * confirma que el HTML y los datos necesarios están en la página.
+     */
+    public function test_movimientos_trae_el_stock_por_almacen_para_el_aviso_de_cantidad(): void
+    {
+        [$almacen] = $this->dosAlmacenes();
+        $producto = Producto::create(['codigo' => 'P015', 'nombre' => 'Tornillo Drywall', 'stock' => 40]);
+        StockAlmacen::create(['producto_id' => $producto->id, 'almacen_id' => $almacen->id, 'stock' => 40]);
+
+        $respuesta = $this->actingAs($this->admin(), 'web')->get(route('admin.inventario.movimientos'));
+
+        $respuesta->assertOk();
+        $respuesta->assertSee('data-stock-actual', false);
+        $respuesta->assertSee('data-campo-stock-almacen', false);
+        $respuesta->assertSee('"stocks":{"'.$almacen->id.'":40}', false);
+    }
+
+    public function test_historial_trae_el_stock_por_almacen_para_el_aviso_de_cantidad(): void
+    {
+        [$almacen] = $this->dosAlmacenes();
+        $producto = Producto::create(['codigo' => 'P016', 'nombre' => 'Cinta Papel', 'stock' => 12]);
+        StockAlmacen::create(['producto_id' => $producto->id, 'almacen_id' => $almacen->id, 'stock' => 12]);
+
+        $respuesta = $this->actingAs($this->admin(), 'web')->get(route('admin.inventario.movimientos.historial'));
+
+        $respuesta->assertOk();
+        $respuesta->assertSee('data-stock-actual', false);
+        $respuesta->assertSee('data-campo-stock-almacen', false);
+        $respuesta->assertSee('"stocks":{"'.$almacen->id.'":12}', false);
+    }
+
     public function test_movimientos_filtra_por_almacen(): void
     {
         [$almacen1, $almacen2] = $this->dosAlmacenes();
@@ -302,6 +338,7 @@ class InventarioTest extends TestCase
     {
         [$almacen] = $this->dosAlmacenes();
         $producto = Producto::create(['codigo' => 'P013', 'nombre' => 'Angular', 'stock' => 45]);
+        StockAlmacen::create(['producto_id' => $producto->id, 'almacen_id' => $almacen->id, 'stock' => 45]);
         MovimientoAlmacen::create(['producto_id' => $producto->id, 'almacen_id' => $almacen->id, 'tipo' => 'entrada', 'cantidad' => 50, 'stock_anterior' => 0, 'stock_nuevo' => 50]);
         MovimientoAlmacen::create(['producto_id' => $producto->id, 'almacen_id' => $almacen->id, 'tipo' => 'salida', 'cantidad' => 5, 'stock_anterior' => 50, 'stock_nuevo' => 45]);
 
@@ -312,6 +349,37 @@ class InventarioTest extends TestCase
         // Las dos filas históricas muestran el MISMO stock actual (45), no
         // solo su propio "stock_nuevo" de ese momento.
         $respuesta->assertSeeInOrder(['45', '45'], false);
+    }
+
+    /**
+     * El cliente reportó que el stock de "Movimientos" (por almacén) y el
+     * de "reportes de Movimiento" (este historial) no coincidían — porque
+     * la columna "Stock actual" mostraba el ACUMULADO de todos los
+     * almacenes (`Producto.stock`), mientras Movimientos siempre separa
+     * por almacén. Con dos almacenes distintos para el mismo producto,
+     * cada fila del historial ahora muestra el stock de SU PROPIO almacén,
+     * igual que Movimientos.
+     */
+    public function test_historial_muestra_el_stock_de_cada_almacen_no_el_acumulado(): void
+    {
+        [$almacen1, $almacen2] = $this->dosAlmacenes();
+        $producto = Producto::create(['codigo' => 'P014', 'nombre' => 'Perfil U', 'stock' => 50]);
+        StockAlmacen::create(['producto_id' => $producto->id, 'almacen_id' => $almacen1->id, 'stock' => 30]);
+        StockAlmacen::create(['producto_id' => $producto->id, 'almacen_id' => $almacen2->id, 'stock' => 20]);
+        MovimientoAlmacen::create(['producto_id' => $producto->id, 'almacen_id' => $almacen1->id, 'tipo' => 'entrada', 'cantidad' => 30, 'stock_anterior' => 0, 'stock_nuevo' => 30]);
+        MovimientoAlmacen::create(['producto_id' => $producto->id, 'almacen_id' => $almacen2->id, 'tipo' => 'entrada', 'cantidad' => 20, 'stock_anterior' => 0, 'stock_nuevo' => 20]);
+
+        $respuesta = $this->actingAs($this->admin(), 'web')->get(route('admin.inventario.movimientos.historial'));
+
+        $respuesta->assertOk();
+        $filas = $respuesta->viewData('movimientos')->getCollection();
+        $filaAlmacen1 = $filas->firstWhere('almacen_id', $almacen1->id);
+        $filaAlmacen2 = $filas->firstWhere('almacen_id', $almacen2->id);
+
+        $this->assertSame(30, $filaAlmacen1->stock_actual_almacen);
+        $this->assertSame(20, $filaAlmacen2->stock_actual_almacen);
+        // Ninguna de las dos es el acumulado (50) — cada una es su propio almacén.
+        $this->assertNotSame(50, $filaAlmacen1->stock_actual_almacen);
     }
 
     public function test_reporte_inventario_calcula_la_utilidad_unitaria(): void

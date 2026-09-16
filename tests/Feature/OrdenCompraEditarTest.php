@@ -23,6 +23,27 @@ class OrdenCompraEditarTest extends TestCase
         return Usuario::create(['username' => 'admin_'.uniqid(), 'password' => 'x', 'rol' => 'admin']);
     }
 
+    /** El listado tenía botones de PDF/Email/Eliminar por fila, pero ninguno para editar — solo se llegaba a "Editar orden" pasando por el detalle. */
+    public function test_el_listado_tiene_un_boton_editar_por_fila(): void
+    {
+        $admin = $this->admin();
+
+        $this->actingAs($admin, 'web')->post(route('admin.ordenes-compra.store'), [
+            'estado' => 'Pendiente', 'gasto_unit' => '0', 'condicion_pago' => 'contado', 'tc' => '1',
+            'proveedor' => 'Distribuidora Drywall SAC', 'ruc' => '20123456789',
+            'numero_orden' => 'OC-LIST-001', 'fecha' => now()->toDateString(),
+            'precio_venta' => '0', 'total_usd' => '19.00', 'total_soles' => '19.00',
+        ]);
+
+        $orden = OrdenCompra::where('numero_orden', 'OC-LIST-001')->firstOrFail();
+
+        $respuesta = $this->actingAs($admin, 'web')->get(route('admin.ordenes-compra.index'));
+
+        $respuesta->assertOk();
+        $respuesta->assertSee(route('admin.ordenes-compra.edit', $orden), false);
+        $respuesta->assertSee('btn-edit-oc', false);
+    }
+
     public function test_editar_una_orden_permite_cambiar_los_productos_y_el_pdf_lo_refleja(): void
     {
         $admin = $this->admin();

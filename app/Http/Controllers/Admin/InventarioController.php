@@ -87,7 +87,7 @@ class InventarioController extends Controller
         ];
 
         $movimientos = MovimientoAlmacen::query()
-            ->with(['producto:id,codigo,nombre,stock', 'almacen:id,nombre', 'usuario:id,username'])
+            ->with(['producto:id,codigo,nombre', 'almacen:id,nombre', 'usuario:id,username'])
             ->when($filtros['tipo'] !== '', fn ($q) => $q->where('tipo', $filtros['tipo']))
             ->when($filtros['producto_id'] > 0, fn ($q) => $q->where('producto_id', $filtros['producto_id']))
             ->when($filtros['almacen_id'] > 0, fn ($q) => $q->where('almacen_id', $filtros['almacen_id']))
@@ -100,6 +100,19 @@ class InventarioController extends Controller
             ->orderByDesc('id')
             ->paginate(30)
             ->withQueryString();
+
+        // "Stock actual" es el de ESE almacén puntual, no la suma de todos —
+        // así siempre coincide con el número que muestra Inventario para el
+        // mismo producto y almacén (antes mostraba el acumulado de
+        // `Producto.stock`, que con más de un almacén nunca iba a calzar).
+        $stocksPorFila = StockAlmacen::whereIn('producto_id', $movimientos->pluck('producto_id'))
+            ->whereIn('almacen_id', $movimientos->pluck('almacen_id'))
+            ->get()
+            ->keyBy(fn (StockAlmacen $s) => $s->producto_id.'-'.$s->almacen_id);
+
+        $movimientos->getCollection()->each(function (MovimientoAlmacen $m) use ($stocksPorFila) {
+            $m->stock_actual_almacen = (int) ($stocksPorFila->get($m->producto_id.'-'.$m->almacen_id)?->stock ?? 0);
+        });
 
         return view('admin.inventario.historial', [
             'movimientos' => $movimientos,

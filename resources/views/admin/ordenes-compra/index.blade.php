@@ -255,6 +255,7 @@
 
                                     <td>
                                         <div class="oc-acciones">
+                                            <a href="{{ route('admin.ordenes-compra.edit', $orden) }}" class="btn-edit-oc" title="Editar orden y sus productos">✏️ Editar</a>
                                             <button type="button" class="btn-excel-oc btn-excel-menu"
                                                     data-ids="{{ $orden->id }}" title="Descargar PDF o Excel">PDF ▾</button>
                                             <button type="button" class="btn-email-oc btn-enviar-oc"
