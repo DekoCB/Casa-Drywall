@@ -4,6 +4,8 @@
 @section('crumb', 'Gestión comercial')
 
 @php
+    $venta = $venta ?? null;
+
     // Catálogo para el buscador de productos, en el formato que espera el JS.
     $productosJs = $productos->map(fn ($p) => [
         'nombre' => $p->nombre,
@@ -13,6 +15,19 @@
         'marca' => $p->marca?->nombre,
         'presentacion' => $p->presentacion,
     ])->values();
+
+    // Al editar, el detalle ya guardado precarga la tabla de productos por
+    // JS — igual mecanismo que "Generar venta desde Cotización" de abajo.
+    $edicionItems = $venta ? $venta->detalles->map(fn ($d) => [
+        'nombre' => $d->prod_nombre,
+        'codigo' => $d->prod_codigo,
+        'precio' => (float) $d->precio_unitario,
+        'cantidad' => (int) $d->cantidad,
+    ])->values() : [];
+
+    // El monto único solo tiene sentido si la venta no tiene productos
+    // detallados (se creó con "Monto único" en vez de la tabla de abajo).
+    $edicionSinItems = $venta && $edicionItems->isEmpty();
 @endphp
 
 @push('styles')
@@ -83,7 +98,8 @@
 @endpush
 
 @section('content')
-<x-page-header titulo="Nueva Venta" subtitulo="Ingresa un monto único o detalla los productos a facturar">
+<x-page-header :titulo="$venta ? 'Editar '.($tipos[$venta->tipcomp]['nombre'] ?? $venta->tipcomp).' '.$venta->n_seri.'-'.$venta->n_comp : 'Nueva Venta'"
+               :subtitulo="$venta ? 'Cambia el cliente, el monto o los productos — se actualiza el mismo comprobante.' : 'Ingresa un monto único o detalla los productos a facturar'">
     <x-slot:acciones>
         <a href="{{ route('admin.ventas.index') }}" class="btn btn-secondary btn-sm">
             <span class="btn-text">← Volver</span>
@@ -101,8 +117,9 @@
     </div>
 @endif
 
-<form method="POST" action="{{ route('admin.ventas.factura.store') }}" id="formFactura" class="nv-form">
+<form method="POST" action="{{ $venta ? route('admin.ventas.factura.update', $venta) : route('admin.ventas.factura.store') }}" id="formFactura" class="nv-form">
     @csrf
+    @if ($venta) @method('PUT') @endif
     <input type="hidden" name="origen_id" value="{{ old('origen_id', $origen['id'] ?? '') }}">
 
     <div class="content-card">
@@ -110,27 +127,32 @@
         <div class="form-grid">
             <div class="form-group">
                 <label for="f-tipcomp">Tipo Comprobante <span>*</span></label>
+                {{-- Al editar no se puede cambiar de tipo: son documentos
+                     internos distintos (Cotización vs Nota de Venta), con
+                     su propia numeración — cambiarlo a mitad de edición es
+                     más confuso que útil. --}}
                 <select id="f-tipcomp" name="tipcomp" required>
-                    @foreach (array_intersect_key($tipos, array_flip(['COT', 'NV', '01', '03'])) as $codigo => $tipo)
+                    @foreach ($venta ? array_intersect_key($tipos, array_flip([$venta->tipcomp])) : array_intersect_key($tipos, array_flip(['COT', 'NV', '01', '03'])) as $codigo => $tipo)
                         <option value="{{ $codigo }}" data-serie="{{ $tipo['serie'] }}"
                                 data-comp="{{ $correlativosInternos[$codigo] ?? '' }}"
-                                @selected(old('tipcomp', request('tipo', 'COT')) === $codigo)>{{ $tipo['nombre'] }}</option>
+                                @selected(old('tipcomp', $venta?->tipcomp ?? request('tipo', 'COT')) === $codigo)>{{ $tipo['nombre'] }}</option>
                     @endforeach
                 </select>
             </div>
             <div class="form-group">
                 <label for="f-fecha">Fecha <span>*</span></label>
-                <input type="date" id="f-fecha" name="fecha" required value="{{ old('fecha', now()->toDateString()) }}">
+                <input type="date" id="f-fecha" name="fecha" required
+                       value="{{ old('fecha', $venta?->fecha?->toDateString() ?? now()->toDateString()) }}">
             </div>
             <div class="form-group">
                 <label for="f-n-seri">N° Serie <span>*</span></label>
                 <input type="text" id="f-n-seri" name="n_seri" required maxlength="4"
-                       placeholder="F001" value="{{ old('n_seri') }}">
+                       placeholder="F001" value="{{ old('n_seri', $venta?->n_seri ?? '') }}">
             </div>
             <div class="form-group">
                 <label for="f-n-comp">N° Comprobante <span>*</span></label>
                 <input type="text" id="f-n-comp" name="n_comp" required maxlength="20"
-                       placeholder="0000000001" value="{{ old('n_comp') }}">
+                       placeholder="0000000001" value="{{ old('n_comp', $venta?->n_comp ?? '') }}">
                 <small id="f-n-comp-hint" style="display:block; margin-top:4px; font-size:11px; color:var(--ink-3);" hidden>
                     Correlativo automático: no se puede editar.
                 </small>
@@ -138,12 +160,12 @@
             <div class="form-group">
                 <label for="f-vencimiento">Fecha de vencimiento <span>*</span></label>
                 <input type="date" id="f-vencimiento" name="fecha_vencimiento" required
-                       value="{{ old('fecha_vencimiento', now()->toDateString()) }}">
+                       value="{{ old('fecha_vencimiento', $venta?->fecha_vencimiento?->toDateString() ?? now()->toDateString()) }}">
             </div>
             <div class="form-group">
                 <label for="f-condicion">Condición de pago</label>
                 <input type="text" id="f-condicion" name="condicion_pago" maxlength="100"
-                       placeholder="Contado, crédito 30 días…" value="{{ old('condicion_pago', 'Contado') }}">
+                       placeholder="Contado, crédito 30 días…" value="{{ old('condicion_pago', $venta?->condicion_pago ?? 'Contado') }}">
             </div>
         </div>
     </div>
@@ -166,17 +188,17 @@
             <div class="form-group">
                 <label for="f-razonsocial">Cliente <span>*</span></label>
                 <input type="text" id="f-razonsocial" name="razonsocial" required maxlength="300"
-                       placeholder="Nombre o empresa..." value="{{ old('razonsocial') }}">
+                       placeholder="Nombre o empresa..." value="{{ old('razonsocial', $venta?->razonsocial ?? '') }}">
             </div>
             <div class="form-group">
                 <label for="f-n-ruc">N° RUC / DNI</label>
                 <div style="display:flex;gap:8px;">
-                    <input type="text" id="f-n-ruc" name="n_ruc" maxlength="20" value="{{ old('n_ruc') }}" style="flex:1;">
+                    <input type="text" id="f-n-ruc" name="n_ruc" maxlength="20" value="{{ old('n_ruc', $venta?->n_ruc ?? '') }}" style="flex:1;">
                     <button type="button" class="btn btn-secondary" id="btnBuscarDocFactura" title="Buscar en SUNAT/RENIEC">Buscar</button>
                 </div>
                 <small id="docFacturaEstado" style="display:block;margin-top:4px;color:var(--ink-3);"></small>
             </div>
-            <input type="hidden" id="f-cliente-id" name="cliente_id" value="{{ old('cliente_id') }}">
+            <input type="hidden" id="f-cliente-id" name="cliente_id" value="{{ old('cliente_id', $venta?->cliente_id ?? '') }}">
         </div>
     </div>
 
@@ -186,15 +208,25 @@
         <div class="form-grid">
             <div class="form-group">
                 <label for="f-tipo-operacion">Tipo de operación</label>
+                @php
+                    $tipoOperacionPrefill = $edicionSinItems
+                        ? ($venta->baseimp > 0 ? 'gravada' : ($venta->exonerado > 0 ? 'exonerada' : 'inafecta'))
+                        : 'gravada';
+                @endphp
                 <select id="f-tipo-operacion" name="tipo_operacion">
-                    <option value="gravada">⚡ Gravada (con IGV)</option>
-                    <option value="exonerada">🟡 Exonerada</option>
-                    <option value="inafecta">⚪ Inafecta</option>
+                    <option value="gravada" @selected(old('tipo_operacion', $tipoOperacionPrefill) === 'gravada')>⚡ Gravada (con IGV)</option>
+                    <option value="exonerada" @selected(old('tipo_operacion', $tipoOperacionPrefill) === 'exonerada')>🟡 Exonerada</option>
+                    <option value="inafecta" @selected(old('tipo_operacion', $tipoOperacionPrefill) === 'inafecta')>⚪ Inafecta</option>
                 </select>
             </div>
             <div class="form-group">
                 <label for="f-monto">Monto (S/)</label>
-                <input type="number" id="f-monto" name="monto" step="0.01" min="0" placeholder="0.00" value="{{ old('monto') }}">
+                @php
+                    $montoPrefill = $edicionSinItems
+                        ? round((float) $venta->baseimp + (float) $venta->igv + (float) $venta->exonerado + (float) $venta->inafecto, 2)
+                        : null;
+                @endphp
+                <input type="number" id="f-monto" name="monto" step="0.01" min="0" placeholder="0.00" value="{{ old('monto', $montoPrefill) }}">
             </div>
         </div>
     </div>
@@ -216,7 +248,7 @@
             <select id="f-almacen" name="almacen_id">
                 <option value="">— Selecciona si vas a descontar stock —</option>
                 @foreach ($almacenes as $almacen)
-                    <option value="{{ $almacen->id }}" @selected((string) old('almacen_id', $almacenPredeterminado) === (string) $almacen->id)>{{ $almacen->nombre }}</option>
+                    <option value="{{ $almacen->id }}" @selected((string) old('almacen_id', $venta?->almacen_id ?? $almacenPredeterminado) === (string) $almacen->id)>{{ $almacen->nombre }}</option>
                 @endforeach
             </select>
             <p class="nv-hint" style="margin-top:4px;">Solo hace falta si alguno de los productos que agregues abajo es del catálogo — descuenta su stock.</p>
@@ -263,7 +295,7 @@
 
     <div class="header-btns" style="justify-content:flex-end;margin-top:14px;">
         <a href="{{ route('admin.ventas.index') }}" class="btn btn-secondary">Cancelar</a>
-        <button type="submit" class="btn btn-primary">Guardar</button>
+        <button type="submit" class="btn btn-primary">{{ $venta ? 'Guardar cambios' : 'Guardar' }}</button>
     </div>
 </form>
 @endsection
@@ -271,6 +303,7 @@
 @push('scripts')
 <script>
 const IGV_VENTAS = {{ config('rentaltech.igv') }};
+const EDITANDO = {{ $venta ? 'true' : 'false' }};
 
 // Serie sugerida según el tipo de comprobante.
 const fTipcomp = document.getElementById('f-tipcomp');
@@ -280,14 +313,17 @@ const fNCompHint = document.getElementById('f-n-comp-hint');
 
 // Se sugiere de nuevo cada vez que cambia el tipo, salvo que el usuario ya
 // haya escrito su propia serie a mano (si solo se chequeara "está vacío",
-// dejaría de re-sugerir después del primer autocompletado).
-let fSerieEditada = false;
+// dejaría de re-sugerir después del primer autocompletado). Al editar, el
+// número ya es el real del comprobante — nunca se re-sugiere.
+let fSerieEditada = EDITANDO;
 fNSeri.addEventListener('input', () => { fSerieEditada = true; });
 
 // Cotización y Nota de Venta no admiten número libre: el servidor siempre
 // reemplaza lo que se escriba aquí por el siguiente correlativo, así que el
 // campo se bloquea y se muestra el número que realmente va a quedar.
 function sugerirSerieFactura() {
+    if (EDITANDO) return;
+
     if (!fSerieEditada) {
         fNSeri.value = fTipcomp.selectedOptions[0]?.dataset.serie || '';
     }
@@ -618,6 +654,13 @@ if (ORIGEN) {
         fMonto.value = ORIGEN.monto;
     }
 }
+
+// ── Precarga al editar: el detalle ya guardado de la venta ───────────────
+const EDICION_ITEMS = @json($edicionItems);
+
+EDICION_ITEMS.forEach((it) => {
+    agregarFilaFactura({ nombre: it.nombre, codigo: it.codigo, precio: it.precio }, it.cantidad);
+});
 
 recalcularFactura();
 

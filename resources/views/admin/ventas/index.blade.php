@@ -177,20 +177,28 @@
                                 <a href="{{ route('admin.ventas.comprobante', $venta) }}" target="_blank"
                                    class="btn-edit-v" title="Ver / imprimir comprobante"
                                    style="text-decoration:none;color:inherit;">🧾</a>
-                                <button type="button" class="btn-edit-v btn-editar" title="Editar"
-                                        data-venta="{{ $venta->id }}"
-                                        data-fecha="{{ $venta->fecha?->format('Y-m-d') }}"
-                                        data-tipcomp="{{ $venta->tipcomp }}"
-                                        data-n-seri="{{ $venta->n_seri }}"
-                                        data-n-comp="{{ $venta->n_comp }}"
-                                        data-n-ruc="{{ $venta->n_ruc }}"
-                                        data-razonsocial="{{ $venta->razonsocial }}"
-                                        data-cliente-id="{{ $venta->cliente_id }}"
-                                        data-baseimp="{{ $venta->baseimp }}"
-                                        data-exonerado="{{ $venta->exonerado }}"
-                                        data-inafecto="{{ $venta->inafecto }}"
-                                        data-total="{{ $venta->total }}"
-                                        data-tipcambio="{{ $venta->tipcambio }}">✏</button>
+                                @if (in_array($venta->tipcomp, ['COT', 'NV'], true))
+                                    {{-- Cotización y Nota de Venta editan también el detalle de
+                                         productos — el modal rápido de abajo solo toca cabecera. --}}
+                                    <a href="{{ route('admin.ventas.factura.edit', $venta) }}"
+                                       class="btn-edit-v" title="Editar (cabecera y productos)"
+                                       style="text-decoration:none;color:inherit;">✏</a>
+                                @else
+                                    <button type="button" class="btn-edit-v btn-editar" title="Editar"
+                                            data-venta="{{ $venta->id }}"
+                                            data-fecha="{{ $venta->fecha?->format('Y-m-d') }}"
+                                            data-tipcomp="{{ $venta->tipcomp }}"
+                                            data-n-seri="{{ $venta->n_seri }}"
+                                            data-n-comp="{{ $venta->n_comp }}"
+                                            data-n-ruc="{{ $venta->n_ruc }}"
+                                            data-razonsocial="{{ $venta->razonsocial }}"
+                                            data-cliente-id="{{ $venta->cliente_id }}"
+                                            data-baseimp="{{ $venta->baseimp }}"
+                                            data-exonerado="{{ $venta->exonerado }}"
+                                            data-inafecto="{{ $venta->inafecto }}"
+                                            data-total="{{ $venta->total }}"
+                                            data-tipcambio="{{ $venta->tipcambio }}">✏</button>
+                                @endif
 
                                 @if ($venta->tipcomp === 'COT')
                                     <details class="ven-generar-dd">

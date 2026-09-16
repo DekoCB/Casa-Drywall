@@ -269,25 +269,9 @@ class VentaController extends Controller
             return back()->with('error', "Ya existe el comprobante {$datos['n_seri']}-{$datos['n_comp']}.");
         }
 
-        if ($items !== []) {
-            $subtotalItems = collect($items)->sum(
-                fn (array $item) => (float) $item['cantidad'] * (float) $item['precio_unitario']
-            );
-            $desglose = $this->precios->desglosarImporte($subtotalItems, ! empty($datos['precios_incluyen_igv']));
-            $importes = [
-                'baseimp' => $desglose['base'],
-                'igv' => $desglose['igv'],
-                'exonerado' => 0.0,
-                'inafecto' => 0.0,
-                'total' => round($desglose['base'] + $desglose['igv'], 2),
-            ];
-        } elseif ((float) ($datos['monto'] ?? 0) > 0 && ! empty($datos['tipo_operacion'])) {
-            $importes = $this->conImportes([
-                'monto' => $datos['monto'],
-                'tipo_operacion' => $datos['tipo_operacion'],
-                'precios_incluyen_igv' => $datos['precios_incluyen_igv'] ?? false,
-            ]);
-        } else {
+        $importes = $this->calcularImportes($datos, $items);
+
+        if ($importes === null) {
             return back()->withInput()->with('error', 'Ingresa un monto o agrega al menos un producto.');
         }
 
@@ -475,6 +459,185 @@ class VentaController extends Controller
 
         // Se abre el comprobante recién generado, listo para imprimir o enviar.
         $mensaje = "Comprobante {$venta->n_seri}-{$venta->n_comp} generado para {$venta->cliente_nombre}.";
+
+        if ($avisosStock !== []) {
+            $mensaje .= ' ⚠ Sin stock suficiente — '.implode('; ', $avisosStock).'.';
+        }
+
+        return redirect()->route('admin.ventas.comprobante', $venta)->with('mensaje', $mensaje);
+    }
+
+    /**
+     * Página de edición de Cotización/Nota de Venta — reusa el mismo
+     * formulario de `createFactura()` (`admin.ventas.factura`), precargado
+     * con los datos de `$venta`. Boleta/Factura ya comprometidas con SUNAT
+     * no pasan por acá: se corrigen con una Nota de Crédito, no editando el
+     * detalle (ver el docblock de `anular()`).
+     */
+    public function editFactura(Venta $venta): View
+    {
+        abort_unless(in_array($venta->tipcomp, ['COT', 'NV'], true), 404);
+
+        $venta->load('detalles');
+
+        $almacenes = Almacen::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']);
+
+        return view('admin.ventas.factura', [
+            'tipos' => self::TIPOS,
+            'clientes' => Cliente::orderBy('nombres')->get(['id', 'nombres', 'numero_documento']),
+            'almacenes' => $almacenes,
+            'almacenPredeterminado' => $almacenes->min('id'),
+            'productos' => Producto::activos()->with(['categoria:id,nombre', 'marca:id,nombre'])->orderBy('nombre')
+                ->get(['id', 'codigo', 'nombre', 'presentacion', 'categoria_id', 'marca_id', 'precio_venta', 'stock']),
+            'correlativosInternos' => [],
+            'origen' => null,
+            'venta' => $venta,
+        ]);
+    }
+
+    /**
+     * Guarda los cambios de `editFactura()`, incluido el detalle de
+     * productos (añadir/quitar líneas) — antes de esto, la edición de una
+     * venta solo tocaba la cabecera y nunca el detalle ni el stock.
+     */
+    public function updateFactura(Request $request, Venta $venta): RedirectResponse
+    {
+        abort_unless(in_array($venta->tipcomp, ['COT', 'NV'], true), 404);
+
+        $datos = $this->validarFactura($request);
+        $items = $this->resolverProductoIds($this->itemsValidos($datos['items'] ?? []));
+
+        $duplicado = Venta::where('tipcomp', $datos['tipcomp'])
+            ->where('n_seri', $datos['n_seri'])
+            ->where('n_comp', $datos['n_comp'])
+            ->where('id', '!=', $venta->id)
+            ->exists();
+
+        if ($duplicado) {
+            return back()->withInput()->with('error', "Ya existe otro comprobante {$datos['n_seri']}-{$datos['n_comp']}.");
+        }
+
+        $importes = $this->calcularImportes($datos, $items);
+
+        if ($importes === null) {
+            return back()->withInput()->with('error', 'Ingresa un monto o agrega al menos un producto.');
+        }
+
+        $almacenId = ! empty($datos['almacen_id']) ? (int) $datos['almacen_id'] : null;
+
+        $aplicaStock = $datos['tipcomp'] !== 'COT'
+            && collect($items)->contains(fn (array $item) => $item['producto_id'] !== null);
+
+        if ($aplicaStock && ! $almacenId) {
+            throw ValidationException::withMessages([
+                'almacen_id' => 'Selecciona un almacén: hay productos del catálogo en el detalle y su stock debe descontarse.',
+            ]);
+        }
+
+        $cliente = $this->fichaDelCliente($datos);
+        $avisosStock = [];
+
+        DB::transaction(function () use ($request, $venta, $datos, $items, $importes, $almacenId, $cliente, &$avisosStock) {
+            $venta->loadMissing('detalles');
+
+            $oldAlmacenId = $venta->almacen_id;
+
+            $oldQtyPorProducto = $venta->detalles
+                ->filter(fn (VentaDetalle $d) => $d->producto_id !== null)
+                ->groupBy('producto_id')
+                ->map(fn ($g) => (int) $g->sum('cantidad'));
+
+            $newQtyPorProducto = collect($items)
+                ->filter(fn (array $i) => $i['producto_id'] !== null)
+                ->groupBy('producto_id')
+                ->map(fn ($g) => (int) $g->sum('cantidad'));
+
+            // Una Cotización es un presupuesto: nunca movió stock al crearse
+            // (sin importar si sus líneas enlazan productos reales, ver
+            // `$aplicaStock` en storeFactura()) — tampoco al editarla, por
+            // más que `$venta->detalles` sí tenga `producto_id`.
+            if ($datos['tipcomp'] !== 'COT') {
+                // Solo se mueve la diferencia entre lo que se vendía antes
+                // de editar y lo que se vende ahora — no se descuenta todo
+                // de nuevo cada vez que se edita, para no ensuciar
+                // Movimientos con pares de entrada/salida que se cancelan
+                // entre sí. Si además cambió el almacén, no hay
+                // "diferencia" que valga: se revierte todo lo viejo en el
+                // almacén viejo y se aplica todo lo nuevo en el nuevo.
+                if ($oldAlmacenId === $almacenId) {
+                    $productoIds = $oldQtyPorProducto->keys()->merge($newQtyPorProducto->keys())->unique();
+
+                    foreach ($productoIds as $productoId) {
+                        $delta = ($newQtyPorProducto[$productoId] ?? 0) - ($oldQtyPorProducto[$productoId] ?? 0);
+
+                        if ($delta !== 0 && $almacenId) {
+                            $this->ajustarStockDelta((int) $productoId, $almacenId, $delta, $venta, $request, $avisosStock);
+                        }
+                    }
+                } else {
+                    if ($oldAlmacenId) {
+                        foreach ($oldQtyPorProducto as $productoId => $qty) {
+                            $this->ajustarStockDelta((int) $productoId, $oldAlmacenId, -$qty, $venta, $request, $avisosStock);
+                        }
+                    }
+
+                    if ($almacenId) {
+                        foreach ($newQtyPorProducto as $productoId => $qty) {
+                            $this->ajustarStockDelta((int) $productoId, $almacenId, $qty, $venta, $request, $avisosStock);
+                        }
+                    }
+                }
+            }
+
+            $venta->detalles()->delete();
+
+            foreach ($items as $item) {
+                VentaDetalle::create([
+                    'venta_id' => $venta->id,
+                    'producto_id' => $item['producto_id'],
+                    'prod_codigo' => $item['producto_codigo'] ?: null,
+                    'prod_nombre' => $item['producto_nombre'],
+                    'cantidad' => $item['cantidad'],
+                    'precio_unitario' => $item['precio_unitario'],
+                    'subtotal' => round((float) $item['cantidad'] * (float) $item['precio_unitario'], 2),
+                ]);
+            }
+
+            // La Cobranza vinculada (si la Nota de Venta tiene una) no se
+            // toca acá a propósito: `Cobranza::reflejarEnVentas()` pisaría
+            // `tipcomp` de vuelta a '01' (ver el comentario en storeFactura()
+            // sobre por qué hace falta corregirlo después de guardar la
+            // cobranza) — mismo límite que ya tenía `update()` antes de este
+            // cambio, no es nuevo.
+            $venta->update([
+                'fecha' => $datos['fecha'],
+                'fecha_vencimiento' => $datos['fecha_vencimiento'],
+                'n_seri' => $datos['n_seri'],
+                'n_comp' => $datos['n_comp'],
+                'n_ruc' => $datos['n_ruc'] ?? '',
+                'razonsocial' => $datos['razonsocial'],
+                'cliente_id' => $cliente?->id,
+                'cliente_ruc' => $datos['n_ruc'] ?? null,
+                'cliente_nombre' => $datos['razonsocial'],
+                'cliente_direccion' => $cliente?->direccion,
+                'cliente_telefono' => $cliente?->telefono,
+                'cliente_correo' => $cliente?->email,
+                'cliente_distrito' => $cliente?->distrito,
+                'condicion_pago' => $datos['condicion_pago'] ?? null,
+                'almacen_id' => $almacenId,
+                'baseimp' => $importes['baseimp'],
+                'subtotal' => round($importes['baseimp'] + $importes['exonerado'] + $importes['inafecto'], 2),
+                'igv' => $importes['igv'],
+                'exonerado' => $importes['exonerado'],
+                'inafecto' => $importes['inafecto'],
+                'total' => $importes['total'],
+                'moneda' => 'PEN',
+                'tipo_cambio' => 1,
+                'tipcambio' => 1,
+            ]);
+        });
+
+        $mensaje = "Comprobante {$venta->n_seri}-{$venta->n_comp} actualizado.";
 
         if ($avisosStock !== []) {
             $mensaje .= ' ⚠ Sin stock suficiente — '.implode('; ', $avisosStock).'.';
@@ -1005,5 +1168,77 @@ class VentaController extends Controller
         }
 
         return $validos;
+    }
+
+    /**
+     * Igual que la rama de importes de `storeFactura()`: si hay ítems, el
+     * importe sale de sumarlos; si no, del monto único. `null` cuando no
+     * vino ninguno de los dos — el llamador decide el error (crear no puede
+     * seguir, editar tampoco).
+     */
+    private function calcularImportes(array $datos, array $items): ?array
+    {
+        if ($items !== []) {
+            $subtotalItems = collect($items)->sum(
+                fn (array $item) => (float) $item['cantidad'] * (float) $item['precio_unitario']
+            );
+            $desglose = $this->precios->desglosarImporte($subtotalItems, ! empty($datos['precios_incluyen_igv']));
+
+            return [
+                'baseimp' => $desglose['base'],
+                'igv' => $desglose['igv'],
+                'exonerado' => 0.0,
+                'inafecto' => 0.0,
+                'total' => round($desglose['base'] + $desglose['igv'], 2),
+            ];
+        }
+
+        if ((float) ($datos['monto'] ?? 0) > 0 && ! empty($datos['tipo_operacion'])) {
+            return $this->conImportes([
+                'monto' => $datos['monto'],
+                'tipo_operacion' => $datos['tipo_operacion'],
+                'precios_incluyen_igv' => $datos['precios_incluyen_igv'] ?? false,
+            ]);
+        }
+
+        return null;
+    }
+
+    /**
+     * Ajusta el stock de un producto por la diferencia entre lo que se
+     * vendía antes de editar y lo que se vende ahora (`updateFactura()`).
+     * `$delta` positivo = se vende más que antes (descuenta), negativo = se
+     * vende menos (devuelve) — mismo criterio "nunca bloquea" y "puede
+     * quedar negativo" que `storeFactura()`.
+     */
+    private function ajustarStockDelta(int $productoId, int $almacenId, int $delta, Venta $venta, Request $request, array &$avisosStock): void
+    {
+        $fila = StockAlmacen::lockForUpdate()->firstOrCreate(
+            ['producto_id' => $productoId, 'almacen_id' => $almacenId],
+            ['stock' => 0]
+        );
+
+        $anterior = (int) $fila->stock;
+        $nuevo = $anterior - $delta;
+        $fila->update(['stock' => $nuevo]);
+
+        if ($nuevo < 0) {
+            $nombre = Producto::find($productoId)?->nombre ?? "producto #{$productoId}";
+            $avisosStock[] = "{$nombre} quedó en {$nuevo}";
+        }
+
+        MovimientoAlmacen::create([
+            'producto_id' => $productoId,
+            'almacen_id' => $almacenId,
+            'tipo' => $delta > 0 ? 'salida' : 'entrada',
+            'cantidad' => abs($delta),
+            'stock_anterior' => $anterior,
+            'stock_nuevo' => $nuevo,
+            'motivo' => "Edición de venta {$venta->numero_venta}".($nuevo < 0 ? ' (sin stock suficiente)' : ''),
+            'referencia' => $venta->numero_venta,
+            'usuario_id' => $request->user()->id,
+        ]);
+
+        Producto::find($productoId)?->recalcularStock();
     }
 }

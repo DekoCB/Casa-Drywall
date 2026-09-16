@@ -258,6 +258,11 @@ Route::middleware(['auth', 'rol:admin,ventas'])
         // La edición se hace desde el modal del listado; el alta es una página aparte.
         Route::get('ventas/factura/crear', [VentaController::class, 'createFactura'])->name('ventas.factura.create');
         Route::post('ventas/factura', [VentaController::class, 'storeFactura'])->name('ventas.factura.store');
+        // Edición de Cotización/Nota de Venta con detalle de productos — a
+        // diferencia del modal rápido del listado (solo cabecera), acá se
+        // puede añadir o quitar líneas. Boleta/Factura no pasan por acá.
+        Route::get('ventas/{venta}/factura/editar', [VentaController::class, 'editFactura'])->name('ventas.factura.edit');
+        Route::put('ventas/{venta}/factura', [VentaController::class, 'updateFactura'])->name('ventas.factura.update');
         Route::get('ventas/notas/crear/{origen?}', [VentaController::class, 'createNota'])->name('ventas.notas.create');
         Route::post('ventas/notas', [VentaController::class, 'storeNota'])->name('ventas.notas.store');
         Route::post('ventas/{venta}/enviar-sunat', [VentaController::class, 'enviarSunat'])->name('ventas.enviar-sunat');
