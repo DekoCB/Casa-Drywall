@@ -78,7 +78,8 @@
             <thead>
                 <tr>
                     <th>Fecha</th><th>Producto</th><th>Almacén</th><th>Tipo</th>
-                    <th class="num">Cantidad</th><th class="num">Stock</th><th>Motivo / Referencia</th><th>Usuario</th>
+                    <th class="num">Cantidad</th><th class="num">Stock</th><th class="num">Stock actual</th>
+                    <th>Motivo / Referencia</th><th>Usuario</th>
                     <th>Estado</th><th>Acciones</th>
                 </tr>
             </thead>
@@ -91,6 +92,7 @@
                     <td><span class="rep-badge estado-{{ in_array($m->tipo, ['entrada','traslado'], true) ? 'alta' : ($m->tipo === 'ajuste' ? 'media' : 'baja') }}">{{ ucfirst($m->tipo) }}</span></td>
                     <td class="num">{{ number_format($m->cantidad) }}</td>
                     <td class="num">{{ $m->stock_anterior }} → {{ $m->stock_nuevo }}</td>
+                    <td class="num" title="Suma en todos los almacenes, a hoy">{{ number_format((int) ($m->producto?->stock ?? 0)) }}</td>
                     <td>{{ $m->motivo ?: ($m->referencia ?: '—') }}</td>
                     <td>{{ $m->usuario?->username ?? '—' }}</td>
                     <td>
@@ -112,7 +114,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="10" style="text-align:center;padding:40px;color:var(--ink-3);">Sin movimientos para el filtro seleccionado.</td></tr>
+                <tr><td colspan="11" style="text-align:center;padding:40px;color:var(--ink-3);">Sin movimientos para el filtro seleccionado.</td></tr>
             @endforelse
             </tbody>
         </table>

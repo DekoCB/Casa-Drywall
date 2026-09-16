@@ -91,7 +91,7 @@ class CentroInventario
                 'marca' => $p->marca?->nombre ?? '—',
                 'unidad' => $p->presentacion ?: '—',
                 'stock' => $stock,
-                'costo_ponderado' => round($costoPonderado, 2),
+                'costo_ponderado' => round($costoPonderado, 4),
                 'costo_producto' => round($stock * $costoPonderado, 2),
             ];
         });
@@ -107,7 +107,7 @@ class CentroInventario
             'columnas' => ['Código', 'Producto', 'Categoría', 'Marca', 'Unidad', 'Stock', 'Costo Ponderado', 'Costo de Producto'],
             'filas' => $items->map(fn ($f) => [
                 $f['codigo'], $f['nombre'], $f['categoria'], $f['marca'], $f['unidad'], $f['stock'],
-                number_format($f['costo_ponderado'], 2), number_format($f['costo_producto'], 2),
+                number_format($f['costo_ponderado'], 4), number_format($f['costo_producto'], 2),
             ])->all(),
         ];
     }
@@ -166,8 +166,16 @@ class CentroInventario
         ];
     }
 
-    /** Snapshot de stock actual, con el valor a costo de compra. */
-    public function reporteInventario(?int $categoriaId, ?int $marcaId, string $busqueda = ''): array
+    /**
+     * Snapshot de stock actual, con el valor a costo de compra.
+     *
+     * Sin `$almacenId`, "stock" es `Producto.stock` (la suma en todos los
+     * almacenes). Con `$almacenId`, se lee directo de `stock_almacen` — la
+     * misma fuente que usa el Inventario por almacén — para que ambas
+     * pantallas puedan mostrar exactamente el mismo número cuando se
+     * comparan con el mismo almacén elegido en las dos.
+     */
+    public function reporteInventario(?int $categoriaId, ?int $marcaId, string $busqueda = '', ?int $almacenId = null): array
     {
         $busqueda = trim($busqueda);
 
@@ -181,30 +189,37 @@ class CentroInventario
             ->orderBy('nombre')
             ->get();
 
-        $items = $productos->map(function (Producto $p) {
+        $stockPorAlmacen = $almacenId
+            ? StockAlmacen::where('almacen_id', $almacenId)
+                ->whereIn('producto_id', $productos->pluck('id'))
+                ->pluck('stock', 'producto_id')
+            : null;
+
+        $items = $productos->map(function (Producto $p) use ($stockPorAlmacen, $almacenId) {
             $costo = (float) $p->precio_compra;
             $venta = (float) $p->precio_venta;
             $utilidad = $venta - $costo;
+            $stock = $almacenId ? (int) ($stockPorAlmacen[$p->id] ?? 0) : (int) $p->stock;
 
             return [
                 'codigo' => $p->codigo ?: '—',
                 'nombre' => $p->nombre,
                 'categoria' => $p->categoria?->nombre ?? '—',
                 'marca' => $p->marca?->nombre ?? '—',
-                'stock' => (int) $p->stock,
+                'stock' => $stock,
                 'minimo' => (int) $p->stock_minimo,
                 'costo' => $costo,
                 'precio_venta' => $venta,
-                'utilidad' => round($utilidad, 2),
+                'utilidad' => round($utilidad, 4),
                 // Margen sobre el precio de venta (no sobre el costo): 0 si
                 // el producto todavía no tiene precio de venta cargado.
                 'utilidad_pct' => $venta > 0 ? round($utilidad / $venta * 100, 1) : 0.0,
-                'valor' => round((int) $p->stock * $costo, 2),
+                'valor' => round($stock * $costo, 2),
             ];
         });
 
         return [
-            'filtros' => ['categoria' => $categoriaId, 'marca' => $marcaId, 'q' => $busqueda],
+            'filtros' => ['categoria' => $categoriaId, 'marca' => $marcaId, 'q' => $busqueda, 'almacen_id' => $almacenId],
             'resumen' => [
                 'productos' => $items->count(),
                 'unidades' => (int) $items->sum('stock'),
@@ -216,8 +231,8 @@ class CentroInventario
             'columnas' => ['Código', 'Producto', 'Categoría', 'Marca', 'Stock', 'Mín.', 'Costo Unit.', 'Precio Venta', 'Utilidad Unit.', 'Utilidad %', 'Valor'],
             'filas' => $items->map(fn ($f) => [
                 $f['codigo'], $f['nombre'], $f['categoria'], $f['marca'], $f['stock'], $f['minimo'],
-                number_format($f['costo'], 2), number_format($f['precio_venta'], 2),
-                number_format($f['utilidad'], 2), $f['utilidad_pct'].'%', number_format($f['valor'], 2),
+                number_format($f['costo'], 4), number_format($f['precio_venta'], 4),
+                number_format($f['utilidad'], 4), $f['utilidad_pct'].'%', number_format($f['valor'], 2),
             ])->all(),
         ];
     }

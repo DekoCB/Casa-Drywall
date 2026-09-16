@@ -18,6 +18,15 @@
 <div class="content-card">
     <form method="GET" class="rep-filtros-form">
         <div class="filtro-campo">
+            <span>Almacén</span>
+            <select name="almacen_id">
+                <option value="">Todos (suma general)</option>
+                @foreach ($almacenes as $almacen)
+                    <option value="{{ $almacen->id }}" @selected((int) $filtros['almacen_id'] === $almacen->id)>{{ $almacen->nombre }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="filtro-campo">
             <span>Categoría</span>
             <select name="categoria">
                 <option value="">Todas</option>
@@ -46,6 +55,11 @@
             <a href="{{ route('admin.inventario.reporte.pdf', request()->query()) }}" class="btn btn-secondary btn-sm"><span class="btn-text">📄 PDF</span></a>
         </div>
     </form>
+
+    <p style="color:var(--ink-3);font-size:13px;margin:-4px 0 16px;">
+        Sin almacén elegido, "Stock" suma todos los almacenes — para comparar contra
+        <a href="{{ route('admin.inventario.movimientos') }}">Inventario</a>, elige ahí el mismo almacén.
+    </p>
 
     <div class="rep-resumen">
         <div class="rep-kpi">
@@ -85,9 +99,9 @@
                     <td>{{ $fila['marca'] }}</td>
                     <td class="num" style="color:{{ $fila['stock'] <= $fila['minimo'] ? '#A8231F' : 'inherit' }};font-weight:{{ $fila['stock'] <= $fila['minimo'] ? '700' : '400' }};">{{ number_format($fila['stock']) }}</td>
                     <td class="num">{{ number_format($fila['minimo']) }}</td>
-                    <td class="num">S/ {{ number_format($fila['costo'], 2) }}</td>
-                    <td class="num">S/ {{ number_format($fila['precio_venta'], 2) }}</td>
-                    <td class="num" style="color:{{ $fila['utilidad'] < 0 ? '#A8231F' : '#1f6b5e' }};">S/ {{ number_format($fila['utilidad'], 2) }}</td>
+                    <td class="num">S/ {{ number_format($fila['costo'], 4) }}</td>
+                    <td class="num">S/ {{ number_format($fila['precio_venta'], 4) }}</td>
+                    <td class="num" style="color:{{ $fila['utilidad'] < 0 ? '#A8231F' : '#1f6b5e' }};">S/ {{ number_format($fila['utilidad'], 4) }}</td>
                     <td class="num">{{ number_format($fila['utilidad_pct'], 1) }}%</td>
                     <td class="num">S/ {{ number_format($fila['valor'], 2) }}</td>
                 </tr>

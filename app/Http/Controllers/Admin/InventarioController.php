@@ -87,7 +87,7 @@ class InventarioController extends Controller
         ];
 
         $movimientos = MovimientoAlmacen::query()
-            ->with(['producto:id,codigo,nombre', 'almacen:id,nombre', 'usuario:id,username'])
+            ->with(['producto:id,codigo,nombre,stock', 'almacen:id,nombre', 'usuario:id,username'])
             ->when($filtros['tipo'] !== '', fn ($q) => $q->where('tipo', $filtros['tipo']))
             ->when($filtros['producto_id'] > 0, fn ($q) => $q->where('producto_id', $filtros['producto_id']))
             ->when($filtros['almacen_id'] > 0, fn ($q) => $q->where('almacen_id', $filtros['almacen_id']))
@@ -354,6 +354,7 @@ class InventarioController extends Controller
         return view('admin.inventario.reporte', $this->datosReporte($request) + [
             'categorias' => Categoria::orderBy('nombre')->get(['id', 'nombre']),
             'marcas' => Marca::orderBy('nombre')->get(['id', 'nombre']),
+            'almacenes' => Almacen::where('activo', true)->orderBy('nombre')->get(),
         ]);
     }
 
@@ -410,11 +411,13 @@ class InventarioController extends Controller
     {
         $categoria = $request->query('categoria');
         $marca = $request->query('marca');
+        $almacenId = (int) $request->query('almacen_id', 0);
 
         return $this->centro->reporteInventario(
             $categoria ? (int) $categoria : null,
             $marca ? (int) $marca : null,
-            (string) $request->query('q', '')
+            (string) $request->query('q', ''),
+            $almacenId > 0 ? $almacenId : null
         );
     }
 

@@ -80,7 +80,7 @@
                     <td>{{ $fila['marca'] }}</td>
                     <td>{{ $fila['unidad'] }}</td>
                     <td class="num">{{ number_format($fila['stock']) }}</td>
-                    <td class="num">S/ {{ number_format($fila['costo_ponderado'], 2) }}</td>
+                    <td class="num">S/ {{ number_format($fila['costo_ponderado'], 4) }}</td>
                     <td class="num">S/ {{ number_format($fila['costo_producto'], 2) }}</td>
                 </tr>
             @empty

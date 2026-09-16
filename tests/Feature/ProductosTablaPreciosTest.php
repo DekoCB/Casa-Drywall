@@ -10,7 +10,13 @@ use Tests\TestCase;
 /**
  * El listado de Productos ahora muestra precio de compra y de venta, uno
  * junto al otro — Viscosidad (un dato de Kendall que ya no aplica al
- * catálogo real de drywall) se quitó para hacerle espacio.
+ * catálogo real de drywall) se quitó para hacerle espacio, y Precio Alquiler
+ * (tampoco usado) se quitó del modal de alta/edición.
+ *
+ * Los precios de compra y venta se muestran con 4 decimales (antes 2): el
+ * negocio necesita esa precisión para costos por unidad que salen de
+ * prorratear una compra al por mayor (ej. el costo de un tornillo dentro de
+ * una caja de 1000).
  */
 class ProductosTablaPreciosTest extends TestCase
 {
@@ -25,7 +31,7 @@ class ProductosTablaPreciosTest extends TestCase
     {
         Producto::create([
             'codigo' => 'DRY-500', 'nombre' => 'Placa de prueba', 'estado' => 'activo',
-            'precio_compra' => 12.34, 'precio_venta' => 20, 'stock' => 0, 'stock_minimo' => 0,
+            'precio_compra' => 12.3456, 'precio_venta' => 20, 'stock' => 0, 'stock_minimo' => 0,
         ]);
 
         $respuesta = $this->actingAs($this->admin(), 'web')->get(route('admin.productos.index'));
@@ -34,6 +40,16 @@ class ProductosTablaPreciosTest extends TestCase
         $respuesta->assertSee('<th>Precio compra</th>', false);
         $respuesta->assertSee('<th>Precio venta</th>', false);
         $respuesta->assertDontSee('<th>Viscosidad</th>', false);
-        $respuesta->assertSee('S/ 12.34', false);
+        $respuesta->assertSee('S/ 12.3456', false);
+    }
+
+    public function test_el_modal_ya_no_pide_viscosidad_ni_precio_de_alquiler(): void
+    {
+        $respuesta = $this->actingAs($this->admin(), 'web')->get(route('admin.productos.index'));
+
+        $respuesta->assertOk();
+        $respuesta->assertDontSee('id="viscosidad"', false);
+        $respuesta->assertDontSee('id="precio_alquiler"', false);
+        $respuesta->assertDontSee('Precio Alquiler');
     }
 }

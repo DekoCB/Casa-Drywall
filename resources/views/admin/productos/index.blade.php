@@ -220,10 +220,8 @@
                         'categoria_id'     => $producto->categoria_id,
                         'marca_id'         => $producto->marca_id,
                         'presentacion'     => $producto->presentacion,
-                        'viscosidad'       => $producto->viscosidad,
                         'precio_compra'    => $producto->precio_compra,
                         'precio_venta'     => $producto->precio_venta,
-                        'precio_alquiler'  => $producto->precio_alquiler,
                         'stock_minimo'     => $producto->stock_minimo,
                         'peso'             => $producto->peso,
                         'descripcion'      => $producto->descripcion,
@@ -260,8 +258,8 @@
                             <span class="prod-mudo">—</span>
                         @endif
                     </td>
-                    <td class="prod-precio">S/ {{ number_format($producto->precio_compra, 2) }}</td>
-                    <td class="prod-precio">S/ {{ number_format($producto->precio_venta, 2) }}</td>
+                    <td class="prod-precio">S/ {{ number_format($producto->precio_compra, 4) }}</td>
+                    <td class="prod-precio">S/ {{ number_format($producto->precio_venta, 4) }}</td>
                     <td>
                         <span class="prod-acciones">
                             <button type="button" class="pbtn-ico pbtn-ico-verde" title="Movimiento de stock"
@@ -352,21 +350,12 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="viscosidad">Viscosidad</label>
-                        <input type="text" id="viscosidad" name="viscosidad" maxlength="50" placeholder="10W30">
-                    </div>
-                    <div class="form-group">
                         <label for="precio_compra">Precio Compra <span>*</span></label>
-                        <input type="number" id="precio_compra" name="precio_compra" step="0.01" min="0" required placeholder="0.00">
+                        <input type="number" id="precio_compra" name="precio_compra" step="0.0001" min="0" required placeholder="0.0000">
                     </div>
                     <div class="form-group">
                         <label for="precio_venta">Precio Venta <span>*</span></label>
-                        <input type="number" id="precio_venta" name="precio_venta" step="0.01" min="0" required placeholder="0.00">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="precio_alquiler">Precio Alquiler</label>
-                        <input type="number" id="precio_alquiler" name="precio_alquiler" step="0.01" min="0" placeholder="0.00">
+                        <input type="number" id="precio_venta" name="precio_venta" step="0.0001" min="0" required placeholder="0.0000">
                     </div>
                     <div class="form-group">
                         <label for="stock_minimo">Stock Mínimo <span>*</span></label>
@@ -505,8 +494,8 @@ document.addEventListener('click', (e) => {
     document.getElementById('tituloModalProducto').textContent = datos ? 'Editar Producto' : 'Nuevo Producto';
     document.getElementById('registro_id').value = datos?.id ?? '';
 
-    for (const campo of ['codigo', 'nombre', 'categoria_id', 'marca_id', 'presentacion', 'viscosidad',
-                         'precio_compra', 'precio_venta', 'precio_alquiler', 'stock_minimo', 'peso',
+    for (const campo of ['codigo', 'nombre', 'categoria_id', 'marca_id', 'presentacion',
+                         'precio_compra', 'precio_venta', 'stock_minimo', 'peso',
                          'descripcion', 'especificaciones']) {
         document.getElementById(campo).value = datos?.[campo] ?? '';
     }
@@ -528,8 +517,8 @@ document.addEventListener('click', (e) => {
         previos.registro_id ? 'Editar Producto' : 'Nuevo Producto';
     document.getElementById('registro_id').value = previos.registro_id ?? '';
 
-    for (const campo of ['codigo', 'nombre', 'categoria_id', 'marca_id', 'presentacion', 'viscosidad',
-                         'precio_compra', 'precio_venta', 'precio_alquiler', 'stock_minimo', 'peso',
+    for (const campo of ['codigo', 'nombre', 'categoria_id', 'marca_id', 'presentacion',
+                         'precio_compra', 'precio_venta', 'stock_minimo', 'peso',
                          'descripcion', 'especificaciones']) {
         document.getElementById(campo).value = previos[campo] ?? '';
     }

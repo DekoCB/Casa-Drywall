@@ -21,8 +21,8 @@ class Producto extends Model
     protected function casts(): array
     {
         return [
-            'precio_compra' => 'decimal:2',
-            'precio_venta' => 'decimal:2',
+            'precio_compra' => 'decimal:4',
+            'precio_venta' => 'decimal:4',
             'precio_alquiler' => 'decimal:2',
             'peso' => 'decimal:3',
             'stock' => 'integer',

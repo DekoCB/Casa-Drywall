@@ -520,12 +520,10 @@ class ProductoController extends Controller
             'categoria_id' => ['nullable', 'integer', 'exists:categorias,id'],
             'marca_id' => ['nullable', 'integer', 'exists:marcas,id'],
             'presentacion' => ['nullable', 'string', 'max:100'],
-            'viscosidad' => ['nullable', 'string', 'max:50'],
             'descripcion' => ['nullable', 'string'],
             'especificaciones' => ['nullable', 'string'],
             'precio_compra' => ['required', 'numeric', 'min:0'],
             'precio_venta' => ['required', 'numeric', 'min:0'],
-            'precio_alquiler' => ['nullable', 'numeric', 'min:0'],
             'stock_minimo' => ['required', 'integer', 'min:0'],
             'peso' => ['nullable', 'numeric', 'min:0'],
         ]);

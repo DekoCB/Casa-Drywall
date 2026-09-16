@@ -268,6 +268,52 @@ class InventarioTest extends TestCase
         $this->assertSame(187.5, $fila['valor']); // 15 * 12.5
     }
 
+    /**
+     * El cliente reportó que el stock de "Inventario" (por almacén) no
+     * coincidía con "Reporte de Inventario" (antes siempre la suma de TODOS
+     * los almacenes, sin poder elegir uno). Con el mismo almacén elegido en
+     * las dos pantallas, ahora sí dan el mismo número — porque las dos leen
+     * `stock_almacen` directamente en vez de que una use el acumulado
+     * `Producto.stock` y la otra el detalle por almacén.
+     */
+    public function test_reporte_inventario_con_almacen_elegido_coincide_con_inventario_por_almacen(): void
+    {
+        [$almacen1, $almacen2] = $this->dosAlmacenes();
+        $producto = Producto::create(['codigo' => 'P012', 'nombre' => 'Plancha', 'stock' => 30, 'precio_compra' => 4]);
+        StockAlmacen::create(['producto_id' => $producto->id, 'almacen_id' => $almacen1->id, 'stock' => 10]);
+        StockAlmacen::create(['producto_id' => $producto->id, 'almacen_id' => $almacen2->id, 'stock' => 20]);
+
+        $sinFiltro = $this->actingAs($this->admin(), 'web')->get(route('admin.inventario.reporte'));
+        $this->assertSame(30, $sinFiltro->viewData('items')->firstWhere('codigo', 'P012')['stock']);
+
+        $conFiltro = $this->actingAs($this->admin(), 'web')
+            ->get(route('admin.inventario.reporte', ['almacen_id' => $almacen1->id]));
+        $filaReporte = $conFiltro->viewData('items')->firstWhere('codigo', 'P012');
+        $this->assertSame(10, $filaReporte['stock']);
+
+        $inventario = $this->actingAs($this->admin(), 'web')
+            ->get(route('admin.inventario.movimientos', ['almacen_id' => $almacen1->id]));
+        $filaInventario = $inventario->viewData('items')->firstWhere('producto_id', $producto->id);
+
+        $this->assertSame($filaInventario['stock'], $filaReporte['stock']);
+    }
+
+    public function test_historial_de_movimientos_muestra_el_stock_actual_del_producto(): void
+    {
+        [$almacen] = $this->dosAlmacenes();
+        $producto = Producto::create(['codigo' => 'P013', 'nombre' => 'Angular', 'stock' => 45]);
+        MovimientoAlmacen::create(['producto_id' => $producto->id, 'almacen_id' => $almacen->id, 'tipo' => 'entrada', 'cantidad' => 50, 'stock_anterior' => 0, 'stock_nuevo' => 50]);
+        MovimientoAlmacen::create(['producto_id' => $producto->id, 'almacen_id' => $almacen->id, 'tipo' => 'salida', 'cantidad' => 5, 'stock_anterior' => 50, 'stock_nuevo' => 45]);
+
+        $respuesta = $this->actingAs($this->admin(), 'web')->get(route('admin.inventario.movimientos.historial'));
+
+        $respuesta->assertOk();
+        $respuesta->assertSee('Stock actual');
+        // Las dos filas históricas muestran el MISMO stock actual (45), no
+        // solo su propio "stock_nuevo" de ese momento.
+        $respuesta->assertSeeInOrder(['45', '45'], false);
+    }
+
     public function test_reporte_inventario_calcula_la_utilidad_unitaria(): void
     {
         Producto::create(['codigo' => 'P009', 'nombre' => 'Perfil', 'stock' => 10, 'precio_compra' => 8, 'precio_venta' => 12]);
