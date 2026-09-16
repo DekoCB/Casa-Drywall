@@ -591,9 +591,9 @@ function pintarMembreteProveedor() {
     $(campo).addEventListener('input', pintarMembreteProveedor);
 });
 
-// ── Buscador de productos: AJAX contra el catálogo real, acotado al
-//    proveedor elegido arriba si es uno registrado (mismo patrón de
-//    búsqueda con debounce que el autocompletado de cliente, más abajo) ──
+// ── Buscador de productos: AJAX contra el catálogo real, el mismo para
+//    cualquier proveedor (mismo patrón de búsqueda con debounce que el
+//    autocompletado de cliente, más abajo) ──────────────────────────
 let resultados = [];
 let indice = -1;
 let esperaProducto;

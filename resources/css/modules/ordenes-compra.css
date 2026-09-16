@@ -986,7 +986,11 @@ body.oc-seleccionando .fab-nueva-oc { display: none; }
     border-radius: var(--r-lg);
     background: var(--surface);
     box-shadow: 0 18px 50px rgba(17,24,39,.09), 0 2px 6px rgba(17,24,39,.04);
-    overflow: hidden;
+    /* Sin overflow:hidden a propósito: el buscador de productos/cliente
+       abre un desplegable que necesita poder salirse del cuadro cuando el
+       contenido debajo (ej. merch vacío) no le deja espacio de sobra —
+       antes quedaba recortado en silencio. El redondeado de arriba lo
+       cubre .ocd-membrete con su propio border-radius, no el overflow. */
 }
 
 /* ── Membrete ────────────────────────────────────────── */
@@ -999,6 +1003,7 @@ body.oc-seleccionando .fab-nueva-oc { display: none; }
         radial-gradient(900px 220px at 100% 0%, rgba(217, 203, 22,.22), transparent 62%),
         linear-gradient(180deg, #17191d 0%, #0d0e11 100%);
     color: var(--surface-2);
+    border-radius: var(--r-lg) var(--r-lg) 0 0;
 }
 .ocd-membrete-marca {
     display: flex;
