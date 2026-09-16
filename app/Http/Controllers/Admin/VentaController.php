@@ -304,7 +304,13 @@ class VentaController extends Controller
             ]);
         }
 
-        $venta = DB::transaction(function () use ($request, $datos, $items, $importes, $origenCotizacion, $almacenId, $aplicaStock) {
+        // El negocio pidió explícitamente que la venta NUNCA se bloquee por
+        // falta de stock (a diferencia del POS, que sí bloquea) — se
+        // descuenta igual, queda en negativo si hace falta, y se avisa
+        // después de guardar (no se corta la venta a mitad de camino).
+        $avisosStock = [];
+
+        $venta = DB::transaction(function () use ($request, $datos, $items, $importes, $origenCotizacion, $almacenId, $aplicaStock, &$avisosStock) {
             $stockFilas = collect();
 
             if ($aplicaStock) {
@@ -383,30 +389,35 @@ class VentaController extends Controller
                 ]);
             }
 
-            // Stock: se descuenta recién acá (después de crear el detalle)
-            // para que el mensaje de error, si falta stock, incluya el
-            // nombre real de la línea. Como itemsValidos() no fusiona
-            // líneas repetidas del mismo producto, el chequeo y el
-            // descuento van en el mismo paso por línea — así la segunda
-            // línea de un mismo producto ya ve el descuento de la primera
-            // y no deja pasar una demanda combinada que excede el stock.
+            // Stock: se descuenta igual aunque no alcance — el negocio pidió
+            // que la venta nunca se corte por esto (a diferencia del POS).
+            // Como itemsValidos() no fusiona líneas repetidas del mismo
+            // producto, el descuento va en el mismo paso por línea: así la
+            // segunda línea de un mismo producto ya ve el descuento de la
+            // primera y el negativo refleja la demanda combinada real, no
+            // solo la de una línea aislada.
             if ($aplicaStock) {
                 foreach ($items as $item) {
                     if ($item['producto_id'] === null) {
                         continue;
                     }
 
-                    $fila = $stockFilas->get($item['producto_id']);
-                    $disponible = (int) ($fila?->stock ?? 0);
+                    // Si el producto nunca tuvo stock registrado en este
+                    // almacén, $stockFilas no trae su fila (el WHERE IN de
+                    // arriba solo lee filas existentes) — se crea en cero
+                    // en vez de reventar con un ->update() sobre null.
+                    $fila = $stockFilas->get($item['producto_id']) ?? StockAlmacen::lockForUpdate()->firstOrCreate(
+                        ['producto_id' => $item['producto_id'], 'almacen_id' => $almacenId],
+                        ['stock' => 0]
+                    );
 
-                    if ($disponible < $item['cantidad']) {
-                        throw ValidationException::withMessages([
-                            'items' => "Stock insuficiente para {$item['producto_nombre']}: quedan {$disponible}.",
-                        ]);
-                    }
-
+                    $disponible = (int) $fila->stock;
                     $nuevo = $disponible - $item['cantidad'];
                     $fila->update(['stock' => $nuevo]);
+
+                    if ($nuevo < 0) {
+                        $avisosStock[] = "{$item['producto_nombre']} quedó en {$nuevo}";
+                    }
 
                     MovimientoAlmacen::create([
                         'producto_id' => $item['producto_id'],
@@ -415,7 +426,7 @@ class VentaController extends Controller
                         'cantidad' => $item['cantidad'],
                         'stock_anterior' => $disponible,
                         'stock_nuevo' => $nuevo,
-                        'motivo' => "Venta {$venta->numero_venta}",
+                        'motivo' => "Venta {$venta->numero_venta}".($nuevo < 0 ? ' (sin stock suficiente)' : ''),
                         'referencia' => $venta->numero_venta,
                         'usuario_id' => $request->user()->id,
                     ]);
@@ -457,8 +468,13 @@ class VentaController extends Controller
         }
 
         // Se abre el comprobante recién generado, listo para imprimir o enviar.
-        return redirect()->route('admin.ventas.comprobante', $venta)
-            ->with('mensaje', "Comprobante {$venta->n_seri}-{$venta->n_comp} generado para {$venta->cliente_nombre}.");
+        $mensaje = "Comprobante {$venta->n_seri}-{$venta->n_comp} generado para {$venta->cliente_nombre}.";
+
+        if ($avisosStock !== []) {
+            $mensaje .= ' ⚠ Sin stock suficiente — '.implode('; ', $avisosStock).'.';
+        }
+
+        return redirect()->route('admin.ventas.comprobante', $venta)->with('mensaje', $mensaje);
     }
 
     /** Página de alta de Nota de Crédito/Débito, opcionalmente preseleccionando el comprobante a corregir. */

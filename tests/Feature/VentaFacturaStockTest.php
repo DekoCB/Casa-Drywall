@@ -18,6 +18,9 @@ use Tests\TestCase;
  * también descuenta stock y crea movimiento cuando una línea enlaza un
  * producto real del catálogo — mismo patrón que ya usaba `PosVentaService`,
  * para que Inventario/Movimientos por fin cuadren con las ventas normales.
+ * A diferencia del POS, acá la venta NUNCA se bloquea por falta de stock
+ * (pedido explícito del negocio) — se descuenta igual y puede quedar
+ * negativo, con aviso en el mensaje de éxito.
  */
 class VentaFacturaStockTest extends TestCase
 {
@@ -74,7 +77,13 @@ class VentaFacturaStockTest extends TestCase
         $this->assertStringContainsString($venta->numero_venta, $movimiento->motivo);
     }
 
-    public function test_stock_insuficiente_no_escribe_nada(): void
+    /**
+     * El negocio pidió explícitamente que la venta nunca se bloquee por
+     * falta de stock (a diferencia del POS, que sí bloquea) — se descuenta
+     * igual, queda en negativo, y se avisa en el mensaje de éxito sin
+     * cortar la venta.
+     */
+    public function test_stock_insuficiente_permite_la_venta_y_queda_en_negativo(): void
     {
         ['almacen' => $almacen, 'producto' => $producto] = $this->crearEscenario(stock: 1);
 
@@ -83,16 +92,20 @@ class VentaFacturaStockTest extends TestCase
             'items' => [['producto_codigo' => 'DRY-001', 'producto_nombre' => 'Placa Drywall 1/2"', 'cantidad' => 5, 'precio_unitario' => 25]],
         ]);
 
-        $respuesta->assertSessionHasErrors('items');
+        $respuesta->assertRedirect();
+        $respuesta->assertSessionDoesntHaveErrors();
+        $this->assertStringContainsString('Sin stock suficiente', session('mensaje'));
 
-        $this->assertSame(0, Venta::count());
-        $this->assertSame(0, Cobranza::count());
-        $this->assertSame(0, VentaDetalle::count());
-        $this->assertSame(0, MovimientoAlmacen::count());
-        $this->assertSame(1, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
+        $this->assertSame(1, Venta::count());
+        $this->assertSame(-4, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
+        $this->assertSame(-4, $producto->fresh()->stock);
+
+        $movimiento = MovimientoAlmacen::where('producto_id', $producto->id)->firstOrFail();
+        $this->assertStringContainsString('sin stock suficiente', $movimiento->motivo);
     }
 
-    public function test_dos_lineas_del_mismo_producto_verifican_demanda_acumulada(): void
+    /** La segunda línea del mismo producto debe ver el descuento ya aplicado por la primera, aunque el resultado quede en negativo. */
+    public function test_dos_lineas_del_mismo_producto_acumulan_el_descuento_aunque_quede_negativo(): void
     {
         ['almacen' => $almacen, 'producto' => $producto] = $this->crearEscenario(stock: 5);
 
@@ -104,9 +117,28 @@ class VentaFacturaStockTest extends TestCase
             ],
         ]);
 
-        $respuesta->assertSessionHasErrors('items');
-        $this->assertSame(0, Venta::count());
-        $this->assertSame(5, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
+        $respuesta->assertRedirect();
+        $this->assertSame(1, Venta::count());
+        // 5 - 3 - 3 = -1 (no -3 ni dos negativos independientes): confirma
+        // que la segunda línea vio el stock ya descontado por la primera.
+        $this->assertSame(-1, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
+        $this->assertSame(2, MovimientoAlmacen::where('producto_id', $producto->id)->count());
+    }
+
+    /** Un producto que nunca tuvo fila de stock en ese almacén no debe reventar — se crea en cero y queda negativo. */
+    public function test_producto_sin_fila_de_stock_previa_no_falla(): void
+    {
+        $almacen = Almacen::create(['nombre' => 'Principal', 'activo' => true]);
+        $producto = Producto::create(['nombre' => 'Producto Nuevo', 'codigo' => 'NEW-001', 'precio_venta' => 15]);
+        // Sin StockAlmacen::create(...) — nunca se registró stock acá.
+
+        $respuesta = $this->actingAs($this->admin(), 'web')->post(route('admin.ventas.factura.store'), $this->datosBase() + [
+            'almacen_id' => $almacen->id,
+            'items' => [['producto_codigo' => 'NEW-001', 'producto_nombre' => 'Producto Nuevo', 'cantidad' => 2, 'precio_unitario' => 15]],
+        ]);
+
+        $respuesta->assertRedirect();
+        $this->assertSame(-2, StockAlmacen::where('producto_id', $producto->id)->where('almacen_id', $almacen->id)->value('stock'));
     }
 
     public function test_linea_manual_sin_producto_no_requiere_almacen_ni_toca_stock(): void
