@@ -216,7 +216,7 @@
             <select id="f-almacen" name="almacen_id">
                 <option value="">— Selecciona si vas a descontar stock —</option>
                 @foreach ($almacenes as $almacen)
-                    <option value="{{ $almacen->id }}" @selected((string) old('almacen_id') === (string) $almacen->id)>{{ $almacen->nombre }}</option>
+                    <option value="{{ $almacen->id }}" @selected((string) old('almacen_id', $almacenPredeterminado) === (string) $almacen->id)>{{ $almacen->nombre }}</option>
                 @endforeach
             </select>
             <p class="nv-hint" style="margin-top:4px;">Solo hace falta si alguno de los productos que agregues abajo es del catálogo — descuenta su stock.</p>

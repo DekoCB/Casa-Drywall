@@ -60,12 +60,16 @@ return [
     |--------------------------------------------------------------------------
     |
     | Here you may specify the default timezone for your application, which
-    | will be used by the PHP date and date-time functions. The timezone
-    | is set to "UTC" by default as it is suitable for most use cases.
+    | will be used by the PHP date and date-time functions.
+    |
+    | Casa Drywall/Jitk operan desde Perú (UTC-5, sin horario de verano) —
+    | con "UTC" el `now()` de Laravel quedaba 5 horas adelantado, así que
+    | pasado el atardecer local ya mostraba la fecha del día siguiente
+    | (ej: la Fecha de "Nueva Venta" salía mañana en vez de hoy).
     |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => 'America/Lima',
 
     /*
     |--------------------------------------------------------------------------

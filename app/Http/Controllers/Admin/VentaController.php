@@ -66,10 +66,16 @@ class VentaController extends Controller
     /** Página de alta de comprobante: monto único o detalle de productos. */
     public function createFactura(Request $request): View
     {
+        $almacenes = Almacen::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']);
+
         return view('admin.ventas.factura', [
             'tipos' => self::TIPOS,
             'clientes' => Cliente::orderBy('nombres')->get(['id', 'nombres', 'numero_documento']),
-            'almacenes' => Almacen::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
+            'almacenes' => $almacenes,
+            // El primero que se registró (menor id), no el primero del
+            // combo (que va alfabético) — así en producción siempre cae
+            // en el almacén principal sin que el usuario tenga que elegirlo.
+            'almacenPredeterminado' => $almacenes->min('id'),
             'productos' => Producto::activos()->with(['categoria:id,nombre', 'marca:id,nombre'])->orderBy('nombre')
                 ->get(['id', 'codigo', 'nombre', 'presentacion', 'categoria_id', 'marca_id', 'precio_venta', 'stock']),
             // Cotización y Nota de Venta no admiten número libre: se muestra
