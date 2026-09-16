@@ -7,6 +7,7 @@ use App\Models\Almacen;
 use App\Models\Cliente;
 use App\Models\Cobranza;
 use App\Models\CuentaBancaria;
+use App\Models\MetodoPago;
 use App\Models\MovimientoAlmacen;
 use App\Models\Producto;
 use App\Models\StockAlmacen;
@@ -85,6 +86,7 @@ class VentaController extends Controller
                 'NV' => $this->correlativo->documentoInterno('NV', self::TIPOS['NV']['serie']),
             ],
             'origen' => $this->origenParaFactura($request),
+            'metodosPago' => MetodoPago::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
         ]);
     }
 
@@ -294,6 +296,15 @@ class VentaController extends Controller
             ]);
         }
 
+        // Una Cotización es un presupuesto: todavía no hay un pago real que
+        // registrar. Nota de Venta, Boleta y Factura sí son una venta
+        // comprometida — hace falta saber cómo se está cobrando.
+        if ($datos['tipcomp'] !== 'COT' && empty($datos['metodo_pago'])) {
+            throw ValidationException::withMessages([
+                'metodo_pago' => 'Selecciona el medio de pago.',
+            ]);
+        }
+
         // El negocio pidió explícitamente que la venta NUNCA se bloquee por
         // falta de stock (a diferencia del POS, que sí bloquea) — se
         // descuenta igual, queda en negativo si hace falta, y se avisa
@@ -348,6 +359,7 @@ class VentaController extends Controller
                 'cliente_correo' => $cliente?->email,
                 'cliente_distrito' => $cliente?->distrito,
                 'condicion_pago' => $datos['condicion_pago'] ?? null,
+                'metodo_pago' => $datos['metodo_pago'] ?? null,
                 'almacen_id' => $almacenId,
                 'baseimp' => $importes['baseimp'],
                 'subtotal' => round($importes['baseimp'] + $importes['exonerado'] + $importes['inafecto'], 2),
@@ -492,6 +504,7 @@ class VentaController extends Controller
             'correlativosInternos' => [],
             'origen' => null,
             'venta' => $venta,
+            'metodosPago' => MetodoPago::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
         ]);
     }
 
@@ -531,6 +544,12 @@ class VentaController extends Controller
         if ($aplicaStock && ! $almacenId) {
             throw ValidationException::withMessages([
                 'almacen_id' => 'Selecciona un almacén: hay productos del catálogo en el detalle y su stock debe descontarse.',
+            ]);
+        }
+
+        if ($datos['tipcomp'] !== 'COT' && empty($datos['metodo_pago'])) {
+            throw ValidationException::withMessages([
+                'metodo_pago' => 'Selecciona el medio de pago.',
             ]);
         }
 
@@ -624,6 +643,7 @@ class VentaController extends Controller
                 'cliente_correo' => $cliente?->email,
                 'cliente_distrito' => $cliente?->distrito,
                 'condicion_pago' => $datos['condicion_pago'] ?? null,
+                'metodo_pago' => $datos['metodo_pago'] ?? null,
                 'almacen_id' => $almacenId,
                 'baseimp' => $importes['baseimp'],
                 'subtotal' => round($importes['baseimp'] + $importes['exonerado'] + $importes['inafecto'], 2),
@@ -814,6 +834,14 @@ class VentaController extends Controller
     {
         if ($venta->estado === 'cancelada') {
             return back()->with('error', 'Este comprobante ya fue anulado.');
+        }
+
+        // Una Cotización es un presupuesto sin efecto ante SUNAT ni stock
+        // comprometido: no hay nada que "anular" — se borra directo con
+        // "Eliminar" (el botón de Anular ya ni se muestra para ella en el
+        // listado, esto es la defensa del lado del servidor).
+        if ($venta->tipcomp === 'COT') {
+            return back()->with('error', 'Una Cotización no se anula: elimínala directamente si ya no sirve.');
         }
 
         $esDocumentoInterno = $venta->tipcomp === 'NV';
@@ -1070,6 +1098,7 @@ class VentaController extends Controller
             'razonsocial'                  => ['required', 'string', 'max:300'],
             'cliente_id'                   => ['nullable', 'integer', 'exists:clientes,id'],
             'condicion_pago'               => ['nullable', 'string', 'max:100'],
+            'metodo_pago'                  => ['nullable', 'string', 'max:50'],
             'almacen_id'                   => ['nullable', 'integer', 'exists:almacenes,id'],
             'monto'                        => ['nullable', 'numeric', 'min:0'],
             'tipo_operacion'               => ['nullable', Rule::in(['gravada', 'exonerada', 'inafecta'])],

@@ -167,6 +167,16 @@
                 <input type="text" id="f-condicion" name="condicion_pago" maxlength="100"
                        placeholder="Contado, crédito 30 días…" value="{{ old('condicion_pago', $venta?->condicion_pago ?? 'Contado') }}">
             </div>
+            <div class="form-group">
+                <label for="f-metodo-pago">Medio de pago <span id="f-metodo-pago-req">*</span></label>
+                <select id="f-metodo-pago" name="metodo_pago">
+                    <option value="">— Selecciona —</option>
+                    @foreach ($metodosPago as $metodo)
+                        <option value="{{ $metodo->nombre }}" @selected(old('metodo_pago', $venta?->metodo_pago) === $metodo->nombre)>{{ $metodo->nombre }}</option>
+                    @endforeach
+                </select>
+                <p class="nv-hint" style="margin-top:4px;">No aplica para Cotización — todavía no hay un pago real que registrar.</p>
+            </div>
         </div>
     </div>
 
@@ -341,6 +351,20 @@ function sugerirSerieFactura() {
 
 fTipcomp.addEventListener('change', sugerirSerieFactura);
 sugerirSerieFactura(); // El tipo por defecto viene preseleccionado: sin esto, nunca se dispara el "change".
+
+// Medio de pago: obligatorio salvo para Cotización (todavía no hay un pago
+// real que registrar — es solo un presupuesto).
+const fMetodoPago = document.getElementById('f-metodo-pago');
+const fMetodoPagoReq = document.getElementById('f-metodo-pago-req');
+
+function actualizarMetodoPagoRequerido() {
+    const requerido = fTipcomp.value !== 'COT';
+    fMetodoPago.required = requerido;
+    fMetodoPagoReq.hidden = !requerido;
+}
+
+fTipcomp.addEventListener('change', actualizarMetodoPagoRequerido);
+actualizarMetodoPagoRequerido();
 
 // ── Buscador de cliente (mismo estilo que el de productos) ───────────────
 const CLIENTES = @json($clientes->map(fn ($c) => ['id' => $c->id, 'nombre' => $c->nombres, 'doc' => $c->numero_documento])->values());

@@ -47,6 +47,7 @@ class VentaEditarFacturaTest extends TestCase
             'n_comp' => '00000001',
             'razonsocial' => 'Cliente de Prueba',
             'precios_incluyen_igv' => 1,
+            'metodo_pago' => 'Efectivo',
             'almacen_id' => $almacen->id,
             'items' => [['producto_codigo' => $producto->codigo, 'producto_nombre' => $producto->nombre, 'cantidad' => $cantidad, 'precio_unitario' => 25]],
         ]);
@@ -64,6 +65,7 @@ class VentaEditarFacturaTest extends TestCase
             'n_comp' => $venta->n_comp,
             'razonsocial' => $venta->razonsocial,
             'precios_incluyen_igv' => 1,
+            'metodo_pago' => $venta->metodo_pago ?? 'Efectivo',
         ], $sobrescribe);
     }
 

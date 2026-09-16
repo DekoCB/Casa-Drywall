@@ -50,6 +50,7 @@ class VentaFacturaStockTest extends TestCase
             'n_comp' => '00000001',
             'razonsocial' => 'Cliente de Prueba',
             'precios_incluyen_igv' => 1,
+            'metodo_pago' => 'Efectivo',
         ];
     }
 
