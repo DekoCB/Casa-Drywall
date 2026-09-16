@@ -53,6 +53,27 @@
         <x-stat-card :valor="number_format($nVentasRango)" etiqueta="Ventas en el rango" />
         <x-stat-card valor="S/ {{ number_format($montoRango, 2) }}" etiqueta="Vendido en el rango" />
     </div>
+
+    @if ($desglosePorDia->isNotEmpty())
+        <table class="table" style="margin-top:20px;">
+            <thead>
+                <tr>
+                    <th>Día</th>
+                    <th>Ventas</th>
+                    <th>Total vendido</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach ($desglosePorDia as $dia)
+                    <tr>
+                        <td>{{ \Illuminate\Support\Carbon::parse($dia['fecha'])->translatedFormat('d \d\e M, Y') }}</td>
+                        <td>{{ number_format($dia['n']) }}</td>
+                        <td>S/ {{ number_format($dia['monto'], 2) }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    @endif
 </div>
 
 <div class="content-card">

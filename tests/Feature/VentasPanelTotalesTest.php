@@ -113,4 +113,46 @@ class VentasPanelTotalesTest extends TestCase
 
         $this->assertSame(60.0, $respuesta->viewData('montoHoy'));
     }
+
+    public function test_desglose_por_dia_trae_una_fila_por_dia_del_rango_mas_reciente_primero(): void
+    {
+        $ella = $this->ventas();
+
+        Venta::create([
+            'fecha' => now()->subDays(2)->toDateString(), 'tipcomp' => '03', 'n_seri' => 'B001', 'n_comp' => '00000001',
+            'estado' => 'activa', 'total' => 100,
+        ]);
+        Venta::create([
+            'fecha' => now()->subDay()->toDateString(), 'tipcomp' => '03', 'n_seri' => 'B001', 'n_comp' => '00000002',
+            'estado' => 'activa', 'total' => 30,
+        ]);
+        // Dos ventas el mismo día: deben acumularse en una sola fila.
+        Venta::create([
+            'fecha' => now()->subDay()->toDateString(), 'tipcomp' => '03', 'n_seri' => 'B001', 'n_comp' => '00000003',
+            'estado' => 'activa', 'total' => 20,
+        ]);
+        // Nota de crédito el mismo día: resta del total de esa fila.
+        Venta::create([
+            'fecha' => now()->subDay()->toDateString(), 'tipcomp' => '07', 'n_seri' => 'FC01', 'n_comp' => '00000001',
+            'estado' => 'activa', 'total' => 10,
+        ]);
+
+        $respuesta = $this->actingAs($ella, 'web')->get(route('ventas.index', [
+            'desde' => now()->subDays(2)->toDateString(),
+            'hasta' => now()->toDateString(),
+        ]));
+
+        $desglose = $respuesta->viewData('desglosePorDia');
+
+        $this->assertCount(2, $desglose);
+        $this->assertSame(now()->subDay()->toDateString(), $desglose[0]['fecha']);
+        // 3 filas ese día (2 boletas + la nota de crédito) — "n" cuenta
+        // filas igual que `nVentasRango`, la nota de crédito solo afecta
+        // el signo del monto, no si se cuenta o no.
+        $this->assertSame(3, $desglose[0]['n']);
+        $this->assertSame(40.0, $desglose[0]['monto']);
+        $this->assertSame(now()->subDays(2)->toDateString(), $desglose[1]['fecha']);
+        $this->assertSame(1, $desglose[1]['n']);
+        $this->assertSame(100.0, $desglose[1]['monto']);
+    }
 }
