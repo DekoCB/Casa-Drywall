@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\MetodoPago;
 use App\Models\Usuario;
 use App\Models\Venta;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -79,6 +80,33 @@ class VentaMetodoPagoTest extends TestCase
         $this->assertSame(1, Venta::count());
     }
 
+    /**
+     * El <select> de Medio de pago no va alfabético — el negocio pidió un
+     * orden fijo: Efectivo, Yape, Plin, Transferencia bancaria, Tarjeta,
+     * Depósito bancario (los últimos dos, sin posición pedida, van al final).
+     */
+    public function test_el_select_de_medio_de_pago_respeta_el_orden_fijo_pedido(): void
+    {
+        $respuesta = $this->actingAs($this->admin(), 'web')->get(route('admin.ventas.factura.create'));
+
+        $respuesta->assertOk();
+
+        $html = $respuesta->getContent();
+        $inicioSelect = strpos($html, 'id="f-metodo-pago"');
+        $finSelect = strpos($html, '</select>', $inicioSelect);
+        $bloqueSelect = substr($html, $inicioSelect, $finSelect - $inicioSelect);
+
+        $posiciones = [];
+        foreach (['Efectivo', 'Yape', 'Plin', 'Transferencia bancaria', 'Tarjeta', 'Depósito bancario'] as $nombre) {
+            $posiciones[$nombre] = strpos($bloqueSelect, $nombre);
+        }
+
+        $this->assertSame(
+            ['Efectivo', 'Yape', 'Plin', 'Transferencia bancaria', 'Tarjeta', 'Depósito bancario'],
+            collect($posiciones)->sort()->keys()->all()
+        );
+    }
+
     public function test_pagina_de_edicion_muestra_el_catalogo_de_metodos_de_pago(): void
     {
         $this->actingAs($this->admin(), 'web')->post(route('admin.ventas.factura.store'), $this->datosNota([
@@ -127,6 +155,16 @@ class VentaMetodoPagoTest extends TestCase
 
         $respuesta->assertRedirect();
         $this->assertSame('Transferencia bancaria', $venta->fresh()->metodo_pago);
+    }
+
+    /** Uno nuevo, agregado desde Configuración y no contemplado en el orden fijo, cae al final sin romper nada. */
+    public function test_metodo_pago_no_contemplado_en_el_orden_cae_al_final(): void
+    {
+        MetodoPago::create(['nombre' => 'QR Interoperable', 'activo' => true]);
+
+        $orden = MetodoPago::activosOrdenados()->pluck('nombre')->all();
+
+        $this->assertSame('QR Interoperable', end($orden));
     }
 
     public function test_editar_cotizacion_no_exige_medio_de_pago(): void

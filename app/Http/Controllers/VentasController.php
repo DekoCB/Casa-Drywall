@@ -15,12 +15,17 @@ use Illuminate\View\View;
 class VentasController extends Controller
 {
     /**
-     * Medios de pago que se muestran como bucket propio en el desglose —
-     * el resto (Tarjeta, Transferencia bancaria, Depósito bancario, los
-     * bancos fijos del POS como BCP/Interbank/BBVA, "Mixto", etc.) se
-     * engloba en "Transferencia", pedido explícito del negocio.
+     * Orden fijo de exhibición del desglose — no alfabético, pedido
+     * explícito del negocio. Todos menos "Transferencia" son buckets
+     * propios (ver `bucketMetodoPago()`); "Transferencia" es el que
+     * engloba Transferencia bancaria, Depósito bancario, los bancos fijos
+     * del POS (BCP/Interbank/BBVA), "Mixto", etc. — Tarjeta ya NO se
+     * engloba ahí, tiene su propio bucket.
      */
-    private const BUCKETS_METODO_PAGO = ['Efectivo', 'Yape', 'Plin'];
+    private const ORDEN_MEDIOS_PAGO = ['Efectivo', 'Yape', 'Plin', 'Transferencia', 'Tarjeta'];
+
+    /** Los que quedan sueltos, sin agruparse en "Transferencia". */
+    private const BUCKETS_PROPIOS = ['Efectivo', 'Yape', 'Plin', 'Tarjeta'];
 
     public function __construct(private readonly CajaService $cajas) {}
 
@@ -95,7 +100,7 @@ class VentasController extends Controller
             ->values();
     }
 
-    /** Efectivo/Yape/Plin quedan sueltos; todo el resto cae en "Transferencia" — ver BUCKETS_METODO_PAGO. */
+    /** Efectivo/Yape/Plin/Tarjeta quedan sueltos; todo el resto cae en "Transferencia" — ver BUCKETS_PROPIOS. */
     private function bucketMetodoPago(?string $metodo): string
     {
         $metodo = trim((string) $metodo);
@@ -104,21 +109,21 @@ class VentasController extends Controller
             return 'Sin especificar';
         }
 
-        return in_array($metodo, self::BUCKETS_METODO_PAGO, true) ? $metodo : 'Transferencia';
+        return in_array($metodo, self::BUCKETS_PROPIOS, true) ? $metodo : 'Transferencia';
     }
 
     /**
-     * Una fila por medio de pago, en orden fijo (Efectivo/Yape/Plin/
-     * Transferencia siempre aparecen, aunque estén en cero, para que el
-     * cajero vea siempre el mismo layout) — "Sin especificar" solo se
-     * agrega si hay algo ahí (Notas de Crédito, que no tienen medio de
-     * pago propio, o ventas de antes de que este campo existiera).
+     * Una fila por medio de pago, en el orden fijo de ORDEN_MEDIOS_PAGO
+     * (siempre aparecen, aunque estén en cero, para que el cajero vea
+     * siempre el mismo layout) — "Sin especificar" solo se agrega si hay
+     * algo ahí (Notas de Crédito, que no tienen medio de pago propio, o
+     * ventas de antes de que este campo existiera).
      */
     private function desglosePorMedioPago(Collection $ventasDelRango): Collection
     {
         $porBucket = $ventasDelRango->groupBy(fn (Venta $v) => $this->bucketMetodoPago($v->metodo_pago));
 
-        return collect([...self::BUCKETS_METODO_PAGO, 'Transferencia', 'Sin especificar'])
+        return collect([...self::ORDEN_MEDIOS_PAGO, 'Sin especificar'])
             ->map(function (string $etiqueta) use ($porBucket) {
                 $grupo = $porBucket->get($etiqueta, collect());
 

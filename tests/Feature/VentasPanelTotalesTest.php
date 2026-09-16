@@ -156,7 +156,7 @@ class VentasPanelTotalesTest extends TestCase
         $this->assertSame(100.0, $desglose[1]['monto']);
     }
 
-    public function test_desglose_por_medio_de_pago_engloba_tarjeta_transferencia_y_deposito_como_transferencia(): void
+    public function test_desglose_por_medio_de_pago_engloba_solo_transferencia_y_deposito_como_transferencia(): void
     {
         $ella = $this->ventas();
         $hoy = now()->toDateString();
@@ -170,15 +170,21 @@ class VentasPanelTotalesTest extends TestCase
 
         $respuesta = $this->actingAs($ella, 'web')->get(route('ventas.index'));
 
-        $porMedio = $respuesta->viewData('ventasPorMedioPago')->keyBy('etiqueta');
+        $desglose = $respuesta->viewData('ventasPorMedioPago');
+        $porMedio = $desglose->keyBy('etiqueta');
 
         $this->assertSame(100.0, $porMedio['Efectivo']['monto']);
         $this->assertSame(50.0, $porMedio['Yape']['monto']);
         $this->assertSame(30.0, $porMedio['Plin']['monto']);
-        // Tarjeta + Transferencia bancaria + Depósito bancario = 20+15+10 = 45.
-        $this->assertSame(45.0, $porMedio['Transferencia']['monto']);
-        $this->assertSame(3, $porMedio['Transferencia']['n']);
+        // Tarjeta ya no se engloba: queda con su propio monto (20).
+        $this->assertSame(20.0, $porMedio['Tarjeta']['monto']);
+        // Solo Transferencia bancaria + Depósito bancario = 15+10 = 25.
+        $this->assertSame(25.0, $porMedio['Transferencia']['monto']);
+        $this->assertSame(2, $porMedio['Transferencia']['n']);
         $this->assertArrayNotHasKey('Sin especificar', $porMedio);
+
+        // Orden pedido: Efectivo, Yape, Plin, Transferencia, Tarjeta.
+        $this->assertSame(['Efectivo', 'Yape', 'Plin', 'Transferencia', 'Tarjeta'], $desglose->pluck('etiqueta')->all());
     }
 
     public function test_desglose_por_medio_de_pago_muestra_sin_especificar_solo_si_hay_algo(): void

@@ -86,7 +86,7 @@ class VentaController extends Controller
                 'NV' => $this->correlativo->documentoInterno('NV', self::TIPOS['NV']['serie']),
             ],
             'origen' => $this->origenParaFactura($request),
-            'metodosPago' => MetodoPago::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
+            'metodosPago' => MetodoPago::activosOrdenados(),
         ]);
     }
 
@@ -504,7 +504,7 @@ class VentaController extends Controller
             'correlativosInternos' => [],
             'origen' => null,
             'venta' => $venta,
-            'metodosPago' => MetodoPago::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
+            'metodosPago' => MetodoPago::activosOrdenados(),
         ]);
     }
 
