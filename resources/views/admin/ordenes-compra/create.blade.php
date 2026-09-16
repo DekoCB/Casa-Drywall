@@ -315,14 +315,7 @@
                 <div>
                     <div class="ocd-lleva-tit">Esta orden lleva</div>
 
-                    <div class="ocd-lleva-item" id="ocr-item-productos">
-                        <span class="ocd-lleva-punto"></span>
-                        <span class="ocd-lleva-nombre">Productos</span>
-                        <span class="ocd-lleva-det">
-                            <span class="ocd-lleva-monto" id="ocr-prod-total">S/ 0.00</span>
-                            <span class="ocd-lleva-sub"><span id="ocr-prod-lineas">0 líneas</span> · <span id="ocr-prod-sub">sin agregar</span></span>
-                        </span>
-                    </div>
+                    <div id="ocr-lista-productos"></div>
                 </div>
 
                 <div class="ocd-totales">
@@ -680,8 +673,6 @@ function recalcular() {
 function pintarPanel() {
     const totalSoles = parseFloat($('oc-total-editable').value) || 0;
 
-    const unidades = productos.reduce((a, p) => a + p.cantidad, 0);
-
     // Cabecera
     $('ocr-numero').textContent = $('oc-numero').value || '—';
 
@@ -692,12 +683,22 @@ function pintarPanel() {
 
     $('ocr-pago').textContent = condicion === 'credito' ? 'Crédito · ' + dias + ' días' : 'Contado';
 
-    // Productos
-    const bloqueProd = $('ocr-item-productos');
-    bloqueProd.classList.toggle('lleno', productos.length > 0);
-    $('ocr-prod-lineas').textContent = productos.length + (productos.length === 1 ? ' línea' : ' líneas');
-    $('ocr-prod-total').textContent = 'S/ ' + totalSoles.toFixed(2);
-    $('ocr-prod-sub').textContent = productos.length === 0 ? 'sin agregar' : unidades + ' unidad(es)';
+    // Productos: una fila por línea, no solo el total agregado — para que
+    // "Esta orden lleva" diga exactamente qué se está comprando.
+    const listaLleva = $('ocr-lista-productos');
+
+    listaLleva.innerHTML = productos.length === 0
+        ? '<div class="ocd-lleva-item"><span class="ocd-lleva-punto"></span><span class="ocd-lleva-nombre">Sin productos agregados</span></div>'
+        : productos.map((p) =>
+            '<div class="ocd-lleva-item lleno">' +
+                '<span class="ocd-lleva-punto"></span>' +
+                '<span class="ocd-lleva-nombre">' + p.descripcion + (p.codigo ? ' <small>(' + p.codigo + ')</small>' : '') + '</span>' +
+                '<span class="ocd-lleva-det">' +
+                    '<span class="ocd-lleva-monto">S/ ' + (p.precio_unit_usd * p.cantidad).toFixed(2) + '</span>' +
+                    '<span class="ocd-lleva-sub">' + p.cantidad + ' x S/ ' + p.precio_unit_usd.toFixed(2) + '</span>' +
+                '</span>' +
+            '</div>'
+        ).join('');
 
     // Totales
     $('ocr-total-soles').textContent = 'S/ ' + totalSoles.toFixed(2);

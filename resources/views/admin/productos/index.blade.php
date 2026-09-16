@@ -198,9 +198,9 @@
                     <th>Producto</th>
                     <th>Marca</th>
                     <th>Presentación</th>
-                    <th>Viscosidad</th>
                     <th>Stock por almacén</th>
                     <th>Vendidos</th>
+                    <th>Precio compra</th>
                     <th>Precio venta</th>
                     <th>Acciones</th>
                 </tr>
@@ -238,7 +238,6 @@
                     <td class="prod-nom">{{ $producto->nombre }}</td>
                     <td>{{ $producto->marca?->nombre ?: '—' }}</td>
                     <td>{{ $producto->presentacion ?: '—' }}</td>
-                    <td>{{ $producto->viscosidad ?: '—' }}</td>
                     <td>
                         <span class="prod-chips">
                             @foreach ($almacenes as $almacen)
@@ -261,6 +260,7 @@
                             <span class="prod-mudo">—</span>
                         @endif
                     </td>
+                    <td class="prod-precio">S/ {{ number_format($producto->precio_compra, 2) }}</td>
                     <td class="prod-precio">S/ {{ number_format($producto->precio_venta, 2) }}</td>
                     <td>
                         <span class="prod-acciones">

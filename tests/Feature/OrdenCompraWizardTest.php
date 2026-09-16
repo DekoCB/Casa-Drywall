@@ -110,6 +110,23 @@ class OrdenCompraWizardTest extends TestCase
         $respuesta->assertDontSee('<span class="ocd-num">6</span>', false);
     }
 
+    /**
+     * "Esta orden lleva" pasó de un solo renglón agregado ("Productos: S/
+     * X, N líneas") a una fila por producto — para que se pueda ver de un
+     * vistazo cuáles son, no solo cuántos.
+     */
+    public function test_esta_orden_lleva_detalla_cada_producto_no_solo_el_total(): void
+    {
+        $respuesta = $this->actingAs($this->admin(), 'web')->get(route('admin.ordenes-compra.create'));
+
+        $respuesta->assertOk();
+        $respuesta->assertSee('id="ocr-lista-productos"', false);
+        $respuesta->assertDontSee('id="ocr-item-productos"', false);
+        $respuesta->assertDontSee('id="ocr-prod-lineas"', false);
+        // La plantilla que arma una fila por línea (nombre, cantidad x precio).
+        $respuesta->assertSee("p.cantidad + ' x S/ ' + p.precio_unit_usd.toFixed(2)", false);
+    }
+
     public function test_la_busqueda_de_productos_trae_precio_de_compra(): void
     {
         \App\Models\Producto::create([
