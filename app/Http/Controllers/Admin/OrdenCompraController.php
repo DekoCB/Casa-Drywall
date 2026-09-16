@@ -136,9 +136,6 @@ class OrdenCompraController extends Controller
             'estados'     => self::ESTADOS,
             'correlativo' => $this->correlativo->ordenCompra(),
             'proveedores' => Proveedor::where('estado', 'activo')->orderBy('razon_social')->get(),
-            'empresas'    => EmpresaTransporte::where('estado', 'activo')->orderBy('nombre')->get(),
-            'catalogoMerch' => Merch::orderBy('nombre')->get(),
-            'aprobadores' => Usuario::orderBy('username')->get(['id', 'username']),
         ]);
     }
 

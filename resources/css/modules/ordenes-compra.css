@@ -854,7 +854,11 @@ body.oc-seleccionando .fab-nueva-oc { display: none; }
     margin-bottom: 4px;
     padding: 14px 20px;
     border-radius: 10px;
-    background: linear-gradient(135deg, var(--ink), var(--ink));
+    /* --ink es el color de texto del tema (claro en modo oscuro, oscuro en
+       modo claro) — para una caja que SIEMPRE debe verse oscura con texto
+       claro, sin importar el tema activo, hace falta un tono fijo como
+       --side (el mismo que ya usa la bolita "activa" del asistente). */
+    background: linear-gradient(135deg, var(--side), var(--side));
 }
 .oc-resumen.visible { display: flex; }
 .oc-resumen-lbl { font-size: 10px; font-weight: 700; color: rgba(255,255,255,.5); text-transform: uppercase; letter-spacing: .5px; }

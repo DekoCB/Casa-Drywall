@@ -55,12 +55,10 @@
 
         <input type="hidden" name="estado" value="Pendiente">
         <input type="hidden" name="gasto_unit" value="0">
-        <input type="hidden" name="peso" id="oc-peso">
         <input type="hidden" name="total_usd" id="oc-total-usd">
         <input type="hidden" name="total_soles" id="oc-total-soles">
         <input type="hidden" name="condicion_pago" id="oc-condicion" value="contado">
         <input type="hidden" name="productos" id="oc-productos-json">
-        <input type="hidden" name="merch" id="oc-merch-json">
 
         {{-- ══ Membrete: la orden se ve como el documento que se emite ══ --}}
         <div class="ocd-membrete">
@@ -82,7 +80,6 @@
             </div>
 
             <div class="ocd-membrete-pie">
-                <div class="ocd-pie-dato">Para el cliente <strong id="ocr-cliente">Sin asignar</strong></div>
                 <div class="ocd-pie-dato">Condición de pago <strong id="ocr-pago">Contado</strong></div>
             </div>
         </div>
@@ -105,7 +102,7 @@
 
         <section class="ocp-paso" data-paso="1">
             <h3 class="ocp-titulo">¿Qué vas a comprar?</h3>
-            <p class="ocp-ayuda">Busca en el catálogo y agrega las líneas. Si la compra incluye merch para clientes, también va aquí.</p>
+            <p class="ocp-ayuda">Busca en el catálogo y agrega las líneas de la orden.</p>
 
         {{-- ══ Proveedor ══ --}}
         <div class="ocd-seccion">
@@ -226,68 +223,6 @@
             </div>
         </div>
 
-
-        {{-- ══ Merch ══ --}}
-        <div class="ocd-seccion">
-            <span class="ocd-num opcional">3</span>
-            <div>
-                <div class="ocd-tit">Merch para clientes</div>
-                <div class="ocd-sub">Entra al stock de Merch y se anota como egreso de promoción</div>
-            </div>
-            <span class="ocd-etiqueta">Soles</span>
-        </div>
-
-@if ($catalogoMerch->isEmpty())
-        <div class="oc-hint" style="padding:10px 0;">
-            Todavía no hay artículos en el catálogo de merch.
-            <a href="{{ route('admin.merch.index') }}" target="_blank">Crearlos aquí</a> para poder comprarlos.
-        </div>
-@else
-        <div class="oc-merch-form">
-            <div class="oc-campo">
-                <label class="oc-label" for="oc-merch-art">Artículo</label>
-                <select class="oc-input" id="oc-merch-art">
-                    <option value="">— Elegir artículo —</option>
-                    @foreach ($catalogoMerch as $articulo)
-                        <option value="{{ $articulo->id }}"
-                                data-nombre="{{ $articulo->nombre }}"
-                                data-precio="{{ $articulo->precio }}">{{ $articulo->nombre }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="oc-campo">
-                <label class="oc-label" for="oc-merch-cant">Cantidad</label>
-                <input type="number" class="oc-input mono" id="oc-merch-cant" min="1" step="1" placeholder="0">
-            </div>
-
-            <div class="oc-campo">
-                <label class="oc-label" for="oc-merch-costo">Costo unitario S/</label>
-                <input type="number" class="oc-input mono" id="oc-merch-costo" min="0" step="0.01" placeholder="0.00">
-            </div>
-
-            <button type="button" class="btn-agregar-prod" id="oc-merch-agregar">✅ Agregar</button>
-        </div>
-
-        <p class="oc-hint oc-merch-nota">
-            El costo se propone desde el catálogo y puedes cambiarlo. Al guardar la orden,
-            las cantidades entran al stock de Merch.
-        </p>
-
-        <div class="oc-lista-prods" id="oc-merch-lista"></div>
-
-        <div class="oc-resumen" id="oc-merch-resumen" style="display:none;">
-            <div>
-                <div class="oc-resumen-lbl">Total Merch</div>
-                <div class="oc-resumen-sub"><span id="oc-merch-cant-total">0</span> unidad(es) · no entra en el total en dólares</div>
-            </div>
-            <div class="oc-resumen-der">
-                <div class="oc-resumen-moneda">SOLES</div>
-                <div class="oc-resumen-fila"><span>S/</span> <span id="oc-merch-total">0.00</span></div>
-            </div>
-        </div>
-@endif
-
         </section>
 
         <section class="ocp-paso oculto" data-paso="2">
@@ -299,7 +234,7 @@
             <span class="ocd-num">4</span>
             <div>
                 <div class="ocd-tit">Datos de la orden</div>
-                <div class="ocd-sub">Número, fecha, cliente, documentos y transporte</div>
+                <div class="ocd-sub">Número y fecha del documento</div>
             </div>
         </div>
 
@@ -321,82 +256,6 @@
             <div class="oc-campo">
                 <label class="oc-label" for="oc-fecha">Fecha de emisión</label>
                 <input type="date" class="oc-input" id="oc-fecha" name="fecha" value="{{ $previos['fecha'] ?? now()->format('Y-m-d') }}">
-            </div>
-
-            <div class="oc-campo">
-                <label class="oc-label" for="oc-fecha-vencimiento">Fecha de vencimiento</label>
-                <input type="date" class="oc-input" id="oc-fecha-vencimiento" name="fecha_vencimiento">
-            </div>
-
-            <div class="oc-campo oc-form-full oc-bloque-cliente">
-                <label class="oc-label" for="oc-cliente">👤 PARA CLIENTE (¿A quién pertenece esta orden?)</label>
-                <div class="oc-buscador">
-                    <input type="text" class="oc-input" id="oc-cliente" name="cliente_ref" autocomplete="off"
-                           value="{{ $previos['cliente_ref'] ?? '' }}"
-                           placeholder="Escribe para buscar cliente...">
-                    <div class="oc-dropdown" id="oc-cliente-dd"></div>
-                </div>
-                <button type="button" class="btn btn-secondary btn-sm" id="btnOcClienteVarios" style="margin-top:8px;">
-                    Usar "Clientes Varios"
-                </button>
-                <span class="oc-hint">¿Para qué cliente de {{ config('rentaltech.empresa.razon_social') }} es esta compra? (Opcional)</span>
-            </div>
-
-            <div class="oc-campo">
-                <label class="oc-label" for="oc-factura">Factura <span class="oc-opcional">⏳ Opcional</span></label>
-                <input type="text" class="oc-input" id="oc-factura" name="nro_factura" placeholder="Se completa al recibir...">
-                <span class="oc-hint">💡 Puedes dejarlo vacío y completarlo después</span>
-            </div>
-
-            <div class="oc-campo">
-                <label class="oc-label" for="oc-guia">N° Guía de Remisión <span class="oc-opcional">⏳ Opcional</span></label>
-                <input type="text" class="oc-input" id="oc-guia" name="nro_guia" placeholder="Se completa cuando llegue...">
-                <span class="oc-hint">💡 Puedes dejarlo vacío y completarlo después</span>
-            </div>
-
-            <div class="oc-campo">
-                <label class="oc-label" for="oc-referencia-venta">Referencia / O. Venta <span class="oc-opcional">⏳ Opcional</span></label>
-                <input type="text" class="oc-input" id="oc-referencia-venta" name="referencia_venta" maxlength="100" placeholder="Ej: OV-001">
-            </div>
-
-            <div class="oc-campo">
-                <label class="oc-label" for="oc-aprobado-por">Aprobado por <span class="oc-opcional">⏳ Opcional</span></label>
-                <select class="oc-input" id="oc-aprobado-por" name="aprobado_por">
-                    <option value="">Seleccionar...</option>
-                    @foreach ($aprobadores as $aprobador)
-                        <option value="{{ $aprobador->username }}">{{ $aprobador->username }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="oc-campo">
-                <label class="oc-label" for="oc-transporte">Empresa de Transporte</label>
-                <select class="oc-input" id="oc-transporte" name="empresa_transporte">
-                    <option value="">Seleccionar empresa...</option>
-                    @forelse ($empresas as $empresa)
-                        <option value="{{ $empresa->nombre }}" @selected(($previos['empresa_transporte'] ?? '') === $empresa->nombre)>{{ $empresa->nombre }}</option>
-                    @empty
-                        <option value="TRANSPORTES PAYANO EIRL">Transportes Payano EIRL</option>
-                        <option value="TRANSPORTES DIGAVY SAC">Transportes Digavy SAC</option>
-                        <option value="TRANSPORTES ALARCÓN AGAL SAC">Transportes Alarcón AGAL SAC</option>
-                    @endforelse
-                </select>
-            </div>
-
-            <div class="oc-campo">
-                <label class="oc-label">⚖️ Peso Total</label>
-                <div class="oc-peso-caja">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3d9b8c" stroke-width="2">
-                        <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/><path d="M12 8v4l3 3"/>
-                    </svg>
-                    <span class="oc-peso-valor" id="oc-peso-display">—</span>
-                    <span class="oc-peso-nota">calculado automáticamente según productos</span>
-                </div>
-            </div>
-
-            <div class="oc-campo">
-                <label class="oc-label" for="oc-bultos">📦 Bultos</label>
-                <input type="number" class="oc-input mono" id="oc-bultos" name="bultos" min="0" step="1" placeholder="0">
             </div>
         </div>
 
@@ -468,15 +327,6 @@
                             <span class="ocd-lleva-sub"><span id="ocr-prod-lineas">0 líneas</span> · <span id="ocr-prod-sub">sin agregar</span></span>
                         </span>
                     </div>
-
-                    <div class="ocd-lleva-item merch" id="ocr-item-merch">
-                        <span class="ocd-lleva-punto"></span>
-                        <span class="ocd-lleva-nombre">Merch</span>
-                        <span class="ocd-lleva-det">
-                            <span class="ocd-lleva-monto" id="ocr-merch-total">S/ 0.00</span>
-                            <span class="ocd-lleva-sub"><span id="ocr-merch-lineas">0 artículos</span> · <span id="ocr-merch-sub">opcional</span></span>
-                        </span>
-                    </div>
                 </div>
 
                 <div class="ocd-totales">
@@ -484,7 +334,6 @@
                         <span>Total en soles</span>
                         <b id="ocr-total-soles">S/ 0.00</b>
                     </div>
-                    <div class="ocd-nota oculta" id="ocr-nota-merch"></div>
                 </div>
             </div>
 
@@ -498,11 +347,11 @@
             <div class="ocd-barra-info">
                 <div class="ocd-barra-lbl">Total de la orden</div>
                 <div class="ocd-barra-total"><span id="ocr-barra-total">S/ 0.00</span></div>
-                <div class="ocd-barra-det" id="ocr-barra-det">Sin productos ni merch</div>
+                <div class="ocd-barra-det" id="ocr-barra-det">Sin productos</div>
             </div>
 
             <div class="ocd-barra-acciones">
-                <span class="ocd-aviso oculto" id="ocr-aviso">Agrega un producto o merch para continuar</span>
+                <span class="ocd-aviso oculto" id="ocr-aviso">Agrega un producto para continuar</span>
                 <a href="{{ route('admin.ordenes-compra.index') }}" class="ocd-cancelar">Cancelar</a>
                 <button type="button" class="ocm-btn oculto" id="oc-atras">← Atrás</button>
                 <button type="button" class="ocd-guardar" id="oc-siguiente">Siguiente →</button>
@@ -553,11 +402,9 @@
 <script>
 const URL_PRODUCTOS_BUSCAR = '{{ route('admin.productos.buscar') }}';
 const URL_VERIFICAR = '{{ route('admin.ordenes-compra.verificar-numero') }}';
-const URL_CLIENTES  = '{{ route('admin.clientes.buscar') }}';
 
 let productos   = [];   // líneas ya agregadas a la orden
 let paso        = 1;    // tramo del asistente que se está viendo
-let merchLineas = [];   // líneas de merch de la orden
 let seleccionado = null; // producto elegido en el buscador, aún sin cantidad
 let condicion   = 'contado';
 let dias        = 30;
@@ -671,7 +518,6 @@ function elegirProducto(i) {
         descripcion: p.nombre,
         presentacion: p.presentacion || '',
         precio_unit: parseFloat(p.precio_venta) || 0,
-        peso_unit: parseFloat(p.peso) || 0,
     };
     $('oc-buscar').value = '';
     cerrarBuscador();
@@ -735,7 +581,6 @@ function agregarProducto() {
         precio_unit_usd: seleccionado.precio_unit,
         precio_editado:  false,
         cantidad:        cantidad,
-        peso_unit:       seleccionado.peso_unit || 0,
     });
 
     pintarLineas();
@@ -761,10 +606,6 @@ function pintarLineas() {
             '<div class="oc-linea-col"><div class="oc-linea-lbl">Cant.</div>' +
                 '<input type="number" class="oc-cant-input" data-campo="cantidad" data-idx="' + i + '" ' +
                 'value="' + p.cantidad + '" min="1" step="1"></div>' +
-            '<div class="oc-linea-col"><div class="oc-linea-lbl">Peso/und kg</div>' +
-                '<input type="number" class="oc-peso-input" data-campo="peso" data-idx="' + i + '" ' +
-                // El peso se guarda con 3 decimales en `productos`.
-                'value="' + (p.peso_unit || '') + '" min="0" step="0.001" placeholder="0.000"></div>' +
             '<div class="oc-linea-col oc-linea-total"><div class="oc-linea-lbl">Total S/</div>' +
                 '<div>S/ ' + (p.precio_unit_usd * p.cantidad).toFixed(2) + '</div></div>' +
             '<button type="button" class="btn-borrar-linea" data-borrar="' + i + '">✕</button>' +
@@ -784,9 +625,6 @@ function pintarLineas() {
                 const entero = parseInt(campo.value, 10);
                 if (isNaN(entero) || entero < 1) { campo.value = p.cantidad; return; }
                 p.cantidad = entero;
-            } else {
-                if (isNaN(valor) || valor < 0) { return; }
-                p.peso_unit = valor;
             }
 
             recalcular();
@@ -826,7 +664,6 @@ $('oc-dias').addEventListener('input', (e) => {
 // ── Totales y resumen ────────────────────────────────────────────────────
 function recalcular() {
     const sumaSoles = productos.reduce((a, p) => a + p.precio_unit_usd * p.cantidad, 0);
-    const pesoTotal = productos.reduce((a, p) => a + p.cantidad * (p.peso_unit || 0), 0);
 
     const resumen = $('oc-resumen');
     resumen.classList.toggle('visible', productos.length > 0);
@@ -844,23 +681,16 @@ function recalcular() {
         $('oc-pventa').value = productos[0].precio_unit_usd.toFixed(2);
     }
 
-    // Peso total, que va al campo oculto que se guarda.
-    $('oc-peso').value = pesoTotal > 0 ? pesoTotal.toFixed(2) : '';
-    $('oc-peso-display').textContent = pesoTotal > 0 ? pesoTotal.toFixed(2) + ' kg' : '—';
-    $('oc-peso-display').classList.toggle('lleno', pesoTotal > 0);
-
     pintarPanel();
 }
 
 // ── Panel de resumen ────────────────────────────────────────────────
 // Espejo de lo que se guardará. No calcula nada nuevo: lee el mismo estado
-// que ya manejan `productos` y `merchLineas`.
+// que ya maneja `productos`.
 function pintarPanel() {
     const totalSoles = parseFloat($('oc-total-editable').value) || 0;
 
-    const unidades   = productos.reduce((a, p) => a + p.cantidad, 0);
-    const merchUnds  = merchLineas.reduce((a, m) => a + m.cantidad, 0);
-    const merchTotal = merchLineas.reduce((a, m) => a + m.cantidad * m.costo_unit, 0);
+    const unidades = productos.reduce((a, p) => a + p.cantidad, 0);
 
     // Cabecera
     $('ocr-numero').textContent = $('oc-numero').value || '—';
@@ -870,7 +700,6 @@ function pintarPanel() {
         ? new Date(fecha + 'T00:00:00').toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' })
         : '—';
 
-    $('ocr-cliente').textContent = $('oc-cliente').value.trim() || 'Sin asignar';
     $('ocr-pago').textContent = condicion === 'credito' ? 'Crédito · ' + dias + ' días' : 'Contado';
 
     // Productos
@@ -880,31 +709,17 @@ function pintarPanel() {
     $('ocr-prod-total').textContent = 'S/ ' + totalSoles.toFixed(2);
     $('ocr-prod-sub').textContent = productos.length === 0 ? 'sin agregar' : unidades + ' unidad(es)';
 
-    // Merch
-    const bloqueMerch = $('ocr-item-merch');
-    bloqueMerch.classList.toggle('lleno', merchLineas.length > 0);
-    $('ocr-merch-lineas').textContent = merchLineas.length + (merchLineas.length === 1 ? ' artículo' : ' artículos');
-    $('ocr-merch-total').textContent = 'S/ ' + merchTotal.toFixed(2);
-    $('ocr-merch-sub').textContent = merchLineas.length === 0
-        ? 'opcional'
-        : merchUnds + ' unidad(es) para clientes';
-
     // Totales
     $('ocr-total-soles').textContent = 'S/ ' + totalSoles.toFixed(2);
 
-    const nota = $('ocr-nota-merch');
-    nota.classList.toggle('oculta', merchTotal <= 0);
-    nota.textContent = 'Más S/ ' + merchTotal.toFixed(2) + ' de merch, que se registra aparte como egreso de promoción.';
-
-    // Barra fija: el total incluye el merch, porque es plata que igual sale.
-    const barraSoles = totalSoles + merchTotal;
-    $('ocr-barra-total').textContent = 'S/ ' + barraSoles.toFixed(2);
-    $('ocr-barra-det').textContent = productos.length === 0 && merchLineas.length === 0
-        ? 'Sin productos ni merch'
-        : productos.length + ' producto(s)' + (merchLineas.length ? ' · ' + merchUnds + ' de merch' : '');
+    // Barra fija
+    $('ocr-barra-total').textContent = 'S/ ' + totalSoles.toFixed(2);
+    $('ocr-barra-det').textContent = productos.length === 0
+        ? 'Sin productos'
+        : productos.length + ' producto(s)';
 
     // Guardar solo tiene sentido si la orden lleva algo.
-    const vacia = productos.length === 0 && merchLineas.length === 0;
+    const vacia = productos.length === 0;
     $('ocr-aviso').classList.toggle('oculto', !(vacia && paso === 1));
     $('oc-btn-guardar').disabled = vacia;
 
@@ -956,166 +771,16 @@ async function verificarNumero() {
 $('oc-numero').addEventListener('blur', verificarNumero);
 $('oc-numero').addEventListener('input', () => { $('oc-aviso-duplicado').innerHTML = ''; });
 
-['oc-numero', 'oc-fecha', 'oc-cliente'].forEach((campo) => {
+['oc-numero', 'oc-fecha'].forEach((campo) => {
     $(campo).addEventListener('input', pintarPanel);
 });
 
-// ── Autocompletado del cliente ───────────────────────────────────────────
-let esperaCliente;
-
-$('oc-cliente').addEventListener('input', (e) => {
-    clearTimeout(esperaCliente);
-    const termino = e.target.value.trim();
-    const dd = $('oc-cliente-dd');
-
-    if (termino.length < 2) { dd.classList.remove('abierto'); return; }
-
-    esperaCliente = setTimeout(async () => {
-        try {
-            const respuesta = await fetch(URL_CLIENTES + '?q=' + encodeURIComponent(termino), {
-                headers: { 'Accept': 'application/json' },
-            });
-            const clientes = await respuesta.json();
-
-            if (!clientes.length) { dd.classList.remove('abierto'); return; }
-
-            dd.innerHTML = clientes.map((c) => {
-                const nombre = c.nombres || c.nombre_empresa || '';
-
-                return '<div class="oc-item" data-nombre="' + nombre.replace(/"/g, '&quot;') + '">' +
-                    '<div class="oc-item-top"><span class="oc-item-cod">' + (c.numero_documento || '') + '</span>' +
-                    '<span class="oc-item-desc">' + nombre + '</span></div></div>';
-            }).join('');
-
-            dd.querySelectorAll('.oc-item').forEach((item) => {
-                item.addEventListener('mousedown', () => {
-                    $('oc-cliente').value = item.dataset.nombre;
-                    dd.classList.remove('abierto');
-                });
-            });
-
-            dd.classList.add('abierto');
-        } catch (e) {
-            dd.classList.remove('abierto');
-        }
-    }, 220);
-});
-
-// "Clientes Varios": para una compra que no pertenece a un cliente concreto
-// registrado — mismo atajo que ya existe en Nueva Venta.
-$('btnOcClienteVarios').addEventListener('click', () => {
-    $('oc-cliente').value = 'Clientes Varios';
-    $('oc-cliente-dd').classList.remove('abierto');
-});
-
-// ── Merch ────────────────────────────────────────────────────────────
-// Se cotiza en soles y va aparte del total en dólares: el merch se compra
-// local y no forma parte del costeo por galón de los lubricantes.
-function pintarMerch() {
-    const lista = $('oc-merch-lista');
-    if (!lista) { return; }
-
-    lista.innerHTML = merchLineas.map((m, i) =>
-        '<div class="oc-linea">' +
-            '<div class="oc-linea-num">' + (i + 1) + '</div>' +
-            '<div class="oc-linea-info">' +
-                '<div class="oc-linea-desc">' + m.nombre + '</div>' +
-                '<div class="oc-linea-meta"><span class="tipo">MERCH</span></div>' +
-            '</div>' +
-            '<div class="oc-linea-col"><div class="oc-linea-lbl">Costo S/</div>' +
-                '<input type="number" class="oc-precio-input" data-merch-campo="costo_unit" data-idx="' + i + '" ' +
-                'value="' + m.costo_unit.toFixed(2) + '" min="0" step="0.01"></div>' +
-            '<div class="oc-linea-col"><div class="oc-linea-lbl">Cant.</div>' +
-                '<input type="number" class="oc-cant-input" data-merch-campo="cantidad" data-idx="' + i + '" ' +
-                'value="' + m.cantidad + '" min="1" step="1"></div>' +
-            '<div class="oc-linea-col oc-linea-total"><div class="oc-linea-lbl">Total S/</div>' +
-                '<div>S/ ' + (m.cantidad * m.costo_unit).toFixed(2) + '</div></div>' +
-            '<button type="button" class="btn-borrar-linea" data-merch-borrar="' + i + '">✕</button>' +
-        '</div>'
-    ).join('');
-
-    lista.querySelectorAll('input[data-merch-campo]').forEach((campo) => {
-        campo.addEventListener('input', () => {
-            const linea = merchLineas[Number(campo.dataset.idx)];
-            const valor = parseFloat(campo.value);
-
-            if (campo.dataset.merchCampo === 'cantidad') {
-                const entero = parseInt(campo.value, 10);
-                if (isNaN(entero) || entero < 1) { campo.value = linea.cantidad; return; }
-                linea.cantidad = entero;
-            } else {
-                if (isNaN(valor) || valor < 0) { return; }
-                linea.costo_unit = valor;
-            }
-
-            totalizarMerch();
-        });
-    });
-
-    lista.querySelectorAll('[data-merch-borrar]').forEach((boton) => {
-        boton.addEventListener('click', () => {
-            merchLineas.splice(Number(boton.dataset.merchBorrar), 1);
-            pintarMerch();
-        });
-    });
-
-    totalizarMerch();
-}
-
-function totalizarMerch() {
-    const resumen = $('oc-merch-resumen');
-    if (!resumen) { return; }
-
-    const unidades = merchLineas.reduce((a, m) => a + m.cantidad, 0);
-    const total    = merchLineas.reduce((a, m) => a + m.cantidad * m.costo_unit, 0);
-
-    resumen.style.display = merchLineas.length ? '' : 'none';
-    $('oc-merch-cant-total').textContent = unidades;
-    $('oc-merch-total').textContent = total.toFixed(2);
-
-    pintarPanel();
-}
-
-$('oc-merch-agregar')?.addEventListener('click', () => {
-    const select = $('oc-merch-art');
-    const opcion = select.selectedOptions[0];
-    const id     = parseInt(select.value, 10);
-
-    if (!id) { window.alert('⚠️ Elige un artículo de merch.'); return; }
-
-    const cantidad = parseInt($('oc-merch-cant').value, 10);
-    if (isNaN(cantidad) || cantidad < 1) { window.alert('⚠️ Indica cuántas unidades se compran.'); return; }
-
-    const costoEscrito = parseFloat($('oc-merch-costo').value);
-    const costo = isNaN(costoEscrito) || costoEscrito < 0 ? parseFloat(opcion.dataset.precio) || 0 : costoEscrito;
-
-    // Si el artículo ya estaba en la orden se acumula, no se duplica la línea.
-    const previa = merchLineas.find((m) => m.merch_id === id);
-
-    if (previa) {
-        previa.cantidad += cantidad;
-        previa.costo_unit = costo;
-    } else {
-        merchLineas.push({ merch_id: id, nombre: opcion.dataset.nombre, cantidad: cantidad, costo_unit: costo });
-    }
-
-    select.value = '';
-    $('oc-merch-cant').value = '';
-    $('oc-merch-costo').value = '';
-    pintarMerch();
-});
-
-// Al elegir artículo se propone su precio de catálogo como costo.
-$('oc-merch-art')?.addEventListener('change', function () {
-    const precio = this.selectedOptions[0]?.dataset.precio;
-    $('oc-merch-costo').value = precio ? parseFloat(precio).toFixed(2) : '';
-});
 
 // ── Envío ────────────────────────────────────────────────────────────────
 $('formOrden').addEventListener('submit', (evento) => {
-    if (productos.length === 0 && merchLineas.length === 0) {
+    if (productos.length === 0) {
         evento.preventDefault();
-        window.alert('⚠️ Agrega al menos un producto o merch a la orden.');
+        window.alert('⚠️ Agrega al menos un producto a la orden.');
         return;
     }
 
@@ -1128,7 +793,6 @@ $('formOrden').addEventListener('submit', (evento) => {
     $('oc-total-usd').value   = totalSoles.toFixed(2);
     $('oc-total-soles').value = totalSoles.toFixed(2);
     $('oc-productos-json').value = JSON.stringify(productos);
-    $('oc-merch-json').value = JSON.stringify(merchLineas);
 
     $('oc-btn-guardar').textContent = 'Guardando...';
     $('oc-btn-guardar').disabled = true;
@@ -1155,8 +819,8 @@ recalcular();
 const TRAMOS = 2;
 
 function tramoValido(n) {
-    if (n === 1 && productos.length === 0 && merchLineas.length === 0) {
-        window.alert('\u26a0\ufe0f Agrega al menos un producto o un artículo de merch para continuar.');
+    if (n === 1 && productos.length === 0) {
+        window.alert('\u26a0\ufe0f Agrega al menos un producto para continuar.');
         return false;
     }
 

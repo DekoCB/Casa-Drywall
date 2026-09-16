@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\OrdenCompra;
 use App\Models\Usuario;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -9,9 +10,16 @@ use Tests\TestCase;
 /**
  * El alta de Orden de Compra pasó de 3 pasos a 2: "Para quién" (cliente y
  * documentos) ya no es su propia parada — el negocio compra siempre para
- * stock propio, nunca para un cliente puntual — así que su contenido
- * (número, fechas, cliente opcional, documentos, transporte) se fusionó
- * dentro de lo que era el paso 3 ("Confirmar"), que ahora es el paso 2.
+ * stock propio, nunca para un cliente puntual — así que lo que sobrevivió
+ * de su contenido (número, fecha) se fusionó dentro de lo que era el paso
+ * 3 ("Confirmar"), que ahora es el paso 2.
+ *
+ * Además, el negocio pidió simplificar más a fondo: ni "Para cliente" ni
+ * los datos de despacho (factura, guía, referencia, aprobado por,
+ * transporte, peso, bultos, fecha de vencimiento) son necesarios — la
+ * orden solo pide lo mínimo (proveedor, productos, número/fecha, costo y
+ * condición de pago). El Merch para clientes tampoco: es un catálogo
+ * aparte que el negocio decidió que no hace falta comprar desde acá.
  */
 class OrdenCompraWizardTest extends TestCase
 {
@@ -39,7 +47,6 @@ class OrdenCompraWizardTest extends TestCase
         // paso 3 (costos) ahora conviven dentro del mismo paso 2.
         $respuesta->assertSee('Datos de la orden');
         $respuesta->assertSee('N° Orden');
-        $respuesta->assertSee('PARA CLIENTE');
         $respuesta->assertSee('Costos');
         $respuesta->assertSee('Condición de Pago', false);
     }
@@ -49,5 +56,58 @@ class OrdenCompraWizardTest extends TestCase
         $respuesta = $this->actingAs($this->admin(), 'web')->get(route('admin.ordenes-compra.create'));
 
         $respuesta->assertSee('const TRAMOS = 2;', false);
+    }
+
+    public function test_ya_no_pide_cliente_ni_datos_de_despacho_ni_merch(): void
+    {
+        $respuesta = $this->actingAs($this->admin(), 'web')->get(route('admin.ordenes-compra.create'));
+
+        $respuesta->assertOk();
+        // "Factura"/"Bultos" solos son de más: "Facturas" ya aparece en el
+        // menú lateral (Ventas) sin relación con este formulario — se
+        // busca el id del campo puntual, que sí es exclusivo de la orden.
+        $respuesta->assertDontSee('id="oc-cliente"', false);
+        $respuesta->assertDontSee('PARA CLIENTE');
+        $respuesta->assertDontSee('id="oc-factura"', false);
+        $respuesta->assertDontSee('N° Guía de Remisión');
+        $respuesta->assertDontSee('Referencia / O. Venta');
+        $respuesta->assertDontSee('id="oc-aprobado-por"', false);
+        $respuesta->assertDontSee('Empresa de Transporte');
+        $respuesta->assertDontSee('Peso Total');
+        $respuesta->assertDontSee('id="oc-bultos"', false);
+        $respuesta->assertDontSee('Fecha de vencimiento');
+        $respuesta->assertDontSee('Merch para clientes');
+        $respuesta->assertDontSee('Peso/und kg');
+    }
+
+    public function test_guardar_una_orden_no_exige_ninguno_de_los_campos_quitados(): void
+    {
+        $respuesta = $this->actingAs($this->admin(), 'web')->post(route('admin.ordenes-compra.store'), [
+            'estado' => 'Pendiente',
+            'gasto_unit' => '0',
+            'condicion_pago' => 'contado',
+            'tc' => '1',
+            'proveedor' => 'Distribuidora Drywall SAC',
+            'ruc' => '20123456789',
+            'ref_fecha' => now()->format('Ymd'),
+            'numero_orden' => 'OC-TEST-001',
+            'fecha' => now()->toDateString(),
+            'precio_venta' => '0',
+            'total_usd' => '19.00',
+            'total_soles' => '19.00',
+            'productos' => json_encode([
+                ['codigo' => '00001', 'descripcion' => 'PARANTE GALV. 89 X 38 X 0.45 X 3M', 'unidad' => 'Und.', 'precio_unit_usd' => 9.5, 'cantidad' => 2],
+            ]),
+        ]);
+
+        $respuesta->assertRedirect(route('admin.ordenes-compra.create'));
+
+        $orden = OrdenCompra::where('numero_orden', 'OC-TEST-001')->firstOrFail();
+        $this->assertSame('Distribuidora Drywall SAC', $orden->proveedor);
+        $this->assertSame('', $orden->cliente_ref);
+        $this->assertNull($orden->nro_factura);
+        $this->assertNull($orden->empresa_transporte);
+        $this->assertNull($orden->fecha_vencimiento);
+        $this->assertSame(19.0, (float) $orden->total_soles);
     }
 }
