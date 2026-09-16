@@ -218,7 +218,7 @@
                 <div class="oc-resumen-moneda">SOLES</div>
                 <div class="oc-resumen-fila">
                     <span>S/</span>
-                    <input type="number" class="oc-total-input" id="oc-total-editable" step="0.01" min="0" value="0">
+                    <input type="number" class="oc-total-input" id="oc-total-editable" step="0.01" min="0" value="0" readonly>
                 </div>
             </div>
         </div>
@@ -231,7 +231,7 @@
 
         {{-- ══ Datos generales ══ --}}
         <div class="ocd-seccion">
-            <span class="ocd-num">4</span>
+            <span class="ocd-num">3</span>
             <div>
                 <div class="ocd-tit">Datos de la orden</div>
                 <div class="ocd-sub">Número y fecha del documento</div>
@@ -261,10 +261,10 @@
 
         {{-- ══ Costos ══ --}}
         <div class="ocd-seccion">
-            <span class="ocd-num">5</span>
+            <span class="ocd-num">4</span>
             <div>
                 <div class="ocd-tit">Costos</div>
-                <div class="ocd-sub">Precio de venta y condición de pago</div>
+                <div class="ocd-sub">Condición de pago</div>
             </div>
         </div>
 
@@ -273,14 +273,10 @@
              resto del cálculo (compartido con órdenes históricas en
              dólares) no necesite ninguna rama nueva. --}}
         <input type="hidden" id="oc-tc" name="tc" value="1">
-
-        <div class="oc-form-grid">
-            <div class="oc-campo">
-                <label class="oc-label" for="oc-pventa">Precio Venta Unitario (S/)</label>
-                <input type="number" class="oc-input mono" id="oc-pventa" name="precio_venta"
-                       step="0.01" min="0" placeholder="0.00">
-            </div>
-        </div>
+        {{-- El precio de venta es cosa de Ventas (Cotización/Nota de Venta/
+             Boleta/Factura) — una Orden de Compra solo registra el costo de
+             compra, así que este formulario ya no lo pide. --}}
+        <input type="hidden" name="precio_venta" value="0">
 
         <div style="margin-top:16px;">
             <div class="oc-label" style="margin-bottom:10px;">💳 Condición de Pago</div>
@@ -303,7 +299,7 @@
 
         {{-- ══ Observaciones ══ --}}
         <div class="ocd-seccion">
-            <span class="ocd-num opcional">6</span>
+            <span class="ocd-num opcional">5</span>
             <div>
                 <div class="ocd-tit">Observaciones</div>
                 <div class="ocd-sub">Notas para el proveedor o para la secretaria</div>
@@ -408,7 +404,6 @@ let paso        = 1;    // tramo del asistente que se está viendo
 let seleccionado = null; // producto elegido en el buscador, aún sin cantidad
 let condicion   = 'contado';
 let dias        = 30;
-let totalManual = false;
 
 const $ = (id) => document.getElementById(id);
 
@@ -495,7 +490,7 @@ function pintarResultados(termino) {
             '<span class="oc-item-desc">' + resaltar(p.nombre, termino) + '</span></div>' +
             '<div class="oc-item-meta">' +
                 '<span class="oc-chip">' + (p.presentacion || 'Und.') + '</span>' +
-                '<span class="oc-chip">S/ ' + (parseFloat(p.precio_venta) || 0).toFixed(2) + '</span>' +
+                '<span class="oc-chip">Compra S/ ' + (parseFloat(p.precio_compra) || 0).toFixed(2) + '</span>' +
                 '<span class="oc-chip">Stock: ' + (p.stock ?? 0) + '</span>' +
             '</div></div>'
     ).join('');
@@ -517,7 +512,10 @@ function elegirProducto(i) {
         codigo: p.codigo || '',
         descripcion: p.nombre,
         presentacion: p.presentacion || '',
-        precio_unit: parseFloat(p.precio_venta) || 0,
+        // Órdenes de Compra siempre sugiere el precio de COMPRA — el de
+        // venta es para Ventas (Cotización/Nota de Venta/Boleta/Factura),
+        // nunca al revés.
+        precio_unit: parseFloat(p.precio_compra) || 0,
     };
     $('oc-buscar').value = '';
     cerrarBuscador();
@@ -662,24 +660,16 @@ $('oc-dias').addEventListener('input', (e) => {
 });
 
 // ── Totales y resumen ────────────────────────────────────────────────────
+// El total ya no se puede editar a mano: siempre es la suma real de las
+// líneas, para que nunca se guarde un monto que no coincide con lo que
+// realmente se está comprando.
 function recalcular() {
     const sumaSoles = productos.reduce((a, p) => a + p.precio_unit_usd * p.cantidad, 0);
 
     const resumen = $('oc-resumen');
     resumen.classList.toggle('visible', productos.length > 0);
     $('oc-resumen-cant').textContent = productos.length;
-
-    if (productos.length === 0) {
-        totalManual = false;
-        $('oc-total-editable').value = '0';
-    } else if (!totalManual) {
-        $('oc-total-editable').value = sumaSoles.toFixed(2);
-    }
-
-    // El precio de venta se sugiere una sola vez, mientras siga en cero.
-    if (productos.length > 0 && (parseFloat($('oc-pventa').value) || 0) === 0) {
-        $('oc-pventa').value = productos[0].precio_unit_usd.toFixed(2);
-    }
+    $('oc-total-editable').value = sumaSoles.toFixed(2);
 
     pintarPanel();
 }
@@ -727,9 +717,7 @@ function pintarPanel() {
     if (siguiente) { siguiente.disabled = vacia && paso === 1; }
 }
 
-$('oc-total-editable').addEventListener('input', () => { totalManual = true; recalcular(); });
 $('oc-tc').addEventListener('input', recalcular);
-$('oc-pventa').addEventListener('input', recalcular);
 $('oc-btn-agregar').addEventListener('click', agregarProducto);
 $('oc-btn-descartar').addEventListener('click', descartarProducto);
 $('oc-qty').addEventListener('keydown', (e) => {

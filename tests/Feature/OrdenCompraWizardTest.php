@@ -80,6 +80,51 @@ class OrdenCompraWizardTest extends TestCase
         $respuesta->assertDontSee('Peso/und kg');
     }
 
+    /**
+     * Una Orden de Compra es puro costo de compra — el precio de venta es
+     * cosa de Ventas (Cotización/Nota de Venta/Boleta/Factura), nunca al
+     * revés. El total ya tampoco se puede pisar a mano: siempre es la
+     * suma real de las líneas agregadas.
+     */
+    public function test_no_pide_precio_de_venta_y_el_total_no_se_puede_editar(): void
+    {
+        $respuesta = $this->actingAs($this->admin(), 'web')->get(route('admin.ordenes-compra.create'));
+
+        $respuesta->assertOk();
+        $respuesta->assertDontSee('id="oc-pventa"', false);
+        $respuesta->assertDontSee('Precio Venta Unitario');
+        $respuesta->assertSee('id="oc-total-editable" step="0.01" min="0" value="0" readonly', false);
+    }
+
+    /** Los badges de sección quedaron con un hueco (4/5) al quitar Merch (que era el 3, opcional). */
+    public function test_las_secciones_quedan_numeradas_sin_huecos(): void
+    {
+        $respuesta = $this->actingAs($this->admin(), 'web')->get(route('admin.ordenes-compra.create'));
+
+        $respuesta->assertSee('<span class="ocd-num">1</span>', false);
+        $respuesta->assertSee('<span class="ocd-num">2</span>', false);
+        $respuesta->assertSee('<span class="ocd-num">3</span>', false);
+        $respuesta->assertSee('<span class="ocd-num">4</span>', false);
+        $respuesta->assertSee('<span class="ocd-num opcional">5</span>', false);
+        $respuesta->assertDontSee('<span class="ocd-num">5</span>', false);
+        $respuesta->assertDontSee('<span class="ocd-num">6</span>', false);
+    }
+
+    public function test_la_busqueda_de_productos_trae_precio_de_compra(): void
+    {
+        \App\Models\Producto::create([
+            'codigo' => 'DRY-900', 'nombre' => 'Placa de prueba', 'estado' => 'activo',
+            'precio_compra' => 12.5, 'precio_venta' => 20, 'stock' => 0, 'stock_minimo' => 0,
+        ]);
+
+        $respuesta = $this->actingAs($this->admin(), 'web')
+            ->getJson('admin/productos/buscar?q=Placa+de+prueba');
+
+        $respuesta->assertOk();
+        $this->assertSame(12.5, (float) $respuesta->json()[0]['precio_compra']);
+        $this->assertSame(20.0, (float) $respuesta->json()[0]['precio_venta']);
+    }
+
     public function test_guardar_una_orden_no_exige_ninguno_de_los_campos_quitados(): void
     {
         $respuesta = $this->actingAs($this->admin(), 'web')->post(route('admin.ordenes-compra.store'), [

@@ -306,7 +306,12 @@ class ProductoController extends Controller
         return back()->with('mensaje', 'Stock actualizado');
     }
 
-    /** Autocompletado usado por ventas y guías. */
+    /**
+     * Autocompletado usado por ventas, guías y órdenes de compra. Trae los
+     * dos precios porque cada quien usa el suyo: Ventas (Cotización, Nota
+     * de Venta, Boleta, Factura) sugiere `precio_venta`; Órdenes de Compra
+     * sugiere `precio_compra` — nunca al revés.
+     */
     public function buscar(Request $request): JsonResponse
     {
         $termino = trim((string) $request->query('q', ''));
@@ -323,7 +328,7 @@ class ProductoController extends Controller
             })
             ->when($proveedorId > 0, fn ($q) => $q->where('proveedor_id', $proveedorId))
             ->limit(20)
-            ->get(['id', 'codigo', 'nombre', 'presentacion', 'precio_venta', 'stock', 'peso']);
+            ->get(['id', 'codigo', 'nombre', 'presentacion', 'precio_venta', 'precio_compra', 'stock', 'peso']);
 
         return response()->json($productos);
     }
