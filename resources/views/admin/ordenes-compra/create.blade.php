@@ -99,11 +99,7 @@
             </button>
             <button type="button" class="ocp-paso-btn" data-ir="2">
                 <span class="ocp-bolita">2</span>
-                <span class="ocp-txt"><b>Para quién</b><small>Cliente y documentos</small></span>
-            </button>
-            <button type="button" class="ocp-paso-btn" data-ir="3">
-                <span class="ocp-bolita">3</span>
-                <span class="ocp-txt"><b>Confirmar</b><small>Costos y total</small></span>
+                <span class="ocp-txt"><b>Confirmar</b><small>Datos, costos y total</small></span>
             </button>
         </div>
 
@@ -195,7 +191,7 @@
                 <div class="oc-dropdown" id="oc-prod-dd"></div>
             </div>
             <p class="oc-hint" id="oc-buscar-hint">
-                Elegí un proveedor registrado arriba para acotar la búsqueda a sus productos, o buscá en todo el catálogo.
+                Busca en el catálogo de productos que la empresa suele comprar — es el mismo para cualquier proveedor.
             </p>
         </div>
 
@@ -295,8 +291,8 @@
         </section>
 
         <section class="ocp-paso oculto" data-paso="2">
-            <h3 class="ocp-titulo">¿Para quién y cuándo?</h3>
-            <p class="ocp-ayuda">Los datos del documento: a qué cliente pertenece, con qué número y fecha se emite, y con qué papeles viaja.</p>
+            <h3 class="ocp-titulo">Datos, costos y confirmación</h3>
+            <p class="ocp-ayuda">Con qué número y fecha se emite, con qué papeles viaja, el costo y la condición de pago — revisa todo antes de guardar.</p>
 
         {{-- ══ Datos generales ══ --}}
         <div class="ocd-seccion">
@@ -403,12 +399,6 @@
                 <input type="number" class="oc-input mono" id="oc-bultos" name="bultos" min="0" step="1" placeholder="0">
             </div>
         </div>
-
-        </section>
-
-        <section class="ocp-paso oculto" data-paso="3">
-            <h3 class="ocp-titulo">Costos y confirmación</h3>
-            <p class="ocp-ayuda">Revisa el tipo de cambio y la condición de pago, y confirma lo que se va a registrar.</p>
 
         {{-- ══ Costos ══ --}}
         <div class="ocd-seccion">
@@ -628,9 +618,9 @@ function buscarProducto(termino) {
     if (termino.length < 2) { cerrarBuscador(); return; }
 
     esperaProducto = setTimeout(async () => {
-        const proveedorId = $('proveedor_select').value || '';
-        const url = URL_PRODUCTOS_BUSCAR + '?q=' + encodeURIComponent(termino)
-            + (proveedorId ? '&proveedor_id=' + proveedorId : '');
+        // La lista de productos que se compran es una sola, la misma para
+        // cualquier proveedor — ya no se acota por el proveedor elegido.
+        const url = URL_PRODUCTOS_BUSCAR + '?q=' + encodeURIComponent(termino);
 
         try {
             const respuesta = await fetch(url, { headers: { Accept: 'application/json' } });
@@ -1162,7 +1152,7 @@ recalcular();
 // ── Asistente de tres pasos ───────────────────────────────────────
 // Solo se muestra un tramo a la vez. No se puede avanzar del primero sin
 // nada que comprar, que es el único dato sin el cual la orden no existe.
-const TRAMOS = 3;
+const TRAMOS = 2;
 
 function tramoValido(n) {
     if (n === 1 && productos.length === 0 && merchLineas.length === 0) {
