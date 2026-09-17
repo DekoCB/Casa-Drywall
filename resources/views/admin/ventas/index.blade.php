@@ -40,10 +40,20 @@
             @endif
         </div>
         <div class="ven-header-right">
-            <a href="{{ route('admin.ventas.index', ['estado' => 'cancelada']) }}" class="btn-add-ven"
-               style="text-decoration:none;background:#fff;color:#a12b2b;border:1.5px solid #a12b2b;">
-                🚫 Anulaciones
-            </a>
+            @if ($estadoFiltro === 'cancelada')
+                {{-- Recuerda de qué pestaña/filtro se vino (guardado en "volver"
+                     al entrar acá) para volver ahí, no siempre al listado general. --}}
+                @php $volver = trim((string) request()->query('volver', '')); @endphp
+                <a href="{{ $volver !== '' ? url('admin/ventas').'?'.$volver : route('admin.ventas.index') }}" class="btn-add-ven"
+                   style="text-decoration:none;background:#fff;color:#a12b2b;border:1.5px solid #a12b2b;">
+                    ↩ Volver
+                </a>
+            @else
+                <a href="{{ route('admin.ventas.index', ['estado' => 'cancelada', 'volver' => http_build_query(request()->except(['estado', 'volver']))]) }}" class="btn-add-ven"
+                   style="text-decoration:none;background:#fff;color:#a12b2b;border:1.5px solid #a12b2b;">
+                    🚫 Anulaciones
+                </a>
+            @endif
             <a href="{{ route('admin.ventas.notas.create') }}" class="btn-add-ven" style="text-decoration:none;background:#fff;color:#3d9b8c;border:1.5px solid #3d9b8c;">
                 Nota de Crédito / Débito
             </a>

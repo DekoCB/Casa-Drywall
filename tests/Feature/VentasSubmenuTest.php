@@ -214,7 +214,39 @@ class VentasSubmenuTest extends TestCase
         $respuesta = $this->actingAs($this->admin(), 'web')->get(route('admin.ventas.index'));
 
         $respuesta->assertSee('Anulaciones');
-        $respuesta->assertSee(route('admin.ventas.index', ['estado' => 'cancelada']), false);
+        $respuesta->assertSee('estado=cancelada', false);
+    }
+
+    /**
+     * El botón "Anulaciones" es una ida y vuelta: al entrar recuerda desde
+     * qué pestaña/filtro se vino (acá, Cotizaciones) en el propio link, y
+     * una vez adentro se convierte en "Volver" hacia ese mismo lugar — no
+     * siempre al listado general.
+     */
+    public function test_boton_anulaciones_recuerda_la_pestana_y_vuelve_ahi(): void
+    {
+        $admin = $this->admin();
+
+        $enCotizaciones = $this->actingAs($admin, 'web')
+            ->get(route('admin.ventas.index', ['tipcomp' => 'COT']));
+
+        $enCotizaciones->assertSee('Anulaciones');
+        $enCotizaciones->assertSee('volver=tipcomp%3DCOT', false);
+
+        $enAnulaciones = $this->actingAs($admin, 'web')
+            ->get(route('admin.ventas.index', ['estado' => 'cancelada', 'volver' => 'tipcomp=COT']));
+
+        $enAnulaciones->assertSee('Volver');
+        $enAnulaciones->assertSee(url('admin/ventas').'?tipcomp=COT', false);
+    }
+
+    public function test_boton_volver_sin_pestana_guardada_cae_al_listado_general(): void
+    {
+        $respuesta = $this->actingAs($this->admin(), 'web')
+            ->get(route('admin.ventas.index', ['estado' => 'cancelada']));
+
+        $respuesta->assertSee('Volver');
+        $respuesta->assertSee(route('admin.ventas.index'), false);
     }
 
     public function test_listado_de_cotizaciones_muestra_convertida_en_cuando_hay_venta_generada(): void
