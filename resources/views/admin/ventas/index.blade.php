@@ -40,6 +40,10 @@
             @endif
         </div>
         <div class="ven-header-right">
+            <a href="{{ route('admin.ventas.index', ['estado' => 'cancelada']) }}" class="btn-add-ven"
+               style="text-decoration:none;background:#fff;color:#a12b2b;border:1.5px solid #a12b2b;">
+                🚫 Anulaciones
+            </a>
             <a href="{{ route('admin.ventas.notas.create') }}" class="btn-add-ven" style="text-decoration:none;background:#fff;color:#3d9b8c;border:1.5px solid #3d9b8c;">
                 Nota de Crédito / Débito
             </a>
@@ -89,6 +93,19 @@
     <div class="ven-card">
         {{-- Los filtros comparten un solo formulario que se envía al cambiar. --}}
         <form method="GET" id="filtrosVentas">
+            {{-- Se preservan al enviar el formulario (buscar/fecha/convertida):
+                 sin esto, filtrar por fecha estando en una pestaña propia
+                 (Cotizaciones, Anulaciones...) volvía en silencio al listado general. --}}
+            @if ($tipcompFiltro !== '')
+                <input type="hidden" name="tipcomp" value="{{ $tipcompFiltro }}">
+            @endif
+            @if ($estadoFiltro !== '')
+                <input type="hidden" name="estado" value="{{ $estadoFiltro }}">
+            @endif
+            @if ($estadoFactura !== '')
+                <input type="hidden" name="estado_factura" value="{{ $estadoFactura }}">
+            @endif
+
             <div class="ven-card-header">
                 <input type="search" class="ven-search" name="q" value="{{ $busqueda }}"
                        placeholder="Buscar N° comp, RUC, razón social...">
@@ -108,8 +125,18 @@
                 <label class="filtro-mini">Hasta</label>
                 <input type="date" class="fecha-input @if($hasta !== '') activo @endif" name="hasta" value="{{ $hasta }}">
 
-                @if ($mesSel !== '' || $desde !== '' || $hasta !== '' || $busqueda !== '')
-                    <a href="{{ route('admin.ventas.index') }}" class="btn-limpiar-f">✕ Limpiar</a>
+                @if ($tipcompFiltro === 'COT')
+                    <div class="filtro-sep"></div>
+                    <span class="filtro-mes-label">🔁 Convertida:</span>
+                    <select name="convertida" class="fecha-input @if($convertidaFiltro !== '') activo @endif" onchange="this.form.submit()">
+                        <option value="">Todas</option>
+                        <option value="si" @selected($convertidaFiltro === 'si')>Convertidas</option>
+                        <option value="no" @selected($convertidaFiltro === 'no')>Sin convertir</option>
+                    </select>
+                @endif
+
+                @if ($mesSel !== '' || $desde !== '' || $hasta !== '' || $busqueda !== '' || $convertidaFiltro !== '')
+                    <a href="{{ route('admin.ventas.index', array_filter(['tipcomp' => $tipcompFiltro, 'estado' => $estadoFiltro, 'estado_factura' => $estadoFactura])) }}" class="btn-limpiar-f">✕ Limpiar</a>
                 @endif
             </div>
         </form>
@@ -130,6 +157,9 @@
                         <th class="num">IGV</th>
                         <th class="num">Total</th>
                         <th class="num">T/C</th>
+                        @if ($tipcompFiltro === 'COT')
+                            <th>Convertida en</th>
+                        @endif
                         <th></th>
                     </tr>
                 </thead>
@@ -137,7 +167,7 @@
                 @forelse ($grupos as $clave => $grupo)
                     @php $primerDia = \Carbon\Carbon::createFromFormat('Y-m', $clave)->startOfMonth(); @endphp
                     <tr class="grupo-header">
-                        <td colspan="13">
+                        <td colspan="{{ $tipcompFiltro === 'COT' ? 14 : 13 }}">
                             <strong>{{ Str::upper($primerDia->translatedFormat('F Y')) }}</strong>
                             <span class="gh-conteo">{{ $grupo->count() }} comprobante{{ $grupo->count() > 1 ? 's' : '' }}</span>
                             @if ($tipcompFiltro !== 'COT')
@@ -173,6 +203,17 @@
                             <td class="num {{ $igv  > 0 ? 'importe-pos' : 'importe-cero' }}">{{ $igv  > 0 ? number_format($igv, 2)  : '-' }}</td>
                             <td class="num total-bold">S/ {{ number_format($venta->total, 2) }}</td>
                             <td class="num celda-tc">{{ $tc != 1 ? number_format($tc, 3) : '1' }}</td>
+                            @if ($tipcompFiltro === 'COT')
+                                <td class="celda-convertida">
+                                    @if ($venta->ventaGenerada)
+                                        <a href="{{ route('admin.ventas.comprobante', $venta->ventaGenerada) }}" target="_blank" class="badge-tc tc-{{ $venta->ventaGenerada->tipcomp }}" style="text-decoration:none;">
+                                            {{ $venta->ventaGenerada->tipcomp }} {{ $venta->ventaGenerada->n_seri }}-{{ $venta->ventaGenerada->n_comp }}
+                                        </a>
+                                    @else
+                                        <span class="ven-mudo">Sin convertir</span>
+                                    @endif
+                                </td>
+                            @endif
                             <td class="celda-acciones">
                                 <a href="{{ route('admin.ventas.comprobante', $venta) }}" target="_blank"
                                    class="btn-edit-v" title="Ver / imprimir comprobante"
@@ -211,29 +252,43 @@
                                     </details>
                                 @endif
 
-                                {{-- Una Cotización es un presupuesto interno sin efecto ante SUNAT: se
-                                     borra directo, no hace falta "Anular" (eso es para documentos que ya
-                                     salieron a producción/SUNAT). NV y Boleta/Factura sin enviar sí lo usan. --}}
-                                @if ($venta->tipcomp === 'NV' || (in_array($venta->tipcomp, ['01', '03'], true) && $venta->estado_factura === 'pendiente'))
-                                    <form method="POST" action="{{ route('admin.ventas.anular', $venta) }}"
-                                          data-confirmar="¿Anular el comprobante {{ $venta->n_seri }}-{{ $venta->n_comp }}? Esta acción no se puede deshacer.">
-                                        @csrf
-                                        <button type="submit" class="btn-edit-v" title="Anular">🚫</button>
-                                    </form>
-                                @endif
+                                @php
+                                    // Misma regla que VentaController::seguroDeSunat(): Cotización y Nota
+                                    // de Venta nunca comprometen nada ante SUNAT; Boleta/Factura solo
+                                    // mientras sigan "pendiente" de enviarse. Ya enviada, la única
+                                    // corrección válida es una Nota de Crédito.
+                                    $seguroDeSunat = in_array($venta->tipcomp, ['COT', 'NV'], true)
+                                        || (in_array($venta->tipcomp, ['01', '03'], true) && $venta->estado_factura === 'pendiente');
+                                    $yaAnuladaOEliminada = in_array($venta->estado, ['cancelada', 'eliminada'], true);
+                                @endphp
 
-                                <form method="POST" action="{{ route('admin.ventas.destroy', $venta) }}"
-                                      class="form-eliminar"
-                                      data-confirmar="Se eliminará el comprobante {{ $venta->n_seri }}-{{ $venta->n_comp }}. Esta acción no se puede deshacer.">
-                                    @csrf @method('DELETE')
-                                    <button type="submit" class="btn-del-v" title="Eliminar">×</button>
-                                </form>
+                                @unless ($yaAnuladaOEliminada)
+                                    {{-- Una Cotización es un presupuesto interno sin efecto ante SUNAT: se
+                                         elimina directo, no hace falta "Anular" (eso es para documentos que ya
+                                         salieron a producción/SUNAT). NV y Boleta/Factura sin enviar sí lo usan. --}}
+                                    @if ($venta->tipcomp !== 'COT' && $seguroDeSunat)
+                                        <form method="POST" action="{{ route('admin.ventas.anular', $venta) }}"
+                                              data-confirmar="¿Anular el comprobante {{ $venta->n_seri }}-{{ $venta->n_comp }}? Podrás verlo después en Anulaciones.">
+                                            @csrf
+                                            <button type="submit" class="btn-edit-v" title="Anular">🚫</button>
+                                        </form>
+                                    @endif
+
+                                    @if ($seguroDeSunat)
+                                        <form method="POST" action="{{ route('admin.ventas.destroy', $venta) }}"
+                                              class="form-eliminar"
+                                              data-confirmar="Se eliminará el comprobante {{ $venta->n_seri }}-{{ $venta->n_comp }}. Podrás verlo después en Anulaciones.">
+                                            @csrf @method('DELETE')
+                                            <button type="submit" class="btn-del-v" title="Eliminar">×</button>
+                                        </form>
+                                    @endif
+                                @endunless
                             </td>
                         </tr>
                     @endforeach
                 @empty
                     <tr>
-                        <td colspan="13" class="ven-vacio">
+                        <td colspan="{{ $tipcompFiltro === 'COT' ? 14 : 13 }}" class="ven-vacio">
                             <div class="ven-vacio-icono">🔍</div>
                             Sin resultados para el filtro seleccionado.
                         </td>
@@ -260,7 +315,7 @@
                                 </td>
                                 <td></td>
                             @else
-                                <td colspan="6"></td>
+                                <td colspan="7"></td>
                             @endif
                         </tr>
                     </tfoot>

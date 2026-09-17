@@ -257,4 +257,34 @@ class VentaFacturaStockTest extends TestCase
         $this->assertSame(0, StockAlmacen::count());
         $this->assertSame(0, MovimientoAlmacen::count());
     }
+
+    /**
+     * `destroy()` ahora es baja lógica (`estado = 'eliminada'`), no un
+     * borrado real — antes esto dejaba el stock descontado para siempre,
+     * sin ningún rastro ni forma de revertirlo.
+     */
+    public function test_eliminar_restaura_stock_y_no_borra_la_fila(): void
+    {
+        ['almacen' => $almacen, 'producto' => $producto] = $this->crearEscenario(stock: 10);
+        $admin = $this->admin();
+
+        $this->actingAs($admin, 'web')->post(route('admin.ventas.factura.store'), $this->datosBase() + [
+            'almacen_id' => $almacen->id,
+            'items' => [['producto_codigo' => 'DRY-001', 'producto_nombre' => 'Placa Drywall 1/2"', 'cantidad' => 4, 'precio_unitario' => 25]],
+        ]);
+        $venta = Venta::where('n_seri', 'NV01')->where('n_comp', '00000001')->firstOrFail();
+        $this->assertSame(6, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
+
+        $respuesta = $this->actingAs($admin, 'web')->delete(route('admin.ventas.destroy', $venta));
+
+        $respuesta->assertRedirect();
+        $this->assertSame(10, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
+        $this->assertSame(10, $producto->fresh()->stock);
+        // Sigue en la base — baja lógica, no un DELETE real.
+        $this->assertSame('eliminada', $venta->fresh()->estado);
+        $this->assertSame(1, Venta::where('id', $venta->id)->count());
+
+        $entrada = MovimientoAlmacen::where('producto_id', $producto->id)->where('tipo', 'entrada')->firstOrFail();
+        $this->assertStringContainsString('Eliminación', $entrada->motivo);
+    }
 }

@@ -120,4 +120,160 @@ class VentasSubmenuTest extends TestCase
         // No cambia: sigue activa, tiene que corregirse con Nota de Crédito.
         $this->assertSame('activa', $venta->fresh()->estado);
     }
+
+    /**
+     * `destroy()` era un DELETE real — sin ningún rastro y sin forma de
+     * revertirlo, ya causó un incidente real (cobranza huérfana de una
+     * Cotización borrada). Ahora es baja lógica, igual que anular().
+     */
+    public function test_eliminar_una_cotizacion_es_baja_logica_no_borrado_real(): void
+    {
+        $venta = Venta::create(['fecha' => '2026-09-01', 'tipcomp' => 'COT', 'n_seri' => 'CT01', 'n_comp' => '00000001', 'estado' => 'activa']);
+
+        $this->actingAs($this->admin(), 'web')
+            ->delete(route('admin.ventas.destroy', $venta))
+            ->assertRedirect();
+
+        $this->assertSame('eliminada', $venta->fresh()->estado);
+        $this->assertSame(1, Venta::where('id', $venta->id)->count());
+    }
+
+    public function test_eliminar_rechaza_una_boleta_ya_enviada_a_sunat(): void
+    {
+        $venta = Venta::create(['fecha' => '2026-09-01', 'tipcomp' => '03', 'n_seri' => 'B001', 'n_comp' => '00000001', 'estado' => 'activa', 'estado_factura' => 'aceptado']);
+
+        $this->actingAs($this->admin(), 'web')
+            ->delete(route('admin.ventas.destroy', $venta))
+            ->assertRedirect();
+
+        $this->assertSame('activa', $venta->fresh()->estado);
+    }
+
+    public function test_eliminar_dos_veces_es_rechazado(): void
+    {
+        $venta = Venta::create(['fecha' => '2026-09-01', 'tipcomp' => 'COT', 'n_seri' => 'CT01', 'n_comp' => '00000001', 'estado' => 'activa']);
+        $admin = $this->admin();
+
+        $this->actingAs($admin, 'web')->delete(route('admin.ventas.destroy', $venta))->assertRedirect();
+        $segunda = $this->actingAs($admin, 'web')->delete(route('admin.ventas.destroy', $venta));
+
+        $segunda->assertRedirect();
+        $this->assertStringContainsString('ya fue anulado o eliminado', session('error'));
+    }
+
+    public function test_anular_rechaza_si_ya_esta_eliminada(): void
+    {
+        $venta = Venta::create(['fecha' => '2026-09-01', 'tipcomp' => 'NV', 'n_seri' => 'NV01', 'n_comp' => '00000001', 'estado' => 'eliminada']);
+
+        $this->actingAs($this->admin(), 'web')
+            ->post(route('admin.ventas.anular', $venta))
+            ->assertRedirect();
+
+        $this->assertSame('eliminada', $venta->fresh()->estado);
+    }
+
+    /** "Anulaciones" pasa a ser una lista combinada: lo anulado Y lo eliminado, no solo lo anulado. */
+    public function test_filtro_anulaciones_incluye_tambien_lo_eliminado(): void
+    {
+        Venta::create(['fecha' => '2026-09-01', 'tipcomp' => 'NV', 'n_seri' => 'NV01', 'n_comp' => '00000001', 'estado' => 'cancelada']);
+        Venta::create(['fecha' => '2026-09-01', 'tipcomp' => 'COT', 'n_seri' => 'CT01', 'n_comp' => '00000002', 'estado' => 'eliminada']);
+        Venta::create(['fecha' => '2026-09-01', 'tipcomp' => 'NV', 'n_seri' => 'NV01', 'n_comp' => '00000003', 'estado' => 'activa']);
+
+        $respuesta = $this->actingAs($this->admin(), 'web')
+            ->get(route('admin.ventas.index', ['estado' => 'cancelada']));
+
+        $ids = collect($respuesta->viewData('grupos'))->flatten()->pluck('n_comp');
+        $this->assertContains('00000001', $ids);
+        $this->assertContains('00000002', $ids);
+        $this->assertNotContains('00000003', $ids);
+    }
+
+    public function test_no_muestra_anular_ni_eliminar_para_boleta_ya_enviada_a_sunat(): void
+    {
+        Venta::create(['fecha' => '2026-09-01', 'tipcomp' => '03', 'n_seri' => 'B001', 'n_comp' => '00000001', 'estado' => 'activa', 'estado_factura' => 'aceptado']);
+
+        $respuesta = $this->actingAs($this->admin(), 'web')->get(route('admin.ventas.index'));
+
+        $respuesta->assertDontSee('title="Anular"', false);
+        $respuesta->assertDontSee('class="form-eliminar"', false);
+    }
+
+    public function test_no_muestra_anular_ni_eliminar_para_venta_ya_anulada(): void
+    {
+        Venta::create(['fecha' => '2026-09-01', 'tipcomp' => 'NV', 'n_seri' => 'NV01', 'n_comp' => '00000001', 'estado' => 'cancelada']);
+
+        $respuesta = $this->actingAs($this->admin(), 'web')
+            ->get(route('admin.ventas.index', ['estado' => 'cancelada']));
+
+        $respuesta->assertDontSee('title="Anular"', false);
+        $respuesta->assertDontSee('class="form-eliminar"', false);
+    }
+
+    public function test_boton_anulaciones_aparece_en_la_cabecera(): void
+    {
+        $respuesta = $this->actingAs($this->admin(), 'web')->get(route('admin.ventas.index'));
+
+        $respuesta->assertSee('Anulaciones');
+        $respuesta->assertSee(route('admin.ventas.index', ['estado' => 'cancelada']), false);
+    }
+
+    public function test_listado_de_cotizaciones_muestra_convertida_en_cuando_hay_venta_generada(): void
+    {
+        $admin = $this->admin();
+        $this->actingAs($admin, 'web')->post(route('admin.ventas.factura.store'), [
+            'fecha' => '2026-09-01', 'fecha_vencimiento' => '2026-09-01', 'tipcomp' => 'COT',
+            'n_seri' => 'CT01', 'n_comp' => '00000001', 'razonsocial' => 'Cliente de Prueba',
+            'monto' => 100, 'tipo_operacion' => 'gravada', 'precios_incluyen_igv' => 1,
+        ]);
+        $cot = Venta::where('n_seri', 'CT01')->firstOrFail();
+
+        $this->actingAs($admin, 'web')->post(route('admin.ventas.factura.store'), [
+            'fecha' => '2026-09-01', 'fecha_vencimiento' => '2026-09-01', 'tipcomp' => 'NV',
+            'n_seri' => 'NV01', 'n_comp' => '00000001', 'razonsocial' => 'Cliente de Prueba',
+            'monto' => 100, 'tipo_operacion' => 'gravada', 'precios_incluyen_igv' => 1,
+            'metodo_pago' => 'Efectivo', 'origen_id' => $cot->id,
+        ]);
+
+        $respuesta = $this->actingAs($admin, 'web')->get(route('admin.ventas.index', ['tipcomp' => 'COT']));
+
+        $respuesta->assertOk();
+        $respuesta->assertSee('Convertida en');
+        $respuesta->assertSee('NV NV01-00000001', false);
+    }
+
+    public function test_listado_de_cotizaciones_muestra_sin_convertir_cuando_no_hay_venta_generada(): void
+    {
+        Venta::create(['fecha' => '2026-09-01', 'tipcomp' => 'COT', 'n_seri' => 'CT01', 'n_comp' => '00000001', 'estado' => 'activa']);
+
+        $respuesta = $this->actingAs($this->admin(), 'web')->get(route('admin.ventas.index', ['tipcomp' => 'COT']));
+
+        $respuesta->assertSee('Sin convertir');
+    }
+
+    public function test_filtro_convertida_filtra_las_cotizaciones(): void
+    {
+        $admin = $this->admin();
+        $this->actingAs($admin, 'web')->post(route('admin.ventas.factura.store'), [
+            'fecha' => '2026-09-01', 'fecha_vencimiento' => '2026-09-01', 'tipcomp' => 'COT',
+            'n_seri' => 'CT01', 'n_comp' => '00000001', 'razonsocial' => 'Con venta',
+            'monto' => 100, 'tipo_operacion' => 'gravada', 'precios_incluyen_igv' => 1,
+        ]);
+        $cotConVenta = Venta::where('n_seri', 'CT01')->where('n_comp', '00000001')->firstOrFail();
+        $this->actingAs($admin, 'web')->post(route('admin.ventas.factura.store'), [
+            'fecha' => '2026-09-01', 'fecha_vencimiento' => '2026-09-01', 'tipcomp' => 'NV',
+            'n_seri' => 'NV01', 'n_comp' => '00000001', 'razonsocial' => 'Con venta',
+            'monto' => 100, 'tipo_operacion' => 'gravada', 'precios_incluyen_igv' => 1,
+            'metodo_pago' => 'Efectivo', 'origen_id' => $cotConVenta->id,
+        ]);
+
+        Venta::create(['fecha' => '2026-09-01', 'tipcomp' => 'COT', 'n_seri' => 'CT01', 'n_comp' => '00000002', 'estado' => 'activa']);
+
+        $convertidas = $this->actingAs($admin, 'web')
+            ->get(route('admin.ventas.index', ['tipcomp' => 'COT', 'convertida' => 'si']));
+        $sinConvertir = $this->actingAs($admin, 'web')
+            ->get(route('admin.ventas.index', ['tipcomp' => 'COT', 'convertida' => 'no']));
+
+        $this->assertSame(['00000001'], collect($convertidas->viewData('grupos'))->flatten()->pluck('n_comp')->all());
+        $this->assertSame(['00000002'], collect($sinConvertir->viewData('grupos'))->flatten()->pluck('n_comp')->all());
+    }
 }

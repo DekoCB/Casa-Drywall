@@ -145,6 +145,9 @@ class VentaController extends Controller
         // Lista propia por tipo (Cotizaciones/Notas de Venta/Boletas/Facturas
         // del submenú): filtra sobre el mismo listado, no es una vista aparte.
         $tipcomp = trim((string) $request->query('tipcomp', ''));
+        // Solo tiene sentido dentro de la lista de Cotizaciones: si ya se
+        // generó (o no) la venta real (Nota de Venta/Boleta/Factura) desde ahí.
+        $convertida = trim((string) $request->query('convertida', ''));
 
         $filtrada = Venta::query()
             ->when(
@@ -153,11 +156,20 @@ class VentaController extends Controller
                 // Sin un tipo pedido explícitamente, la Cotización no cuenta:
                 // es un presupuesto, no una venta comprometida — mezclarla
                 // aquí duplicaba el monto (cotización + la venta generada
-                // desde ella) y complicaba el cierre de caja.
-                fn ($query) => $query->sinCotizaciones()
+                // desde ella) y complicaba el cierre de caja. Excepción:
+                // "Anulaciones" sí quiere ver de todo, cotizaciones
+                // eliminadas incluidas — por eso esta exclusión se salta ahí.
+                fn ($query) => $estadoFiltro === 'cancelada' ? $query : $query->sinCotizaciones()
             )
+            ->when($tipcomp === 'COT' && $convertida === 'si', fn ($q) => $q->has('ventaGenerada'))
+            ->when($tipcomp === 'COT' && $convertida === 'no', fn ($q) => $q->doesntHave('ventaGenerada'))
             ->when($estadoFiltro === 'cancelada', function ($query) {
-                $query->where('estado', 'cancelada');
+                // "Anulaciones": une lo anulado (Nota de Venta/Boleta/Factura
+                // ya comprometidas) y lo eliminado (Cotización, o cualquiera
+                // de las otras si nunca llegó a comprometerse) en una sola
+                // lista — antes "Eliminar" borraba la fila para siempre, sin
+                // dejar ningún rastro acá.
+                $query->whereIn('estado', ['cancelada', 'eliminada']);
             }, function ($query) {
                 // Las canceladas y eliminadas quedan fuera del registro y de los
                 // totales por defecto, el mismo criterio de `administrador/ventas.php`.
@@ -189,6 +201,7 @@ class VentaController extends Controller
             ->when($hasta !== '', fn ($q) => $q->whereDate('fecha', '<=', $hasta));
 
         $ventas = (clone $filtrada)
+            ->when($tipcomp === 'COT', fn ($q) => $q->with('ventaGenerada:id,tipcomp,n_seri,n_comp,origen_cotizacion_id'))
             ->orderByDesc('fecha')
             ->orderByDesc('n_comp')
             ->get();
@@ -210,6 +223,7 @@ class VentaController extends Controller
             'estadoFactura' => $estadoFactura,
             'estadoFiltro'  => $estadoFiltro,
             'tipcompFiltro' => $tipcomp,
+            'convertidaFiltro' => $convertida,
             'tipos'      => self::TIPOS,
             'nVentas'    => $ventas->count(),
             'totalBase'  => (float) $ventas->sum(fn (Venta $v) => $signo($v) * (float) $v->baseimp),
@@ -373,6 +387,7 @@ class VentaController extends Controller
                 'observaciones' => $origenCotizacion
                     ? "Generado desde Cotización {$origenCotizacion->n_seri}-{$origenCotizacion->n_comp}"
                     : null,
+                'origen_cotizacion_id' => $origenCotizacion?->id,
             ]);
 
             foreach ($items as $item) {
@@ -832,8 +847,8 @@ class VentaController extends Controller
      */
     public function anular(Request $request, Venta $venta): RedirectResponse
     {
-        if ($venta->estado === 'cancelada') {
-            return back()->with('error', 'Este comprobante ya fue anulado.');
+        if (in_array($venta->estado, ['cancelada', 'eliminada'], true)) {
+            return back()->with('error', 'Este comprobante ya fue anulado o eliminado.');
         }
 
         // Una Cotización es un presupuesto sin efecto ante SUNAT ni stock
@@ -844,13 +859,7 @@ class VentaController extends Controller
             return back()->with('error', 'Una Cotización no se anula: elimínala directamente si ya no sirve.');
         }
 
-        $esDocumentoInterno = $venta->tipcomp === 'NV';
-        // 'pendiente' es el valor por defecto: nunca se intentó registrar en
-        // API-GO. Cualquier otro valor ('registrado', 'aceptado', 'rechazado')
-        // ya generó algún rastro allá o ante SUNAT y no se anula por aquí.
-        $noEnviadoAunSunat = in_array($venta->tipcomp, ['01', '03'], true) && $venta->estado_factura === 'pendiente';
-
-        if (! $esDocumentoInterno && ! $noEnviadoAunSunat) {
+        if (! $this->seguroDeSunat($venta)) {
             return back()->with('error',
                 'Este comprobante ya fue enviado a SUNAT: no se puede anular directamente. '.
                 'Genera una Nota de Crédito con motivo "Anulación de la operación" desde el listado.'
@@ -858,45 +867,68 @@ class VentaController extends Controller
         }
 
         DB::transaction(function () use ($request, $venta) {
-            // Las ventas viejas tienen almacen_id=null (nunca descontaron
-            // stock, no hay nada que devolver acá) — se saltan limpio.
-            if ($venta->almacen_id) {
-                $venta->loadMissing('detalles');
-
-                foreach ($venta->detalles as $detalle) {
-                    if ($detalle->producto_id === null) {
-                        continue;
-                    }
-
-                    $fila = StockAlmacen::lockForUpdate()->firstOrCreate(
-                        ['producto_id' => $detalle->producto_id, 'almacen_id' => $venta->almacen_id],
-                        ['stock' => 0]
-                    );
-
-                    $anterior = (int) $fila->stock;
-                    $nuevo = $anterior + (int) $detalle->cantidad;
-                    $fila->update(['stock' => $nuevo]);
-
-                    MovimientoAlmacen::create([
-                        'producto_id' => $detalle->producto_id,
-                        'almacen_id' => $venta->almacen_id,
-                        'tipo' => 'entrada',
-                        'cantidad' => (int) $detalle->cantidad,
-                        'stock_anterior' => $anterior,
-                        'stock_nuevo' => $nuevo,
-                        'motivo' => "Anulación de venta {$venta->n_seri}-{$venta->n_comp}",
-                        'referencia' => $venta->numero_venta,
-                        'usuario_id' => $request->user()->id,
-                    ]);
-
-                    Producto::find($detalle->producto_id)?->recalcularStock();
-                }
-            }
+            $this->revertirStock($venta, $request->user()->id, "Anulación de venta {$venta->n_seri}-{$venta->n_comp}");
 
             $venta->update(['estado' => 'cancelada']);
         });
 
         return back()->with('mensaje', "Comprobante {$venta->n_seri}-{$venta->n_comp} anulado.");
+    }
+
+    /**
+     * Si ya se envió a SUNAT (o no aplica, por ser Cotización/Nota de Venta,
+     * ninguna de las dos SUNAT-electrónicas) es seguro anular o eliminar sin
+     * dejar rastro huérfano allá. Boleta/Factura ya registradas solo se
+     * corrigen con una Nota de Crédito.
+     */
+    private function seguroDeSunat(Venta $venta): bool
+    {
+        if (in_array($venta->tipcomp, ['COT', 'NV'], true)) {
+            return true;
+        }
+
+        return in_array($venta->tipcomp, ['01', '03'], true) && $venta->estado_factura === 'pendiente';
+    }
+
+    /** Devuelve al Inventario el stock que esta venta había descontado, si alguna vez descontó. */
+    private function revertirStock(Venta $venta, int $usuarioId, string $motivo): void
+    {
+        // Las ventas viejas (o una Cotización, que nunca mueve stock) tienen
+        // almacen_id=null — no hay nada que devolver, se saltan limpio.
+        if (! $venta->almacen_id) {
+            return;
+        }
+
+        $venta->loadMissing('detalles');
+
+        foreach ($venta->detalles as $detalle) {
+            if ($detalle->producto_id === null) {
+                continue;
+            }
+
+            $fila = StockAlmacen::lockForUpdate()->firstOrCreate(
+                ['producto_id' => $detalle->producto_id, 'almacen_id' => $venta->almacen_id],
+                ['stock' => 0]
+            );
+
+            $anterior = (int) $fila->stock;
+            $nuevo = $anterior + (int) $detalle->cantidad;
+            $fila->update(['stock' => $nuevo]);
+
+            MovimientoAlmacen::create([
+                'producto_id' => $detalle->producto_id,
+                'almacen_id' => $venta->almacen_id,
+                'tipo' => 'entrada',
+                'cantidad' => (int) $detalle->cantidad,
+                'stock_anterior' => $anterior,
+                'stock_nuevo' => $nuevo,
+                'motivo' => $motivo,
+                'referencia' => $venta->numero_venta,
+                'usuario_id' => $usuarioId,
+            ]);
+
+            Producto::find($detalle->producto_id)?->recalcularStock();
+        }
     }
 
     public function update(Request $request, Venta $venta): RedirectResponse
@@ -928,14 +960,32 @@ class VentaController extends Controller
         return back()->with('mensaje', "Comprobante {$venta->n_seri}-{$venta->n_comp} actualizado.");
     }
 
-    /** El original borra la venta; aquí se conserva el detalle asociado. */
-    public function destroy(Venta $venta): RedirectResponse
+    /**
+     * Baja lógica (`estado = 'eliminada'`), no un borrado real: antes esto
+     * borraba la fila para siempre, sin dejar ningún rastro en "Anulaciones"
+     * ni forma de revertir el stock que hubiera descontado — ya causó un
+     * incidente real en producción (cobranza huérfana de una Cotización
+     * borrada). Misma protección de SUNAT que `anular()`.
+     */
+    public function destroy(Request $request, Venta $venta): RedirectResponse
     {
+        if (in_array($venta->estado, ['cancelada', 'eliminada'], true)) {
+            return back()->with('error', 'Este comprobante ya fue anulado o eliminado.');
+        }
+
+        if (! $this->seguroDeSunat($venta)) {
+            return back()->with('error',
+                'Este comprobante ya fue enviado a SUNAT: no se puede eliminar directamente. '.
+                'Genera una Nota de Crédito con motivo "Anulación de la operación" desde el listado.'
+            );
+        }
+
         $comprobante = "{$venta->n_seri}-{$venta->n_comp}";
 
-        DB::transaction(function () use ($venta) {
-            $venta->detalles()->delete();
-            $venta->delete();
+        DB::transaction(function () use ($request, $venta) {
+            $this->revertirStock($venta, $request->user()->id, "Eliminación de venta {$venta->n_seri}-{$venta->n_comp}");
+
+            $venta->update(['estado' => 'eliminada']);
         });
 
         return back()->with('mensaje', "Comprobante {$comprobante} eliminado.");

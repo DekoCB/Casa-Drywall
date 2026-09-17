@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Venta extends Model
 {
@@ -56,6 +57,9 @@ class Venta extends Model
         'api_go_document_id', 'api_go_document_type', 'api_go_pdf_path',
         // Nota de Crédito/Débito: comprobante que corrige y motivo SUNAT.
         'venta_origen_id', 'cod_motivo',
+        // Venta real generada desde una Cotización (distinto de venta_origen_id,
+        // que es solo para Nota de Crédito/Débito).
+        'origen_cotizacion_id',
         // Punto de Venta.
         'sesion_caja_id', 'canal', 'vuelto', 'descuento_total', 'pos_token',
     ];
@@ -119,6 +123,18 @@ class Venta extends Model
     public function notas(): HasMany
     {
         return $this->hasMany(self::class, 'venta_origen_id');
+    }
+
+    /** Para una Cotización: la venta real (NV/Boleta/Factura) generada desde ella, si alguna. */
+    public function ventaGenerada(): HasOne
+    {
+        return $this->hasOne(self::class, 'origen_cotizacion_id');
+    }
+
+    /** Para una venta generada "desde cotización": la Cotización de origen. */
+    public function origenCotizacion(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'origen_cotizacion_id');
     }
 
     public function scopeDelMes($query, int $anio, int $mes)

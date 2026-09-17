@@ -96,9 +96,13 @@ class VentaGenerarDesdeCotizacionTest extends TestCase
 
         $nueva = Venta::where('n_seri', 'B001')->where('n_comp', '00000099')->firstOrFail();
         $this->assertStringContainsString('CT01-00000001', $nueva->observaciones);
+        // Enlace real (no solo el texto libre) — permite mostrar "Convertida
+        // en" en el listado de Cotizaciones sin tener que parsear observaciones.
+        $this->assertSame($cot->id, $nueva->origen_cotizacion_id);
 
         $cot->refresh();
         $this->assertSame('activa', $cot->estado);
+        $this->assertTrue($cot->ventaGenerada->is($nueva));
     }
 
     public function test_cotizacion_no_aparece_ni_suma_en_el_listado_general(): void

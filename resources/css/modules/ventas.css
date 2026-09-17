@@ -460,6 +460,7 @@
 
 .ven-vacio { padding: 36px; text-align: center; color: var(--vn-mudo); }
 .ven-vacio-icono { margin-bottom: 8px; font-size: 28px; }
+.ven-mudo { color: var(--vn-mudo); font-size: 12px; }
 
 @media (max-width: 560px) {
     .ven-grid { grid-template-columns: 1fr; }
