@@ -95,13 +95,6 @@ return [
             ],
         ],
 
-        'Finanzas' => [
-            ['route' => 'admin.cobranzas.index',       'label' => 'Cobranzas',          'icon' => $iconos['dinero']],
-            ['route' => 'admin.historial-pagos.index', 'label' => 'Historial de Pagos', 'icon' => $iconos['calendario']],
-            ['route' => 'admin.ingresos.index',        'label' => 'Ingresos',           'icon' => $iconos['subida']],
-            ['route' => 'admin.egresos.index',         'label' => 'Egresos',            'icon' => $iconos['bajada']],
-        ],
-
         'Inventario' => [
             [
                 'route' => 'admin.productos.index', 'label' => 'Productos/Servicios', 'icon' => $iconos['caja'],
@@ -126,6 +119,13 @@ return [
                 ],
             ],
             ['route' => 'admin.merch.index',      'label' => 'Merch',      'icon' => $iconos['regalo']],
+        ],
+
+        'Finanzas' => [
+            ['route' => 'admin.cobranzas.index',       'label' => 'Cobranzas',          'icon' => $iconos['dinero']],
+            ['route' => 'admin.historial-pagos.index', 'label' => 'Historial de Pagos', 'icon' => $iconos['calendario']],
+            ['route' => 'admin.ingresos.index',        'label' => 'Ingresos',           'icon' => $iconos['subida']],
+            ['route' => 'admin.egresos.index',         'label' => 'Egresos',            'icon' => $iconos['bajada']],
         ],
 
         'Logística' => [
