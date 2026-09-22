@@ -133,6 +133,11 @@
                 </div>
             </div>
 
+            <label class="remember-field">
+                <input type="checkbox" name="remember" value="1" @checked(old('remember'))>
+                <span>Recuérdame en este equipo</span>
+            </label>
+
             <button type="submit" class="btn-ingresar">
                 <span>Ingresar al Panel</span>
             </button>

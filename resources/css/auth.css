@@ -203,6 +203,24 @@ body {
 }
 .toggle-pwd:hover { color: var(--ink-2); }
 
+/* ── Recuérdame ── */
+.remember-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: var(--ink-3);
+    cursor: pointer;
+    user-select: none;
+}
+.remember-field input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    accent-color: var(--brand);
+    cursor: pointer;
+}
+
 /* ── Botón principal ── */
 .btn-ingresar {
     width: 100%;
