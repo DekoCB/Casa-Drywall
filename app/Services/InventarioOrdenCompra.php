@@ -131,15 +131,20 @@ class InventarioOrdenCompra
      * Suma (o resta, si `$delta` es negativo) stock en un almacén, sin
      * dejarlo nunca negativo. Devuelve el stock ANTES de aplicar el delta,
      * para que el movimiento guarde su `stock_anterior` real.
+     *
+     * `$delta` siempre llega entero (las líneas de Orden de Compra no
+     * aceptan decimales) pero el stock ACTUAL sí puede serlo — pudo llegar
+     * fraccionado por un ajuste manual u otro movimiento — por eso se lee
+     * como float en vez de truncarlo.
      */
-    private function ajustarStock(int $productoId, int $almacenId, int $delta): int
+    private function ajustarStock(int $productoId, int $almacenId, int $delta): float
     {
         $fila = StockAlmacen::lockForUpdate()->firstOrCreate(
             ['producto_id' => $productoId, 'almacen_id' => $almacenId],
             ['stock' => 0]
         );
 
-        $anterior = (int) $fila->stock;
+        $anterior = (float) $fila->stock;
         $fila->update(['stock' => max(0, $anterior + $delta)]);
 
         return $anterior;

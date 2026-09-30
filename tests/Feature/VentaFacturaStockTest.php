@@ -50,7 +50,7 @@ class VentaFacturaStockTest extends TestCase
             'n_comp' => '00000001',
             'razonsocial' => 'Cliente de Prueba',
             'precios_incluyen_igv' => 1,
-            'metodo_pago' => 'Efectivo',
+            'pagos' => [['metodo_pago' => 'Efectivo', 'monto' => 1]],
         ];
     }
 
@@ -70,8 +70,8 @@ class VentaFacturaStockTest extends TestCase
         $this->assertSame($producto->id, $detalle->producto_id);
         $this->assertSame($almacen->id, $venta->almacen_id);
 
-        $this->assertSame(7, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
-        $this->assertSame(7, $producto->fresh()->stock);
+        $this->assertEquals(7, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
+        $this->assertEquals(7, $producto->fresh()->stock);
 
         $movimiento = MovimientoAlmacen::where('producto_id', $producto->id)->where('tipo', 'salida')->firstOrFail();
         $this->assertSame($venta->numero_venta, $movimiento->referencia);
@@ -98,8 +98,8 @@ class VentaFacturaStockTest extends TestCase
         $this->assertStringContainsString('Sin stock suficiente', session('mensaje'));
 
         $this->assertSame(1, Venta::count());
-        $this->assertSame(-4, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
-        $this->assertSame(-4, $producto->fresh()->stock);
+        $this->assertEquals(-4, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
+        $this->assertEquals(-4, $producto->fresh()->stock);
 
         $movimiento = MovimientoAlmacen::where('producto_id', $producto->id)->firstOrFail();
         $this->assertStringContainsString('sin stock suficiente', $movimiento->motivo);
@@ -122,7 +122,7 @@ class VentaFacturaStockTest extends TestCase
         $this->assertSame(1, Venta::count());
         // 5 - 3 - 3 = -1 (no -3 ni dos negativos independientes): confirma
         // que la segunda línea vio el stock ya descontado por la primera.
-        $this->assertSame(-1, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
+        $this->assertEquals(-1, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
         $this->assertSame(2, MovimientoAlmacen::where('producto_id', $producto->id)->count());
     }
 
@@ -139,7 +139,7 @@ class VentaFacturaStockTest extends TestCase
         ]);
 
         $respuesta->assertRedirect();
-        $this->assertSame(-2, StockAlmacen::where('producto_id', $producto->id)->where('almacen_id', $almacen->id)->value('stock'));
+        $this->assertEquals(-2, StockAlmacen::where('producto_id', $producto->id)->where('almacen_id', $almacen->id)->value('stock'));
     }
 
     public function test_linea_manual_sin_producto_no_requiere_almacen_ni_toca_stock(): void
@@ -175,7 +175,7 @@ class VentaFacturaStockTest extends TestCase
         $respuesta->assertRedirect();
         $respuesta->assertSessionDoesntHaveErrors();
 
-        $this->assertSame(10, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
+        $this->assertEquals(10, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
         $this->assertSame(0, MovimientoAlmacen::count());
     }
 
@@ -202,12 +202,12 @@ class VentaFacturaStockTest extends TestCase
         ]);
 
         $venta = Venta::where('n_seri', 'NV01')->where('n_comp', '00000001')->firstOrFail();
-        $this->assertSame(6, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
+        $this->assertEquals(6, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
 
         $this->actingAs($admin, 'web')->post(route('admin.ventas.anular', $venta))->assertRedirect();
 
-        $this->assertSame(10, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
-        $this->assertSame(10, $producto->fresh()->stock);
+        $this->assertEquals(10, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
+        $this->assertEquals(10, $producto->fresh()->stock);
         $this->assertSame('cancelada', $venta->fresh()->estado);
 
         $entrada = MovimientoAlmacen::where('producto_id', $producto->id)->where('tipo', 'entrada')->firstOrFail();
@@ -226,13 +226,13 @@ class VentaFacturaStockTest extends TestCase
         $venta = Venta::where('n_seri', 'NV01')->where('n_comp', '00000001')->firstOrFail();
 
         $this->actingAs($admin, 'web')->post(route('admin.ventas.anular', $venta))->assertRedirect();
-        $this->assertSame(10, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
+        $this->assertEquals(10, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
 
         $segunda = $this->actingAs($admin, 'web')->post(route('admin.ventas.anular', $venta));
         $segunda->assertRedirect();
         $this->assertStringContainsString('ya fue anulado', session('error'));
 
-        $this->assertSame(10, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
+        $this->assertEquals(10, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
         $this->assertSame(1, MovimientoAlmacen::where('producto_id', $producto->id)->where('tipo', 'entrada')->count());
     }
 
@@ -254,7 +254,7 @@ class VentaFacturaStockTest extends TestCase
 
         $respuesta->assertRedirect();
         $this->assertSame('cancelada', $venta->fresh()->estado);
-        $this->assertSame(0, StockAlmacen::count());
+        $this->assertEquals(0, StockAlmacen::count());
         $this->assertSame(0, MovimientoAlmacen::count());
     }
 
@@ -273,13 +273,13 @@ class VentaFacturaStockTest extends TestCase
             'items' => [['producto_codigo' => 'DRY-001', 'producto_nombre' => 'Placa Drywall 1/2"', 'cantidad' => 4, 'precio_unitario' => 25]],
         ]);
         $venta = Venta::where('n_seri', 'NV01')->where('n_comp', '00000001')->firstOrFail();
-        $this->assertSame(6, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
+        $this->assertEquals(6, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
 
         $respuesta = $this->actingAs($admin, 'web')->delete(route('admin.ventas.destroy', $venta));
 
         $respuesta->assertRedirect();
-        $this->assertSame(10, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
-        $this->assertSame(10, $producto->fresh()->stock);
+        $this->assertEquals(10, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
+        $this->assertEquals(10, $producto->fresh()->stock);
         // Sigue en la base — baja lógica, no un DELETE real.
         $this->assertSame('eliminada', $venta->fresh()->estado);
         $this->assertSame(1, Venta::where('id', $venta->id)->count());

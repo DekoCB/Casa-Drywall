@@ -50,13 +50,13 @@ class OrdenCompraStockTest extends TestCase
             ]),
         ]))->assertRedirect();
 
-        $this->assertSame(20, StockAlmacen::where('producto_id', $producto->id)->where('almacen_id', $almacen->id)->value('stock'));
-        $this->assertSame(20, $producto->fresh()->stock);
+        $this->assertEquals(20, StockAlmacen::where('producto_id', $producto->id)->where('almacen_id', $almacen->id)->value('stock'));
+        $this->assertEquals(20, $producto->fresh()->stock);
 
         $orden = OrdenCompra::where('numero_orden', 'OC-STK-001')->firstOrFail();
         $mov = MovimientoAlmacen::where('orden_compra_id', $orden->id)->firstOrFail();
         $this->assertSame('entrada', $mov->tipo);
-        $this->assertSame(20, $mov->cantidad);
+        $this->assertEquals(20, $mov->cantidad);
         $this->assertSame($producto->id, $mov->producto_id);
     }
 
@@ -73,7 +73,7 @@ class OrdenCompraStockTest extends TestCase
                 ['codigo' => 'DRY-002', 'descripcion' => 'Perfil', 'precio_unit_usd' => 5, 'cantidad' => 10],
             ]),
         ]));
-        $this->assertSame(10, $producto->fresh()->stock);
+        $this->assertEquals(10, $producto->fresh()->stock);
 
         $orden = OrdenCompra::where('numero_orden', 'OC-STK-002')->firstOrFail();
 
@@ -87,7 +87,7 @@ class OrdenCompraStockTest extends TestCase
             'total_usd' => '75', 'total_soles' => '75',
         ])->assertRedirect();
 
-        $this->assertSame(15, $producto->fresh()->stock);
+        $this->assertEquals(15, $producto->fresh()->stock);
         $this->assertSame(1, MovimientoAlmacen::where('orden_compra_id', $orden->id)->count());
     }
 
@@ -106,8 +106,8 @@ class OrdenCompraStockTest extends TestCase
                 ['codigo' => 'DRY-004', 'descripcion' => 'Cinta', 'precio_unit_usd' => 2, 'cantidad' => 30],
             ]),
         ]));
-        $this->assertSame(100, $p1->fresh()->stock);
-        $this->assertSame(30, $p2->fresh()->stock);
+        $this->assertEquals(100, $p1->fresh()->stock);
+        $this->assertEquals(30, $p2->fresh()->stock);
 
         $orden = OrdenCompra::where('numero_orden', 'OC-STK-003')->firstOrFail();
 
@@ -121,8 +121,8 @@ class OrdenCompraStockTest extends TestCase
             'total_usd' => '100', 'total_soles' => '100',
         ]);
 
-        $this->assertSame(100, $p1->fresh()->stock);
-        $this->assertSame(0, $p2->fresh()->stock);
+        $this->assertEquals(100, $p1->fresh()->stock);
+        $this->assertEquals(0, $p2->fresh()->stock);
     }
 
     public function test_linea_manual_sin_producto_en_el_catalogo_no_toca_stock(): void
@@ -138,7 +138,7 @@ class OrdenCompraStockTest extends TestCase
         ]))->assertRedirect();
 
         $this->assertSame(0, MovimientoAlmacen::count());
-        $this->assertSame(0, StockAlmacen::count());
+        $this->assertEquals(0, StockAlmacen::count());
     }
 
     public function test_sin_almacen_elegido_no_suma_stock_ni_falla(): void
@@ -153,7 +153,7 @@ class OrdenCompraStockTest extends TestCase
             ]),
         ]))->assertRedirect();
 
-        $this->assertSame(0, $producto->fresh()->stock);
+        $this->assertEquals(0, $producto->fresh()->stock);
         $this->assertSame(0, MovimientoAlmacen::count());
     }
 
@@ -170,7 +170,7 @@ class OrdenCompraStockTest extends TestCase
             ]),
         ]))->assertRedirect();
 
-        $this->assertSame(0, $producto->fresh()->stock);
+        $this->assertEquals(0, $producto->fresh()->stock);
     }
 
     public function test_borrar_la_orden_revierte_el_stock_que_habia_sumado(): void
@@ -186,12 +186,12 @@ class OrdenCompraStockTest extends TestCase
                 ['codigo' => 'DRY-007', 'descripcion' => 'Riel', 'precio_unit_usd' => 6, 'cantidad' => 10],
             ]),
         ]));
-        $this->assertSame(10, $producto->fresh()->stock);
+        $this->assertEquals(10, $producto->fresh()->stock);
 
         $orden = OrdenCompra::where('numero_orden', 'OC-STK-007')->firstOrFail();
         $this->actingAs($admin, 'web')->delete(route('admin.ordenes-compra.destroy', $orden))->assertRedirect();
 
-        $this->assertSame(0, $producto->fresh()->stock);
+        $this->assertEquals(0, $producto->fresh()->stock);
         $this->assertSame(0, MovimientoAlmacen::count());
     }
 }

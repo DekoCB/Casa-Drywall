@@ -47,7 +47,7 @@ class VentaEditarFacturaTest extends TestCase
             'n_comp' => '00000001',
             'razonsocial' => 'Cliente de Prueba',
             'precios_incluyen_igv' => 1,
-            'metodo_pago' => 'Efectivo',
+            'pagos' => [['metodo_pago' => 'Efectivo', 'monto' => 1]],
             'almacen_id' => $almacen->id,
             'items' => [['producto_codigo' => $producto->codigo, 'producto_nombre' => $producto->nombre, 'cantidad' => $cantidad, 'precio_unitario' => 25]],
         ]);
@@ -65,7 +65,7 @@ class VentaEditarFacturaTest extends TestCase
             'n_comp' => $venta->n_comp,
             'razonsocial' => $venta->razonsocial,
             'precios_incluyen_igv' => 1,
-            'metodo_pago' => $venta->metodo_pago ?? 'Efectivo',
+            'pagos' => [['metodo_pago' => $venta->metodo_pago ?: 'Efectivo', 'monto' => 1]],
         ], $sobrescribe);
     }
 
@@ -108,7 +108,7 @@ class VentaEditarFacturaTest extends TestCase
     {
         ['almacen' => $almacen, 'producto' => $producto] = $this->crearEscenario(stock: 10);
         $venta = $this->crearNotaConItems($almacen, $producto, 3);
-        $this->assertSame(7, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
+        $this->assertEquals(7, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
 
         // Misma línea, pero ahora pide 5 en vez de 3: la diferencia (2) es
         // lo único que debe descontarse de nuevo.
@@ -118,15 +118,15 @@ class VentaEditarFacturaTest extends TestCase
         ]));
 
         $respuesta->assertRedirect();
-        $this->assertSame(5, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
-        $this->assertSame(5, $producto->fresh()->stock);
+        $this->assertEquals(5, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
+        $this->assertEquals(5, $producto->fresh()->stock);
         $this->assertSame(5, VentaDetalle::where('venta_id', $venta->id)->value('cantidad'));
 
         // Un solo movimiento adicional (la diferencia), no dos que se cancelan.
         $this->assertSame(2, MovimientoAlmacen::where('producto_id', $producto->id)->count());
         $ultimo = MovimientoAlmacen::where('producto_id', $producto->id)->latest('id')->first();
         $this->assertSame('salida', $ultimo->tipo);
-        $this->assertSame(2, $ultimo->cantidad);
+        $this->assertEquals(2, $ultimo->cantidad);
         $this->assertStringContainsString('Edición', $ultimo->motivo);
     }
 
@@ -134,7 +134,7 @@ class VentaEditarFacturaTest extends TestCase
     {
         ['almacen' => $almacen, 'producto' => $producto] = $this->crearEscenario(stock: 10);
         $venta = $this->crearNotaConItems($almacen, $producto, 3);
-        $this->assertSame(7, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
+        $this->assertEquals(7, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
 
         // Se manda sin items: el producto se quitó del detalle.
         $respuesta = $this->actingAs($this->admin(), 'web')->put(route('admin.ventas.factura.update', $venta), $this->datosEdicion($venta, [
@@ -143,8 +143,8 @@ class VentaEditarFacturaTest extends TestCase
         ]));
 
         $respuesta->assertRedirect();
-        $this->assertSame(10, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
-        $this->assertSame(10, $producto->fresh()->stock);
+        $this->assertEquals(10, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
+        $this->assertEquals(10, $producto->fresh()->stock);
         $this->assertSame(0, VentaDetalle::where('venta_id', $venta->id)->count());
         $this->assertNull($venta->fresh()->almacen_id);
     }
@@ -156,7 +156,7 @@ class VentaEditarFacturaTest extends TestCase
         StockAlmacen::create(['producto_id' => $producto->id, 'almacen_id' => $almacenNuevo->id, 'stock' => 20]);
 
         $venta = $this->crearNotaConItems($almacenViejo, $producto, 4);
-        $this->assertSame(6, StockAlmacen::where('almacen_id', $almacenViejo->id)->where('producto_id', $producto->id)->value('stock'));
+        $this->assertEquals(6, StockAlmacen::where('almacen_id', $almacenViejo->id)->where('producto_id', $producto->id)->value('stock'));
 
         $respuesta = $this->actingAs($this->admin(), 'web')->put(route('admin.ventas.factura.update', $venta), $this->datosEdicion($venta, [
             'almacen_id' => $almacenNuevo->id,
@@ -164,8 +164,8 @@ class VentaEditarFacturaTest extends TestCase
         ]));
 
         $respuesta->assertRedirect();
-        $this->assertSame(10, StockAlmacen::where('almacen_id', $almacenViejo->id)->where('producto_id', $producto->id)->value('stock'));
-        $this->assertSame(16, StockAlmacen::where('almacen_id', $almacenNuevo->id)->where('producto_id', $producto->id)->value('stock'));
+        $this->assertEquals(10, StockAlmacen::where('almacen_id', $almacenViejo->id)->where('producto_id', $producto->id)->value('stock'));
+        $this->assertEquals(16, StockAlmacen::where('almacen_id', $almacenNuevo->id)->where('producto_id', $producto->id)->value('stock'));
         $this->assertSame($almacenNuevo->id, $venta->fresh()->almacen_id);
     }
 
@@ -187,7 +187,7 @@ class VentaEditarFacturaTest extends TestCase
         ]));
 
         $respuesta->assertRedirect();
-        $this->assertSame(10, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
+        $this->assertEquals(10, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
         $this->assertSame(0, MovimientoAlmacen::count());
         $this->assertSame(8, VentaDetalle::where('venta_id', $venta->id)->value('cantidad'));
     }
@@ -221,6 +221,6 @@ class VentaEditarFacturaTest extends TestCase
         $this->assertStringContainsString('Sin stock suficiente', session('mensaje'));
         // Ya estaba en 1 (3 - 2 vendidas al crear); la edición pide 10 en vez
         // de 2, así que se descuenta la diferencia (8) más: 1 - 8 = -7.
-        $this->assertSame(-7, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
+        $this->assertEquals(-7, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
     }
 }

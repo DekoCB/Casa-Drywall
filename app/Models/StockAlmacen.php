@@ -15,7 +15,7 @@ class StockAlmacen extends Model
     protected function casts(): array
     {
         return [
-            'stock' => 'integer',
+            'stock' => 'decimal:3',
         ];
     }
 }

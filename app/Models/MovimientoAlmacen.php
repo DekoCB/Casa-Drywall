@@ -19,9 +19,9 @@ class MovimientoAlmacen extends Model
     protected function casts(): array
     {
         return [
-            'cantidad' => 'integer',
-            'stock_anterior' => 'integer',
-            'stock_nuevo' => 'integer',
+            'cantidad' => 'decimal:3',
+            'stock_anterior' => 'decimal:3',
+            'stock_nuevo' => 'decimal:3',
             'created_at' => 'datetime',
         ];
     }

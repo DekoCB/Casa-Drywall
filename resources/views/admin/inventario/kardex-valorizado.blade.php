@@ -54,7 +54,7 @@
         </div>
         <div class="rep-kpi">
             <div class="rep-kpi-label">Unidades en stock</div>
-            <div class="rep-kpi-val">{{ number_format($resumen['unidades']) }}</div>
+            <div class="rep-kpi-val">{{ number_format($resumen['unidades'], 3) }}</div>
         </div>
         <div class="rep-kpi">
             <div class="rep-kpi-label">Valor total</div>
@@ -79,7 +79,7 @@
                     <td>{{ $fila['categoria'] }}</td>
                     <td>{{ $fila['marca'] }}</td>
                     <td>{{ $fila['unidad'] }}</td>
-                    <td class="num">{{ number_format($fila['stock']) }}</td>
+                    <td class="num">{{ number_format($fila['stock'], 3) }}</td>
                     <td class="num">S/ {{ number_format($fila['costo_ponderado'], 4) }}</td>
                     <td class="num">S/ {{ number_format($fila['costo_producto'], 2) }}</td>
                 </tr>

@@ -28,6 +28,15 @@
     // El monto único solo tiene sentido si la venta no tiene productos
     // detallados (se creó con "Monto único" en vez de la tabla de abajo).
     $edicionSinItems = $venta && $edicionItems->isEmpty();
+
+    // Pagos ya guardados, para precargar sus filas al editar. Calculado
+    // aparte (no inline dentro de @json en el script) porque Blade no
+    // compila bien un @json() con una expresión multilínea así de anidada.
+    $pagosExistentesJs = ($venta?->pagos ?? collect())->map(fn ($p) => [
+        'metodo_pago' => $p->metodo_pago,
+        'monto' => (float) $p->monto,
+        'referencia' => $p->referencia,
+    ])->values();
 @endphp
 
 @push('styles')
@@ -52,6 +61,15 @@
 .nv-form .nv-productos-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .nv-igv-toggle { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; font-size: 13px; color: var(--ink-2); cursor: pointer; }
 .nv-igv-toggle input { width: 16px; height: 16px; cursor: pointer; }
+
+/* Filas de "Forma de pago" — uno o varios medios por venta (pago mixto). */
+.fpago-fila { display: grid; grid-template-columns: minmax(140px,1fr) 140px minmax(140px,1fr) auto; gap: 10px; align-items: center; margin-bottom: 8px; }
+.fpago-fila select, .fpago-fila input { padding: 8px 11px; font-size: 13px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-family: inherit; }
+.fpago-quitar { background: none; border: none; color: var(--ink-4); font-size: 18px; cursor: pointer; line-height: 1; padding: 4px 8px; }
+.fpago-quitar:hover { color: var(--neg, #A8231F); }
+#fPagosResumen.fpago-ok { color: #1f6b5e; }
+#fPagosResumen.fpago-falta { color: var(--ink-3); }
+@media (max-width: 620px) { .fpago-fila { grid-template-columns: 1fr; } }
 
 /* Buscador de productos, al estilo del de Órdenes de Compra. */
 .nv-buscador { position: relative; }
@@ -167,16 +185,16 @@
                 <input type="text" id="f-condicion" name="condicion_pago" maxlength="100"
                        placeholder="Contado, crédito 30 días…" value="{{ old('condicion_pago', $venta?->condicion_pago ?? 'Contado') }}">
             </div>
-            <div class="form-group">
-                <label for="f-metodo-pago">Medio de pago <span id="f-metodo-pago-req">*</span></label>
-                <select id="f-metodo-pago" name="metodo_pago">
-                    <option value="">— Selecciona —</option>
-                    @foreach ($metodosPago as $metodo)
-                        <option value="{{ $metodo->nombre }}" @selected(old('metodo_pago', $venta?->metodo_pago) === $metodo->nombre)>{{ $metodo->nombre }}</option>
-                    @endforeach
-                </select>
-                <p class="nv-hint" style="margin-top:4px;">No aplica para Cotización — todavía no hay un pago real que registrar.</p>
-            </div>
+        </div>
+    </div>
+
+    <div class="content-card" id="tarjetaPagos">
+        <h3>Forma de pago <span id="f-pagos-req">*</span></h3>
+        <p class="nv-hint" id="fPagosHint">No aplica para Cotización — todavía no hay un pago real que registrar.</p>
+        <div id="fPagosLista"></div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:4px;flex-wrap:wrap;">
+            <button type="button" class="btn btn-secondary btn-sm" id="btnAgregarPago">＋ Agregar otro medio de pago</button>
+            <span class="nv-hint" id="fPagosResumen" style="margin:0;"></span>
         </div>
     </div>
 
@@ -352,19 +370,91 @@ function sugerirSerieFactura() {
 fTipcomp.addEventListener('change', sugerirSerieFactura);
 sugerirSerieFactura(); // El tipo por defecto viene preseleccionado: sin esto, nunca se dispara el "change".
 
-// Medio de pago: obligatorio salvo para Cotización (todavía no hay un pago
-// real que registrar — es solo un presupuesto).
-const fMetodoPago = document.getElementById('f-metodo-pago');
-const fMetodoPagoReq = document.getElementById('f-metodo-pago-req');
+// ── Forma de pago: uno o varios medios (pago mixto) ───────────────────────
+// Obligatorio salvo para Cotización (todavía no hay un pago real que
+// registrar — es solo un presupuesto). Mismo patrón que ya usa el POS
+// (una fila por medio, con su propio monto y referencia opcional).
+const METODOS_PAGO = @json($metodosPago->pluck('nombre')->values());
+const PAGOS_EXISTENTES = @json($pagosExistentesJs);
 
-function actualizarMetodoPagoRequerido() {
-    const requerido = fTipcomp.value !== 'COT';
-    fMetodoPago.required = requerido;
-    fMetodoPagoReq.hidden = !requerido;
+const fPagosLista = document.getElementById('fPagosLista');
+const fPagosReq = document.getElementById('f-pagos-req');
+const fPagosHint = document.getElementById('fPagosHint');
+const fPagosResumen = document.getElementById('fPagosResumen');
+let pagoIdx = 0;
+
+function opcionesMetodoPago(seleccionado) {
+    return '<option value="">— Medio —</option>' + METODOS_PAGO.map((m) =>
+        `<option value="${m}" ${m === seleccionado ? 'selected' : ''}>${m}</option>`
+    ).join('');
 }
 
-fTipcomp.addEventListener('change', actualizarMetodoPagoRequerido);
-actualizarMetodoPagoRequerido();
+function agregarFilaPago(metodo = '', monto = '', referencia = '') {
+    const idx = pagoIdx++;
+    const fila = document.createElement('div');
+    fila.className = 'fpago-fila';
+    fila.innerHTML = `
+        <select name="pagos[${idx}][metodo_pago]">${opcionesMetodoPago(metodo)}</select>
+        <input type="number" name="pagos[${idx}][monto]" step="0.01" min="0" placeholder="Monto" value="${monto || ''}">
+        <input type="text" name="pagos[${idx}][referencia]" maxlength="100" placeholder="Referencia / operación (opcional)" value="${referencia || ''}">
+        <button type="button" class="fpago-quitar" title="Quitar este medio de pago">✕</button>
+    `;
+    fila.querySelector('input[type="number"]').addEventListener('input', actualizarResumenPagos);
+    fila.querySelector('.fpago-quitar').addEventListener('click', () => {
+        // Siempre queda al menos una fila — más simple para el usuario que
+        // dejar la tarjeta completamente vacía.
+        if (fPagosLista.children.length > 1) {
+            fila.remove();
+        } else {
+            fila.querySelectorAll('select, input').forEach((c) => { c.value = ''; });
+        }
+        actualizarResumenPagos();
+    });
+    fPagosLista.appendChild(fila);
+}
+
+document.getElementById('btnAgregarPago').addEventListener('click', () => agregarFilaPago());
+
+function totalVentaActual() {
+    return parseFloat((document.getElementById('fTotTotal').textContent || '').replace('S/', '').trim()) || 0;
+}
+
+function actualizarResumenPagos() {
+    const pagado = Array.from(fPagosLista.querySelectorAll('input[type="number"]'))
+        .reduce((s, i) => s + (parseFloat(i.value) || 0), 0);
+    const total = totalVentaActual();
+    const diferencia = Math.round((total - pagado) * 100) / 100;
+
+    if (pagado <= 0) {
+        fPagosResumen.textContent = '';
+        fPagosResumen.className = '';
+    } else if (Math.abs(diferencia) < 0.01) {
+        fPagosResumen.textContent = `Pagado: S/ ${pagado.toFixed(2)} — cubre el total ✓`;
+        fPagosResumen.className = 'fpago-ok';
+    } else if (diferencia > 0) {
+        fPagosResumen.textContent = `Pagado: S/ ${pagado.toFixed(2)} — falta S/ ${diferencia.toFixed(2)}`;
+        fPagosResumen.className = 'fpago-falta';
+    } else {
+        fPagosResumen.textContent = `Pagado: S/ ${pagado.toFixed(2)} — S/ ${Math.abs(diferencia).toFixed(2)} de más`;
+        fPagosResumen.className = 'fpago-falta';
+    }
+}
+
+function actualizarPagosRequeridos() {
+    const requerido = fTipcomp.value !== 'COT';
+    fPagosReq.hidden = !requerido;
+    fPagosHint.hidden = requerido;
+    document.getElementById('tarjetaPagos').style.opacity = requerido ? '1' : '.55';
+}
+
+fTipcomp.addEventListener('change', actualizarPagosRequeridos);
+actualizarPagosRequeridos();
+
+if (PAGOS_EXISTENTES.length > 0) {
+    PAGOS_EXISTENTES.forEach((p) => agregarFilaPago(p.metodo_pago, p.monto, p.referencia));
+} else {
+    agregarFilaPago();
+}
 
 // ── Buscador de cliente (mismo estilo que el de productos) ───────────────
 const CLIENTES = @json($clientes->map(fn ($c) => ['id' => $c->id, 'nombre' => $c->nombres, 'doc' => $c->numero_documento])->values());
@@ -626,6 +716,7 @@ function recalcularFactura() {
     document.getElementById('fTotSubtotal').textContent = 'S/ ' + subtotal.toFixed(2);
     document.getElementById('fTotIgv').textContent      = 'S/ ' + igv.toFixed(2);
     document.getElementById('fTotTotal').textContent    = 'S/ ' + (subtotal + igv).toFixed(2);
+    actualizarResumenPagos();
 }
 
 fMonto?.addEventListener('input', recalcularFactura);
@@ -658,6 +749,18 @@ document.getElementById('formFactura').addEventListener('submit', (e) => {
     if (itemsValidosFactura().length === 0 && monto <= 0) {
         e.preventDefault();
         alert('Ingresa un monto o agrega al menos un producto.');
+        return;
+    }
+
+    if (fTipcomp.value !== 'COT') {
+        const hayPago = Array.from(fPagosLista.querySelectorAll('.fpago-fila')).some((fila) =>
+            fila.querySelector('select').value !== '' && (parseFloat(fila.querySelector('input[type="number"]').value) || 0) > 0
+        );
+
+        if (!hayPago) {
+            e.preventDefault();
+            alert('Registra al menos un medio de pago.');
+        }
     }
 });
 

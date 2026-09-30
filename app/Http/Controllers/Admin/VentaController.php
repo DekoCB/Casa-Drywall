@@ -312,12 +312,17 @@ class VentaController extends Controller
 
         // Una Cotización es un presupuesto: todavía no hay un pago real que
         // registrar. Nota de Venta, Boleta y Factura sí son una venta
-        // comprometida — hace falta saber cómo se está cobrando.
-        if ($datos['tipcomp'] !== 'COT' && empty($datos['metodo_pago'])) {
+        // comprometida — hace falta saber cómo se está cobrando (uno o
+        // varios medios, ej. parte Yape + parte Efectivo).
+        $pagos = $this->pagosValidos($datos['pagos'] ?? []);
+
+        if ($datos['tipcomp'] !== 'COT' && $pagos === []) {
             throw ValidationException::withMessages([
-                'metodo_pago' => 'Selecciona el medio de pago.',
+                'pagos' => 'Registra al menos un medio de pago.',
             ]);
         }
+
+        $metodoPago = $this->resumenMetodoPago($pagos);
 
         // El negocio pidió explícitamente que la venta NUNCA se bloquee por
         // falta de stock (a diferencia del POS, que sí bloquea) — se
@@ -325,7 +330,7 @@ class VentaController extends Controller
         // después de guardar (no se corta la venta a mitad de camino).
         $avisosStock = [];
 
-        $venta = DB::transaction(function () use ($request, $datos, $items, $importes, $origenCotizacion, $almacenId, $aplicaStock, &$avisosStock) {
+        $venta = DB::transaction(function () use ($request, $datos, $items, $importes, $origenCotizacion, $almacenId, $aplicaStock, $pagos, $metodoPago, &$avisosStock) {
             $stockFilas = collect();
 
             if ($aplicaStock) {
@@ -373,7 +378,7 @@ class VentaController extends Controller
                 'cliente_correo' => $cliente?->email,
                 'cliente_distrito' => $cliente?->distrito,
                 'condicion_pago' => $datos['condicion_pago'] ?? null,
-                'metodo_pago' => $datos['metodo_pago'] ?? null,
+                'metodo_pago' => $metodoPago,
                 'almacen_id' => $almacenId,
                 'baseimp' => $importes['baseimp'],
                 'subtotal' => round($importes['baseimp'] + $importes['exonerado'] + $importes['inafecto'], 2),
@@ -406,6 +411,10 @@ class VentaController extends Controller
                 ]);
             }
 
+            foreach ($pagos as $pago) {
+                $venta->pagos()->create($pago);
+            }
+
             // Stock: se descuenta igual aunque no alcance — el negocio pidió
             // que la venta nunca se corte por esto (a diferencia del POS).
             // Como itemsValidos() no fusiona líneas repetidas del mismo
@@ -428,7 +437,7 @@ class VentaController extends Controller
                         ['stock' => 0]
                     );
 
-                    $disponible = (int) $fila->stock;
+                    $disponible = (float) $fila->stock;
                     $nuevo = $disponible - $item['cantidad'];
                     $fila->update(['stock' => $nuevo]);
 
@@ -505,7 +514,7 @@ class VentaController extends Controller
     {
         abort_unless(in_array($venta->tipcomp, ['COT', 'NV'], true), 404);
 
-        $venta->load('detalles');
+        $venta->load('detalles', 'pagos');
 
         $almacenes = Almacen::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']);
 
@@ -562,16 +571,20 @@ class VentaController extends Controller
             ]);
         }
 
-        if ($datos['tipcomp'] !== 'COT' && empty($datos['metodo_pago'])) {
+        $pagos = $this->pagosValidos($datos['pagos'] ?? []);
+
+        if ($datos['tipcomp'] !== 'COT' && $pagos === []) {
             throw ValidationException::withMessages([
-                'metodo_pago' => 'Selecciona el medio de pago.',
+                'pagos' => 'Registra al menos un medio de pago.',
             ]);
         }
+
+        $metodoPago = $this->resumenMetodoPago($pagos);
 
         $cliente = $this->fichaDelCliente($datos);
         $avisosStock = [];
 
-        DB::transaction(function () use ($request, $venta, $datos, $items, $importes, $almacenId, $cliente, &$avisosStock) {
+        DB::transaction(function () use ($request, $venta, $datos, $items, $importes, $almacenId, $cliente, $pagos, $metodoPago, &$avisosStock) {
             $venta->loadMissing('detalles');
 
             $oldAlmacenId = $venta->almacen_id;
@@ -637,6 +650,15 @@ class VentaController extends Controller
                 ]);
             }
 
+            // Se reemplaza el desglose completo en vez de tratar de calzar
+            // filas viejas con nuevas: más simple, y de todos modos siempre
+            // se manda la lista completa vigente desde el formulario.
+            $venta->pagos()->delete();
+
+            foreach ($pagos as $pago) {
+                $venta->pagos()->create($pago);
+            }
+
             // La Cobranza vinculada (si la Nota de Venta tiene una) no se
             // toca acá a propósito: `Cobranza::reflejarEnVentas()` pisaría
             // `tipcomp` de vuelta a '01' (ver el comentario en storeFactura()
@@ -658,7 +680,7 @@ class VentaController extends Controller
                 'cliente_correo' => $cliente?->email,
                 'cliente_distrito' => $cliente?->distrito,
                 'condicion_pago' => $datos['condicion_pago'] ?? null,
-                'metodo_pago' => $datos['metodo_pago'] ?? null,
+                'metodo_pago' => $metodoPago,
                 'almacen_id' => $almacenId,
                 'baseimp' => $importes['baseimp'],
                 'subtotal' => round($importes['baseimp'] + $importes['exonerado'] + $importes['inafecto'], 2),
@@ -911,7 +933,7 @@ class VentaController extends Controller
                 ['stock' => 0]
             );
 
-            $anterior = (int) $fila->stock;
+            $anterior = (float) $fila->stock;
             $nuevo = $anterior + (int) $detalle->cantidad;
             $fila->update(['stock' => $nuevo]);
 
@@ -1148,7 +1170,6 @@ class VentaController extends Controller
             'razonsocial'                  => ['required', 'string', 'max:300'],
             'cliente_id'                   => ['nullable', 'integer', 'exists:clientes,id'],
             'condicion_pago'               => ['nullable', 'string', 'max:100'],
-            'metodo_pago'                  => ['nullable', 'string', 'max:50'],
             'almacen_id'                   => ['nullable', 'integer', 'exists:almacenes,id'],
             'monto'                        => ['nullable', 'numeric', 'min:0'],
             'tipo_operacion'               => ['nullable', Rule::in(['gravada', 'exonerada', 'inafecta'])],
@@ -1159,7 +1180,43 @@ class VentaController extends Controller
             'items.*.precio_unitario'      => ['nullable', 'numeric', 'min:0'],
             'precios_incluyen_igv'         => ['nullable', 'boolean'],
             'origen_id'                    => ['nullable', 'integer', 'exists:ventas,id'],
+            // Pago mixto: una Nota de Venta/Boleta/Factura puede cobrarse
+            // repartida entre varios medios (ej. parte Yape, parte Efectivo)
+            // — mismo patrón que ya usa el POS (`VentaPago`, una fila por
+            // medio). Una Cotización no manda ninguno (todavía no hay cobro).
+            'pagos'                        => ['nullable', 'array'],
+            'pagos.*.metodo_pago'          => ['nullable', 'string', 'max:50'],
+            'pagos.*.monto'                => ['nullable', 'numeric', 'min:0'],
+            'pagos.*.referencia'           => ['nullable', 'string', 'max:100'],
         ]);
+    }
+
+    /**
+     * Filtra filas de pago vacías o sin monto — mismo criterio que
+     * `PosVentaService::pagosValidos()`, para que una fila a medio llenar
+     * (el usuario agregó una segunda fila y se arrepintió) no cuente.
+     */
+    private function pagosValidos(array $pagos): array
+    {
+        return collect($pagos)
+            ->map(fn ($p) => [
+                'metodo_pago' => trim((string) ($p['metodo_pago'] ?? '')),
+                'monto' => round((float) ($p['monto'] ?? 0), 2),
+                'referencia' => trim((string) ($p['referencia'] ?? '')) ?: null,
+            ])
+            ->filter(fn (array $p) => $p['metodo_pago'] !== '' && $p['monto'] > 0)
+            ->values()
+            ->all();
+    }
+
+    /** 'Mixto' en cuanto hay más de un medio, igual que ya resume el POS. */
+    private function resumenMetodoPago(array $pagos): ?string
+    {
+        return match (count($pagos)) {
+            0 => null,
+            1 => $pagos[0]['metodo_pago'],
+            default => 'Mixto',
+        };
     }
 
     /**
@@ -1297,7 +1354,7 @@ class VentaController extends Controller
             ['stock' => 0]
         );
 
-        $anterior = (int) $fila->stock;
+        $anterior = (float) $fila->stock;
         $nuevo = $anterior - $delta;
         $fila->update(['stock' => $nuevo]);
 

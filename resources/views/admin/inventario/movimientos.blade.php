@@ -15,7 +15,7 @@
         ->get(['id', 'codigo', 'nombre'])
         ->map(fn ($p) => [
             'id' => $p->id, 'codigo' => $p->codigo, 'nombre' => $p->nombre,
-            'stocks' => $p->stockPorAlmacen->pluck('stock', 'almacen_id'),
+            'stocks' => $p->stockPorAlmacen->pluck('stock', 'almacen_id')->map(fn ($s) => (float) $s),
         ])->values();
 @endphp
 
@@ -63,7 +63,7 @@
         </div>
         <div class="rep-kpi">
             <div class="rep-kpi-label">Unidades en stock</div>
-            <div class="rep-kpi-val">{{ number_format($resumen['unidades']) }}</div>
+            <div class="rep-kpi-val">{{ number_format($resumen['unidades'], 3) }}</div>
         </div>
     </div>
 
@@ -79,7 +79,7 @@
                 <tr>
                     <td>{{ $fila['codigo'] }} — {{ $fila['nombre'] }}</td>
                     <td>{{ $fila['almacen'] }}</td>
-                    <td class="num">{{ number_format($fila['stock']) }}</td>
+                    <td class="num">{{ number_format($fila['stock'], 3) }}</td>
                     <td style="white-space:nowrap;">
                         <button type="button" class="btn btn-secondary btn-sm" title="Trasladar a otro almacén"
                                 data-accion="trasladar" data-producto-id="{{ $fila['producto_id'] }}"
@@ -134,7 +134,7 @@
             <div class="form-group">
                 <div class="stock-actual-hint" data-stock-actual>Stock actual: —</div>
                 <label>Cantidad <span>*</span></label>
-                <input type="number" name="cantidad" min="1" required>
+                <input type="number" name="cantidad" id="movCantidad" step="0.001" min="0.001" required>
             </div>
         </div>
         <div class="form-group">
@@ -180,7 +180,7 @@
             <div class="form-group">
                 <div class="stock-actual-hint" data-stock-actual>Stock actual (origen): —</div>
                 <label>Cantidad <span>*</span></label>
-                <input type="number" name="cantidad" min="1" required>
+                <input type="number" name="cantidad" step="0.001" min="0.001" required>
             </div>
         </div>
         <div class="form-group">
@@ -285,6 +285,17 @@ function abrirModal(id) {
     document.body.style.overflow = 'hidden';
 }
 
+// "Ajuste" fija el stock final (0 es un valor válido: "no queda nada");
+// Entrada/Salida son un delta, donde 0 no tendría ningún efecto.
+const movTipoSelect = document.getElementById('movTipo');
+const movCantidadInput = document.getElementById('movCantidad');
+
+function actualizarMinCantidadMovimiento() {
+    movCantidadInput.min = movTipoSelect.value === 'ajuste' ? '0' : '0.001';
+}
+
+movTipoSelect.addEventListener('change', actualizarMinCantidadMovimiento);
+
 // ── Botones de cabecera: + Ingreso / − Salida, sin producto preseleccionado ──
 document.querySelectorAll('[data-abrir-movimiento]').forEach((boton) => {
     boton.addEventListener('click', () => {
@@ -292,7 +303,8 @@ document.querySelectorAll('[data-abrir-movimiento]').forEach((boton) => {
         document.getElementById('formMovimiento').action = '';
         input.value = '';
         delete input.dataset.productoStocks;
-        document.getElementById('movTipo').value = boton.dataset.abrirMovimiento;
+        movTipoSelect.value = boton.dataset.abrirMovimiento;
+        actualizarMinCantidadMovimiento();
         actualizarStockHint(document.getElementById('formMovimiento'));
         abrirModal('modalMovimiento');
     });
@@ -320,7 +332,8 @@ document.querySelectorAll('[data-accion]').forEach((boton) => {
         document.getElementById('movBuscarInput').value = productoNombre;
         document.getElementById('movBuscarInput').dataset.productoStocks = stocks;
         document.getElementById('movAlmacenId').value = almacenId;
-        document.getElementById('movTipo').value = accion === 'remover' ? 'salida' : 'ajuste';
+        movTipoSelect.value = accion === 'remover' ? 'salida' : 'ajuste';
+        actualizarMinCantidadMovimiento();
         actualizarStockHint(formMovimiento);
         abrirModal('modalMovimiento');
     });

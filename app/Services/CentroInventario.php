@@ -46,7 +46,7 @@ class CentroInventario
             'filtros' => ['desde' => $desde, 'hasta' => $hasta],
             'resumen' => [
                 'movimientos' => $items->count(),
-                'stock_actual' => (int) $producto->stock,
+                'stock_actual' => (float) $producto->stock,
             ],
             'items' => $items,
             'columnas' => ['Fecha', 'Almacén', 'Tipo', 'Cantidad', 'Stock Ant.', 'Stock Nuevo', 'Motivo', 'Usuario'],
@@ -82,7 +82,7 @@ class CentroInventario
 
         $items = $productos->map(function (Producto $p) {
             $costoPonderado = (float) $p->precio_compra;
-            $stock = (int) $p->stock;
+            $stock = (float) $p->stock;
 
             return [
                 'codigo' => $p->codigo ?: '—',
@@ -100,7 +100,7 @@ class CentroInventario
             'filtros' => ['categoria' => $categoriaId, 'marca' => $marcaId, 'q' => $busqueda],
             'resumen' => [
                 'productos' => $items->count(),
-                'unidades' => (int) $items->sum('stock'),
+                'unidades' => (float) $items->sum('stock'),
                 'valor_total' => round((float) $items->sum('costo_producto'), 2),
             ],
             'items' => $items,
@@ -148,7 +148,7 @@ class CentroInventario
                     'codigo' => $producto->codigo ?: '—',
                     'nombre' => $producto->nombre,
                     'almacen' => $almacen->nombre,
-                    'stock' => (int) ($stocks->get($producto->id.'-'.$almacen->id)?->stock ?? 0),
+                    'stock' => (float) ($stocks->get($producto->id.'-'.$almacen->id)?->stock ?? 0),
                 ]);
             }
         }
@@ -158,7 +158,7 @@ class CentroInventario
             'resumen' => [
                 'productos' => $productos->count(),
                 'filas' => $items->count(),
-                'unidades' => (int) $items->sum('stock'),
+                'unidades' => (float) $items->sum('stock'),
             ],
             'items' => $items,
             'columnas' => ['Código', 'Producto', 'Almacén', 'Stock'],
@@ -199,7 +199,7 @@ class CentroInventario
             $costo = (float) $p->precio_compra;
             $venta = (float) $p->precio_venta;
             $utilidad = $venta - $costo;
-            $stock = $almacenId ? (int) ($stockPorAlmacen[$p->id] ?? 0) : (int) $p->stock;
+            $stock = $almacenId ? (float) ($stockPorAlmacen[$p->id] ?? 0) : (float) $p->stock;
 
             return [
                 'codigo' => $p->codigo ?: '—',
@@ -207,7 +207,7 @@ class CentroInventario
                 'categoria' => $p->categoria?->nombre ?? '—',
                 'marca' => $p->marca?->nombre ?? '—',
                 'stock' => $stock,
-                'minimo' => (int) $p->stock_minimo,
+                'minimo' => (float) $p->stock_minimo,
                 'costo' => $costo,
                 'precio_venta' => $venta,
                 'utilidad' => round($utilidad, 4),
@@ -222,7 +222,7 @@ class CentroInventario
             'filtros' => ['categoria' => $categoriaId, 'marca' => $marcaId, 'q' => $busqueda, 'almacen_id' => $almacenId],
             'resumen' => [
                 'productos' => $items->count(),
-                'unidades' => (int) $items->sum('stock'),
+                'unidades' => (float) $items->sum('stock'),
                 'valor_total' => round((float) $items->sum('valor'), 2),
                 // Utilidad potencial de vender todo el stock actual al precio de venta.
                 'utilidad_potencial' => round((float) $items->sum(fn ($f) => $f['stock'] * $f['utilidad']), 2),

@@ -111,7 +111,7 @@ class InventarioController extends Controller
             ->keyBy(fn (StockAlmacen $s) => $s->producto_id.'-'.$s->almacen_id);
 
         $movimientos->getCollection()->each(function (MovimientoAlmacen $m) use ($stocksPorFila) {
-            $m->stock_actual_almacen = (int) ($stocksPorFila->get($m->producto_id.'-'.$m->almacen_id)?->stock ?? 0);
+            $m->stock_actual_almacen = (float) ($stocksPorFila->get($m->producto_id.'-'.$m->almacen_id)?->stock ?? 0);
         });
 
         return view('admin.inventario.historial', [
@@ -129,7 +129,7 @@ class InventarioController extends Controller
             'producto_id' => ['required', 'integer', 'exists:productos,id'],
             'almacen_origen_id' => ['required', 'integer', 'exists:almacenes,id'],
             'almacen_destino_id' => ['required', 'integer', 'exists:almacenes,id', 'different:almacen_origen_id'],
-            'cantidad' => ['required', 'integer', 'min:1'],
+            'cantidad' => ['required', 'numeric', 'min:0.001'],
             'motivo' => ['nullable', 'string', 'max:255'],
         ]);
 
@@ -193,7 +193,7 @@ class InventarioController extends Controller
             'producto_id' => ['required', 'integer', 'exists:productos,id'],
             'almacen_id' => ['required', 'integer', 'exists:almacenes,id'],
             'proveedor_id' => ['nullable', 'integer', 'exists:proveedores,id'],
-            'cantidad' => ['required', 'integer', 'min:1'],
+            'cantidad' => ['required', 'numeric', 'min:0.001'],
             'motivo' => ['nullable', 'string', 'max:255'],
         ]);
 
@@ -262,7 +262,7 @@ class InventarioController extends Controller
         }
 
         $datos = $request->validate([
-            'cantidad' => ['required', 'integer', 'min:1'],
+            'cantidad' => ['required', 'numeric', 'min:0.001'],
         ]);
 
         DB::transaction(function () use ($datos, $movimiento) {

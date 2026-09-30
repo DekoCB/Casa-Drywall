@@ -15,6 +15,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /**
@@ -52,7 +53,7 @@ class ProductoController extends Controller
             'bajosAlmacen'    => $this->stockBajoPorAlmacen(),
             // Las tarjetas describen lo que se está listando, como en el original.
             'totalProductos'  => $productos->count(),
-            'stockAqui'       => (int) $productos->sum('stock_almacen'),
+            'stockAqui'       => (float) $productos->sum('stock_almacen'),
             'stockBajo'       => $productos->filter(fn ($p) => $p->stock_almacen <= $p->stock_minimo)->count(),
             'valorInventario' => (float) $productos->sum(fn ($p) => $p->stock_almacen * (float) $p->precio_venta),
             'vendidos'        => $this->vendidosPorProducto($periodo),
@@ -75,7 +76,7 @@ class ProductoController extends Controller
             'resumen'    => $resumen,
             'bajos'      => $bajos,
             'activos'    => $almacenes->where('activo', true)->count(),
-            'unidades'   => (int) collect($resumen)->sum('unidades'),
+            'unidades'   => (float) collect($resumen)->sum('unidades'),
             'valorTotal' => (float) collect($valores)->sum(),
         ]);
     }
@@ -148,7 +149,7 @@ class ProductoController extends Controller
             $precioCompra = (float) str_replace(',', '.', (string) ($fila[$indices['precio_compra']] ?? 0));
             $precioVenta = (float) str_replace(',', '.', (string) ($fila[$indices['precio_venta']] ?? 0));
             $stockMinimo = isset($indices['stock_minimo'])
-                ? (int) ($fila[$indices['stock_minimo']] ?? 0)
+                ? (float) str_replace(',', '.', (string) ($fila[$indices['stock_minimo']] ?? 0))
                 : 0;
 
             $producto = $codigo !== '' ? Producto::where('codigo', $codigo)->first() : null;
@@ -177,7 +178,7 @@ class ProductoController extends Controller
             }
 
             if (isset($indices['stock'])) {
-                $stockActual = (int) ($fila[$indices['stock']] ?? 0);
+                $stockActual = (float) str_replace(',', '.', (string) ($fila[$indices['stock']] ?? 0));
 
                 StockAlmacen::updateOrCreate(
                     ['producto_id' => $producto->id, 'almacen_id' => $datos['almacen_id']],
@@ -259,15 +260,28 @@ class ProductoController extends Controller
         return redirect()->route('admin.productos.index')->with('mensaje', 'Producto eliminado exitosamente');
     }
 
-    /** Entrada, salida o ajuste de stock en un almacén concreto. */
+    /**
+     * Entrada, salida o ajuste de stock en un almacén concreto.
+     *
+     * "Ajuste" no es un delta: fija el stock final tal cual se escriba, así
+     * que 0 es un valor legítimo (ej. corregir a "no queda nada") — por eso
+     * el mínimo permitido depende del tipo, a diferencia de entrada/salida
+     * (donde 0 no tendría ningún efecto y seguramente es un error de tipeo).
+     */
     public function ajustarStock(Request $request, Producto $producto): RedirectResponse
     {
         $datos = $request->validate([
             'almacen_id' => ['required', 'integer', 'exists:almacenes,id'],
             'tipo' => ['required', 'in:entrada,salida,ajuste'],
-            'cantidad' => ['required', 'integer', 'min:1'],
+            'cantidad' => ['required', 'numeric', 'min:0'],
             'motivo' => ['nullable', 'string', 'max:255'],
         ]);
+
+        if ($datos['tipo'] !== 'ajuste' && $datos['cantidad'] <= 0) {
+            throw ValidationException::withMessages([
+                'cantidad' => 'Ingresa una cantidad mayor a 0.',
+            ]);
+        }
 
         DB::transaction(function () use ($request, $producto, $datos) {
             $fila = StockAlmacen::firstOrCreate(
@@ -275,7 +289,7 @@ class ProductoController extends Controller
                 ['stock' => 0]
             );
 
-            $anterior = (int) $fila->stock;
+            $anterior = (float) $fila->stock;
 
             $nuevo = match ($datos['tipo']) {
                 'entrada' => $anterior + $datos['cantidad'],
@@ -379,7 +393,7 @@ class ProductoController extends Controller
                 return true;
             })
             ->each(function (Producto $producto) use ($almacenSel) {
-                $producto->stock_almacen = (int) ($producto->stockPorAlmacen
+                $producto->stock_almacen = (float) ($producto->stockPorAlmacen
                     ->firstWhere('almacen_id', $almacenSel)->stock ?? 0);
             })
             ->values();
@@ -405,7 +419,7 @@ class ProductoController extends Controller
             ->get()
             ->mapWithKeys(fn ($fila) => [
                 (int) $fila->almacen_id => [
-                    'unidades'  => (int) $fila->unidades,
+                    'unidades'  => (float) $fila->unidades,
                     'productos' => (int) $fila->productos,
                 ],
             ])
@@ -504,7 +518,7 @@ class ProductoController extends Controller
         foreach ($porAlmacen as $almacenId => $cantidad) {
             StockAlmacen::updateOrCreate(
                 ['producto_id' => $producto->id, 'almacen_id' => (int) $almacenId],
-                ['stock' => max(0, (int) $cantidad)]
+                ['stock' => max(0, (float) $cantidad)]
             );
         }
 
@@ -524,7 +538,7 @@ class ProductoController extends Controller
             'especificaciones' => ['nullable', 'string'],
             'precio_compra' => ['required', 'numeric', 'min:0'],
             'precio_venta' => ['required', 'numeric', 'min:0'],
-            'stock_minimo' => ['required', 'integer', 'min:0'],
+            'stock_minimo' => ['required', 'numeric', 'min:0'],
             'peso' => ['nullable', 'numeric', 'min:0'],
         ]);
     }

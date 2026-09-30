@@ -25,8 +25,8 @@ class Producto extends Model
             'precio_venta' => 'decimal:4',
             'precio_alquiler' => 'decimal:2',
             'peso' => 'decimal:3',
-            'stock' => 'integer',
-            'stock_minimo' => 'integer',
+            'stock' => 'decimal:3',
+            'stock_minimo' => 'decimal:3',
         ];
     }
 
@@ -63,7 +63,7 @@ class Producto extends Model
     /** Recalcula `stock` como la suma del stock de todos los almacenes. */
     public function recalcularStock(): void
     {
-        $this->stock = (int) $this->stockPorAlmacen()->sum('stock');
+        $this->stock = (float) $this->stockPorAlmacen()->sum('stock');
         $this->save();
     }
 }

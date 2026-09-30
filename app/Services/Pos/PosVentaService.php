@@ -99,7 +99,7 @@ class PosVentaService
                 ->keyBy('producto_id');
 
             foreach ($items as $item) {
-                $disponible = (int) ($stockFilas->get($item['producto_id'])?->stock ?? 0);
+                $disponible = (float) ($stockFilas->get($item['producto_id'])?->stock ?? 0);
 
                 if ($disponible < $item['cantidad']) {
                     throw ValidationException::withMessages([
@@ -211,7 +211,7 @@ class PosVentaService
             // 5. Stock — descuento bajo el mismo lock tomado en el paso 1.
             foreach ($items as $item) {
                 $fila = $stockFilas[$item['producto_id']];
-                $anterior = (int) $fila->stock;
+                $anterior = (float) $fila->stock;
                 $nuevo = $anterior - $item['cantidad'];
 
                 $fila->update(['stock' => $nuevo]);

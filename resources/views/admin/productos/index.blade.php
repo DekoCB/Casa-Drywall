@@ -51,7 +51,7 @@
             </span>
             <span class="prod-alm-txt">
                 <span class="prod-alm-nom">{{ $almacen->nombre }}</span>
-                <span class="prod-alm-uds">{{ number_format($datos['unidades']) }} unidades</span>
+                <span class="prod-alm-uds">{{ number_format($datos['unidades'], 3) }} unidades</span>
             </span>
             @if (($bajosAlmacen[$almacen->id] ?? 0) > 0)
                 <span class="prod-alm-aviso">⚠ {{ $bajosAlmacen[$almacen->id] }} bajo stock</span>
@@ -73,12 +73,12 @@
     @foreach ($almacenes->where('id', '!=', $almacenSel) as $otro)
         <span class="prod-banner-item">
             <span>{{ $otro->nombre }}:</span>
-            <b>{{ number_format($resumenAlmacen[$otro->id]['unidades'] ?? 0) }} uds</b>
+            <b>{{ number_format($resumenAlmacen[$otro->id]['unidades'] ?? 0, 3) }} uds</b>
         </span>
     @endforeach
     <span class="prod-banner-item prod-banner-fin">
         <span>{{ $hayFiltros ? 'Stock filtrado aquí' : 'Stock total aquí' }}</span>
-        <b>{{ number_format($stockAqui) }} uds</b>
+        <b>{{ number_format($stockAqui, 3) }} uds</b>
     </span>
 </div>
 
@@ -239,14 +239,14 @@
                     <td>
                         <span class="prod-chips">
                             @foreach ($almacenes as $almacen)
-                                @php $n = (int) ($porAlmacen[$almacen->id]->stock ?? 0); @endphp
+                                @php $n = (float) ($porAlmacen[$almacen->id]->stock ?? 0); @endphp
                                 <span @class([
                                     'chip-alm',
-                                    'chip-alm-cero' => $n === 0,
+                                    'chip-alm-cero' => $n <= 0,
                                     'chip-alm-bajo' => $n > 0 && $n <= $producto->stock_minimo,
                                 ])>
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9.5 12 3l9 6.5V21H3z"/></svg>
-                                    {{ $almacen->nombre }}: {{ number_format($n) }}@if($n === 0) ⚠@endif
+                                    {{ $almacen->nombre }}: {{ number_format($n, 3) }}@if($n <= 0) ⚠@endif
                                 </span>
                             @endforeach
                         </span>
@@ -359,7 +359,7 @@
                     </div>
                     <div class="form-group">
                         <label for="stock_minimo">Stock Mínimo <span>*</span></label>
-                        <input type="number" id="stock_minimo" name="stock_minimo" min="0" required placeholder="5">
+                        <input type="number" id="stock_minimo" name="stock_minimo" step="0.001" min="0" required placeholder="5">
                     </div>
                     <div class="form-group">
                         <label for="peso">Peso por unidad (kg)</label>
@@ -379,7 +379,7 @@
                         @foreach ($almacenes as $almacen)
                             <div class="prod-sa-item">
                                 <div class="prod-sa-label">🏭 {{ $almacen->nombre }}</div>
-                                <input type="number" min="0" value="0" placeholder="0"
+                                <input type="number" step="0.001" min="0" value="0" placeholder="0"
                                        id="stock_alm_{{ $almacen->id }}"
                                        name="stock[{{ $almacen->id }}]"
                                        data-stock-almacen>
@@ -472,9 +472,9 @@ const formProducto = document.getElementById('formProducto');
 function actualizarTotalStock() {
     let total = 0;
     document.querySelectorAll('[data-stock-almacen]').forEach((campo) => {
-        total += parseInt(campo.value, 10) || 0;
+        total += parseFloat(campo.value) || 0;
     });
-    document.getElementById('totalStock').textContent = total;
+    document.getElementById('totalStock').textContent = (Math.round(total * 1000) / 1000).toString();
 }
 
 document.querySelectorAll('[data-stock-almacen]').forEach((campo) => {

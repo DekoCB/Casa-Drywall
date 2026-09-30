@@ -57,8 +57,8 @@ class PosVentaTest extends TestCase
         $this->assertSame(1, MovimientoAlmacen::where('producto_id', $producto->id)->where('tipo', 'salida')->count());
 
         $stock = StockAlmacen::where('producto_id', $producto->id)->where('almacen_id', $almacen->id)->first();
-        $this->assertSame(8, $stock->stock);
-        $this->assertSame(8, $producto->fresh()->stock);
+        $this->assertEquals(8, $stock->stock);
+        $this->assertEquals(8, $producto->fresh()->stock);
     }
 
     public function test_boleta_genera_serie_y_correlativo_interno(): void
@@ -124,7 +124,7 @@ class PosVentaTest extends TestCase
         $this->assertSame(0, VentaDetalle::count());
         $this->assertSame(0, VentaPago::count());
         $this->assertSame(0, MovimientoAlmacen::count());
-        $this->assertSame(1, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
+        $this->assertEquals(1, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
     }
 
     public function test_caja_cerrada_rechaza_antes_de_escribir(): void
@@ -254,7 +254,7 @@ class PosVentaTest extends TestCase
         $this->assertSame($primera->id, $segunda->id);
         $this->assertSame(1, Venta::count());
         // El stock solo se descontó una vez, no dos.
-        $this->assertSame(9, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
+        $this->assertEquals(9, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
     }
 
     public function test_dos_cajeros_vendiendo_el_ultimo_stock_solo_uno_gana(): void

@@ -38,7 +38,7 @@
         <div class="prod-stat-lbl">Activos</div>
     </div>
     <div class="prod-stat prod-stat-simple">
-        <div class="prod-stat-val">{{ number_format($unidades) }}</div>
+        <div class="prod-stat-val">{{ number_format($unidades, 3) }}</div>
         <div class="prod-stat-lbl">Unidades en stock</div>
     </div>
     <div class="prod-stat prod-stat-simple">
@@ -71,7 +71,7 @@
 
                 <div class="prod-alm-cifras">
                     <div class="prod-alm-cifra">
-                        <b>{{ number_format($datos['unidades']) }}</b>
+                        <b>{{ number_format($datos['unidades'], 3) }}</b>
                         <span>Unidades</span>
                     </div>
                     <div class="prod-alm-cifra">

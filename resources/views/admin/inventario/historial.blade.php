@@ -20,7 +20,7 @@
         ->get(['id', 'codigo', 'nombre'])
         ->map(fn ($p) => [
             'id' => $p->id, 'codigo' => $p->codigo, 'nombre' => $p->nombre,
-            'stocks' => $p->stockPorAlmacen->pluck('stock', 'almacen_id'),
+            'stocks' => $p->stockPorAlmacen->pluck('stock', 'almacen_id')->map(fn ($s) => (float) $s),
         ])->values();
 @endphp
 
@@ -94,9 +94,9 @@
                     <td>{{ $m->producto?->nombre ?? '—' }}</td>
                     <td>{{ $m->almacen?->nombre ?? '—' }}</td>
                     <td><span class="rep-badge estado-{{ in_array($m->tipo, ['entrada','traslado'], true) ? 'alta' : ($m->tipo === 'ajuste' ? 'media' : 'baja') }}">{{ ucfirst($m->tipo) }}</span></td>
-                    <td class="num">{{ number_format($m->cantidad) }}</td>
-                    <td class="num">{{ $m->stock_anterior }} → {{ $m->stock_nuevo }}</td>
-                    <td class="num" title="En ese almacén, a hoy — el mismo número que muestra Inventario">{{ number_format((int) $m->stock_actual_almacen) }}</td>
+                    <td class="num">{{ number_format($m->cantidad, 3) }}</td>
+                    <td class="num">{{ number_format($m->stock_anterior, 3) }} → {{ number_format($m->stock_nuevo, 3) }}</td>
+                    <td class="num" title="En ese almacén, a hoy — el mismo número que muestra Inventario">{{ number_format($m->stock_actual_almacen, 3) }}</td>
                     <td>{{ $m->motivo ?: ($m->referencia ?: '—') }}</td>
                     <td>{{ $m->usuario?->username ?? '—' }}</td>
                     <td>
@@ -149,7 +149,7 @@
             </div>
             <div class="form-group">
                 <label>Tipo <span>*</span></label>
-                <select name="tipo" required>
+                <select name="tipo" id="histMovTipo" required>
                     <option value="entrada">Entrada</option>
                     <option value="salida">Salida</option>
                     <option value="ajuste">Ajuste (fija el total)</option>
@@ -158,7 +158,7 @@
             <div class="form-group">
                 <div class="stock-actual-hint" data-stock-actual>Stock actual: —</div>
                 <label>Cantidad <span>*</span></label>
-                <input type="number" name="cantidad" min="1" required>
+                <input type="number" name="cantidad" id="histMovCantidad" step="0.001" min="0.001" required>
             </div>
         </div>
         <div class="form-group">
@@ -204,7 +204,7 @@
             <div class="form-group">
                 <div class="stock-actual-hint" data-stock-actual>Stock actual (origen): —</div>
                 <label>Cantidad <span>*</span></label>
-                <input type="number" name="cantidad" min="1" required>
+                <input type="number" name="cantidad" step="0.001" min="0.001" required>
             </div>
         </div>
         <div class="form-group">
@@ -251,7 +251,7 @@
             <div class="form-group">
                 <div class="stock-actual-hint" data-stock-actual>Stock actual: —</div>
                 <label>Cantidad <span>*</span></label>
-                <input type="number" name="cantidad" min="1" required>
+                <input type="number" name="cantidad" step="0.001" min="0.001" required>
             </div>
         </div>
         <div class="form-group">
@@ -271,7 +271,7 @@
         @csrf @method('PATCH')
         <div class="form-group">
             <label>Nueva cantidad <span>*</span></label>
-            <input type="number" name="cantidad" id="inputNuevaCantidad" min="1" required>
+            <input type="number" name="cantidad" id="inputNuevaCantidad" step="0.001" min="0.001" required>
         </div>
         <div class="header-btns" style="justify-content:flex-end;">
             <button type="button" class="btn btn-secondary" data-cerrar="modalEditarCantidad">Cancelar</button>
@@ -313,6 +313,14 @@ document.querySelectorAll('[data-stock-actual]').forEach((hint) => {
 
 document.querySelectorAll('[data-campo-stock-almacen]').forEach((select) => {
     select.addEventListener('change', () => actualizarStockHint(select.closest('form')));
+});
+
+// "Ajuste" fija el stock final (0 es un valor válido: "no queda nada");
+// Entrada/Salida son un delta, donde 0 no tendría ningún efecto.
+const histMovTipo = document.getElementById('histMovTipo');
+const histMovCantidad = document.getElementById('histMovCantidad');
+histMovTipo.addEventListener('change', () => {
+    histMovCantidad.min = histMovTipo.value === 'ajuste' ? '0' : '0.001';
 });
 
 // Un solo buscador reutilizado por los 3 modales (Movimiento/Traslado/Devolución).

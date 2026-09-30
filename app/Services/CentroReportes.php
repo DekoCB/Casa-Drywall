@@ -113,7 +113,7 @@ class CentroReportes
         $items = Producto::activos()->orderBy('nombre')->get(['id', 'codigo', 'nombre', 'stock', 'stock_minimo'])
             ->map(function (Producto $p) use ($vendidos, $dias) {
                 $vendido = (int) ($vendidos[$p->id] ?? 0);
-                $stock = (int) $p->stock;
+                $stock = (float) $p->stock;
                 $rotacion = $vendido > 0 ? round($vendido / max($stock, 1), 2) : 0.0;
                 $diasStock = $vendido > 0 ? (int) round($stock / ($vendido / $dias)) : null;
                 $estado = $vendido === 0 ? 'Baja' : ($rotacion < 1 ? 'Media' : 'Alta');
@@ -122,7 +122,7 @@ class CentroReportes
                     'codigo' => $p->codigo ?: '—',
                     'nombre' => $p->nombre,
                     'stock' => $stock,
-                    'minimo' => (int) $p->stock_minimo,
+                    'minimo' => (float) $p->stock_minimo,
                     'vendido' => $vendido,
                     'rotacion' => $rotacion,
                     'dias_stock' => $diasStock,

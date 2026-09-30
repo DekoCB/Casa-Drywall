@@ -68,7 +68,7 @@
         </div>
         <div class="rep-kpi">
             <div class="rep-kpi-label">Unidades en stock</div>
-            <div class="rep-kpi-val">{{ number_format($resumen['unidades']) }}</div>
+            <div class="rep-kpi-val">{{ number_format($resumen['unidades'], 3) }}</div>
         </div>
         <div class="rep-kpi">
             <div class="rep-kpi-label">Valor total</div>
@@ -97,8 +97,8 @@
                     <td>{{ $fila['nombre'] }}</td>
                     <td>{{ $fila['categoria'] }}</td>
                     <td>{{ $fila['marca'] }}</td>
-                    <td class="num" style="color:{{ $fila['stock'] <= $fila['minimo'] ? '#A8231F' : 'inherit' }};font-weight:{{ $fila['stock'] <= $fila['minimo'] ? '700' : '400' }};">{{ number_format($fila['stock']) }}</td>
-                    <td class="num">{{ number_format($fila['minimo']) }}</td>
+                    <td class="num" style="color:{{ $fila['stock'] <= $fila['minimo'] ? '#A8231F' : 'inherit' }};font-weight:{{ $fila['stock'] <= $fila['minimo'] ? '700' : '400' }};">{{ number_format($fila['stock'], 3) }}</td>
+                    <td class="num">{{ number_format($fila['minimo'], 3) }}</td>
                     <td class="num">S/ {{ number_format($fila['costo'], 4) }}</td>
                     <td class="num">S/ {{ number_format($fila['precio_venta'], 4) }}</td>
                     <td class="num" style="color:{{ $fila['utilidad'] < 0 ? '#A8231F' : '#1f6b5e' }};">S/ {{ number_format($fila['utilidad'], 4) }}</td>

@@ -88,7 +88,7 @@ class VentaGenerarDesdeCotizacionTest extends TestCase
             'monto' => 100,
             'tipo_operacion' => 'gravada',
             'precios_incluyen_igv' => 1,
-            'metodo_pago' => 'Efectivo',
+            'pagos' => [['metodo_pago' => 'Efectivo', 'monto' => 100]],
             'origen_id' => $cot->id,
         ]);
 
@@ -164,7 +164,7 @@ class VentaGenerarDesdeCotizacionTest extends TestCase
             'monto' => 100,
             'tipo_operacion' => 'gravada',
             'precios_incluyen_igv' => 1,
-            'metodo_pago' => 'Efectivo',
+            'pagos' => [['metodo_pago' => 'Efectivo', 'monto' => 100]],
         ])->assertRedirect();
 
         $venta = Venta::where('tipcomp', '03')->where('n_comp', '00000001')->firstOrFail();

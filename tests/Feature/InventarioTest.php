@@ -46,8 +46,8 @@ class InventarioTest extends TestCase
             'cantidad' => 20,
         ])->assertRedirect();
 
-        $this->assertSame(30, StockAlmacen::where('almacen_id', $origen->id)->value('stock'));
-        $this->assertSame(20, StockAlmacen::where('almacen_id', $destino->id)->value('stock'));
+        $this->assertEquals(30, StockAlmacen::where('almacen_id', $origen->id)->value('stock'));
+        $this->assertEquals(20, StockAlmacen::where('almacen_id', $destino->id)->value('stock'));
 
         $movs = MovimientoAlmacen::where('producto_id', $producto->id)->where('tipo', 'traslado')->get();
         $this->assertCount(2, $movs);
@@ -67,7 +67,7 @@ class InventarioTest extends TestCase
             'cantidad' => 50,
         ])->assertSessionHasErrors('cantidad');
 
-        $this->assertSame(5, StockAlmacen::where('almacen_id', $origen->id)->value('stock'));
+        $this->assertEquals(5, StockAlmacen::where('almacen_id', $origen->id)->value('stock'));
         $this->assertSame(0, MovimientoAlmacen::count());
     }
 
@@ -86,7 +86,7 @@ class InventarioTest extends TestCase
             'motivo' => 'Producto defectuoso',
         ])->assertRedirect();
 
-        $this->assertSame(20, StockAlmacen::where('almacen_id', $almacen->id)->value('stock'));
+        $this->assertEquals(20, StockAlmacen::where('almacen_id', $almacen->id)->value('stock'));
 
         $mov = MovimientoAlmacen::where('producto_id', $producto->id)->where('tipo', 'devolucion')->firstOrFail();
         $this->assertStringContainsString('Distribuidora XYZ', $mov->referencia);
@@ -114,9 +114,9 @@ class InventarioTest extends TestCase
             ->patch(route('admin.inventario.movimientos.cantidad', $movOrigen), ['cantidad' => 15])
             ->assertRedirect();
 
-        $this->assertSame(35, StockAlmacen::where('almacen_id', $origen->id)->value('stock')); // 50-15
-        $this->assertSame(15, StockAlmacen::where('almacen_id', $destino->id)->value('stock'));
-        $this->assertTrue(MovimientoAlmacen::where('producto_id', $producto->id)->get()->every(fn (MovimientoAlmacen $m) => $m->cantidad === 15));
+        $this->assertEquals(35, StockAlmacen::where('almacen_id', $origen->id)->value('stock')); // 50-15
+        $this->assertEquals(15, StockAlmacen::where('almacen_id', $destino->id)->value('stock'));
+        $this->assertTrue(MovimientoAlmacen::where('producto_id', $producto->id)->get()->every(fn (MovimientoAlmacen $m) => $m->cantidad == 15));
     }
 
     public function test_marcar_entregado_bloquea_la_edicion_de_cantidad(): void
@@ -139,8 +139,8 @@ class InventarioTest extends TestCase
             ->patch(route('admin.inventario.movimientos.cantidad', $mov), ['cantidad' => 10])
             ->assertSessionHas('error');
 
-        $this->assertSame(15, StockAlmacen::where('almacen_id', $almacen->id)->value('stock')); // sin cambios
-        $this->assertSame(5, $mov->fresh()->cantidad);
+        $this->assertEquals(15, StockAlmacen::where('almacen_id', $almacen->id)->value('stock')); // sin cambios
+        $this->assertEquals(5, $mov->fresh()->cantidad);
     }
 
     public function test_entrada_manual_queda_entregada_de_una_y_no_se_puede_editar(): void
@@ -178,7 +178,7 @@ class InventarioTest extends TestCase
             ->patch(route('admin.inventario.movimientos.cantidad', $mov), ['cantidad' => 80])
             ->assertSessionHas('error');
 
-        $this->assertSame(90, $mov->fresh()->cantidad);
+        $this->assertEquals(90, $mov->fresh()->cantidad);
     }
 
     public function test_listado_de_movimientos_filtra_por_tipo(): void
@@ -209,7 +209,7 @@ class InventarioTest extends TestCase
         $respuesta->assertOk();
         $filas = $respuesta->viewData('items')->where('producto_id', $producto->id);
         $this->assertCount(2, $filas);
-        $this->assertTrue($filas->every(fn ($f) => $f['stock'] === 0));
+        $this->assertTrue($filas->every(fn ($f) => $f['stock'] == 0));
     }
 
     /**
@@ -276,7 +276,7 @@ class InventarioTest extends TestCase
 
         $respuesta->assertOk();
         $items = $respuesta->viewData('items');
-        $this->assertSame(40, $items->last()['stock_nuevo']);
+        $this->assertEquals(40, $items->last()['stock_nuevo']);
         $this->assertSame(2, $items->count());
     }
 
@@ -290,7 +290,7 @@ class InventarioTest extends TestCase
         $respuesta->assertOk();
         $fila = $respuesta->viewData('items')->firstWhere('codigo', 'P006');
         $this->assertSame(3.0, $fila['costo_ponderado']);
-        $this->assertSame(60.0, $fila['costo_producto']); // stock(20) * costo(3)
+        $this->assertEquals(60.0, $fila['costo_producto']); // stock(20) * costo(3)
     }
 
     public function test_reporte_inventario_calcula_el_valor_a_costo_de_compra(): void
@@ -320,18 +320,18 @@ class InventarioTest extends TestCase
         StockAlmacen::create(['producto_id' => $producto->id, 'almacen_id' => $almacen2->id, 'stock' => 20]);
 
         $sinFiltro = $this->actingAs($this->admin(), 'web')->get(route('admin.inventario.reporte'));
-        $this->assertSame(30, $sinFiltro->viewData('items')->firstWhere('codigo', 'P012')['stock']);
+        $this->assertEquals(30, $sinFiltro->viewData('items')->firstWhere('codigo', 'P012')['stock']);
 
         $conFiltro = $this->actingAs($this->admin(), 'web')
             ->get(route('admin.inventario.reporte', ['almacen_id' => $almacen1->id]));
         $filaReporte = $conFiltro->viewData('items')->firstWhere('codigo', 'P012');
-        $this->assertSame(10, $filaReporte['stock']);
+        $this->assertEquals(10, $filaReporte['stock']);
 
         $inventario = $this->actingAs($this->admin(), 'web')
             ->get(route('admin.inventario.movimientos', ['almacen_id' => $almacen1->id]));
         $filaInventario = $inventario->viewData('items')->firstWhere('producto_id', $producto->id);
 
-        $this->assertSame($filaInventario['stock'], $filaReporte['stock']);
+        $this->assertEquals($filaInventario['stock'], $filaReporte['stock']);
     }
 
     public function test_historial_de_movimientos_muestra_el_stock_actual_del_producto(): void
@@ -376,8 +376,8 @@ class InventarioTest extends TestCase
         $filaAlmacen1 = $filas->firstWhere('almacen_id', $almacen1->id);
         $filaAlmacen2 = $filas->firstWhere('almacen_id', $almacen2->id);
 
-        $this->assertSame(30, $filaAlmacen1->stock_actual_almacen);
-        $this->assertSame(20, $filaAlmacen2->stock_actual_almacen);
+        $this->assertEquals(30, $filaAlmacen1->stock_actual_almacen);
+        $this->assertEquals(20, $filaAlmacen2->stock_actual_almacen);
         // Ninguna de las dos es el acumulado (50) — cada una es su propio almacén.
         $this->assertNotSame(50, $filaAlmacen1->stock_actual_almacen);
     }
@@ -413,5 +413,62 @@ class InventarioTest extends TestCase
         $kardexValorizadoExcel = $admin->get(route('admin.inventario.kardex-valorizado.excel'));
         $kardexValorizadoExcel->assertOk();
         $kardexValorizadoExcel->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    }
+
+    /**
+     * El negocio tiene stock real que no es un número entero (confirmado por
+     * una lista de productos importada con cantidades como "33.75") — una
+     * entrada/salida/ajuste debe poder registrar esos decimales.
+     */
+    public function test_entrada_de_stock_admite_decimales(): void
+    {
+        [$almacen] = $this->dosAlmacenes();
+        $producto = Producto::create(['codigo' => 'P200', 'nombre' => 'Cable', 'stock' => 0]);
+        StockAlmacen::create(['producto_id' => $producto->id, 'almacen_id' => $almacen->id, 'stock' => 0]);
+
+        $this->actingAs($this->admin(), 'web')->post(route('admin.productos.stock', $producto), [
+            'almacen_id' => $almacen->id, 'tipo' => 'entrada', 'cantidad' => 2.75,
+        ])->assertSessionDoesntHaveErrors();
+
+        $this->assertEquals(2.75, StockAlmacen::where('almacen_id', $almacen->id)->value('stock'));
+        $this->assertEquals(2.75, $producto->fresh()->stock);
+    }
+
+    /**
+     * El cliente reportó que en "Ajuste" no podía poner 0 ni revertir un
+     * ajuste hecho por error. La causa real: `cantidad` siempre exigía un
+     * mínimo de 1, aunque para "Ajuste" ese número ES el stock final (no un
+     * delta) — 0 es un valor legítimo ("no queda nada"). Entrada/Salida
+     * siguen exigiendo una cantidad mayor a 0 (ahí sí sería un no-op).
+     */
+    public function test_ajuste_a_cero_es_un_valor_valido(): void
+    {
+        [$almacen] = $this->dosAlmacenes();
+        $producto = Producto::create(['codigo' => 'P201', 'nombre' => 'Masilla', 'stock' => 12]);
+        StockAlmacen::create(['producto_id' => $producto->id, 'almacen_id' => $almacen->id, 'stock' => 12]);
+
+        $this->actingAs($this->admin(), 'web')->post(route('admin.productos.stock', $producto), [
+            'almacen_id' => $almacen->id, 'tipo' => 'ajuste', 'cantidad' => 0,
+        ])->assertSessionDoesntHaveErrors();
+
+        $this->assertEquals(0, StockAlmacen::where('almacen_id', $almacen->id)->value('stock'));
+        $this->assertEquals(0, $producto->fresh()->stock);
+
+        $mov = MovimientoAlmacen::where('producto_id', $producto->id)->where('tipo', 'ajuste')->firstOrFail();
+        $this->assertEquals(12, $mov->stock_anterior);
+        $this->assertEquals(0, $mov->stock_nuevo);
+    }
+
+    public function test_entrada_o_salida_con_cantidad_cero_sigue_siendo_rechazada(): void
+    {
+        [$almacen] = $this->dosAlmacenes();
+        $producto = Producto::create(['codigo' => 'P202', 'nombre' => 'Clavos', 'stock' => 5]);
+        StockAlmacen::create(['producto_id' => $producto->id, 'almacen_id' => $almacen->id, 'stock' => 5]);
+
+        $this->actingAs($this->admin(), 'web')->post(route('admin.productos.stock', $producto), [
+            'almacen_id' => $almacen->id, 'tipo' => 'entrada', 'cantidad' => 0,
+        ])->assertSessionHasErrors('cantidad');
+
+        $this->assertEquals(5, StockAlmacen::where('almacen_id', $almacen->id)->value('stock'));
     }
 }

@@ -68,7 +68,7 @@
             </div>
             <div class="rep-kpi">
                 <div class="rep-kpi-label">Stock actual</div>
-                <div class="rep-kpi-val">{{ $resumen['stock_actual'] }}</div>
+                <div class="rep-kpi-val">{{ number_format($resumen['stock_actual'], 3) }}</div>
             </div>
         </div>
 
@@ -86,9 +86,9 @@
                         <td>{{ $fila['fecha']->format('d/m/Y H:i') }}</td>
                         <td>{{ $fila['almacen'] }}</td>
                         <td><span class="rep-badge estado-{{ in_array($fila['tipo'], ['entrada','traslado'], true) ? 'alta' : ($fila['tipo'] === 'ajuste' ? 'media' : 'baja') }}">{{ ucfirst($fila['tipo']) }}</span></td>
-                        <td class="num">{{ number_format($fila['cantidad']) }}</td>
-                        <td class="num">{{ $fila['stock_anterior'] }}</td>
-                        <td class="num">{{ $fila['stock_nuevo'] }}</td>
+                        <td class="num">{{ number_format($fila['cantidad'], 3) }}</td>
+                        <td class="num">{{ number_format($fila['stock_anterior'], 3) }}</td>
+                        <td class="num">{{ number_format($fila['stock_nuevo'], 3) }}</td>
                         <td>{{ $fila['motivo'] }}</td>
                         <td>{{ $fila['usuario'] }}</td>
                     </tr>

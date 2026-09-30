@@ -263,7 +263,7 @@ class VentasSubmenuTest extends TestCase
             'fecha' => '2026-09-01', 'fecha_vencimiento' => '2026-09-01', 'tipcomp' => 'NV',
             'n_seri' => 'NV01', 'n_comp' => '00000001', 'razonsocial' => 'Cliente de Prueba',
             'monto' => 100, 'tipo_operacion' => 'gravada', 'precios_incluyen_igv' => 1,
-            'metodo_pago' => 'Efectivo', 'origen_id' => $cot->id,
+            'pagos' => [['metodo_pago' => 'Efectivo', 'monto' => 100]], 'origen_id' => $cot->id,
         ]);
 
         $respuesta = $this->actingAs($admin, 'web')->get(route('admin.ventas.index', ['tipcomp' => 'COT']));
@@ -295,7 +295,7 @@ class VentasSubmenuTest extends TestCase
             'fecha' => '2026-09-01', 'fecha_vencimiento' => '2026-09-01', 'tipcomp' => 'NV',
             'n_seri' => 'NV01', 'n_comp' => '00000001', 'razonsocial' => 'Con venta',
             'monto' => 100, 'tipo_operacion' => 'gravada', 'precios_incluyen_igv' => 1,
-            'metodo_pago' => 'Efectivo', 'origen_id' => $cotConVenta->id,
+            'pagos' => [['metodo_pago' => 'Efectivo', 'monto' => 100]], 'origen_id' => $cotConVenta->id,
         ]);
 
         Venta::create(['fecha' => '2026-09-01', 'tipcomp' => 'COT', 'n_seri' => 'CT01', 'n_comp' => '00000002', 'estado' => 'activa']);
