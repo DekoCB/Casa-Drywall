@@ -168,4 +168,34 @@ class ReportesTest extends TestCase
         $agingExcel = $admin->get(route('admin.reportes.aging.excel'));
         $agingExcel->assertOk();
     }
+
+    /**
+     * Sin filtro, Utilidades (Reportes) debe caer al mismo rango por defecto
+     * que la tarjeta de Utilidades del Dashboard (el mes actual) — antes caía
+     * a "desde el 1 de enero", así que sin tocar ningún filtro ambas pantallas
+     * mostraban números distintos para el mismo cálculo.
+     */
+    public function test_utilidad_sin_filtro_usa_el_mes_actual_como_el_dashboard(): void
+    {
+        $producto = Producto::create(['codigo' => 'P021', 'nombre' => 'Tornillo', 'stock' => 50, 'precio_compra' => 1, 'precio_venta' => 2]);
+
+        // Del mes pasado: no debe contar en el total sin filtro.
+        $ventaMesPasado = $this->ventaConItems(now()->subMonthNoOverflow()->startOfMonth()->toDateString(), '03', [
+            ['codigo' => 'P021', 'nombre' => 'Tornillo', 'cantidad' => 100, 'precio' => 2],
+        ]);
+        VentaDetalle::where('venta_id', $ventaMesPasado->id)->update(['producto_id' => $producto->id]);
+
+        // De hoy (dentro del mes actual): sí debe contar.
+        $ventaHoy = $this->ventaConItems(now()->toDateString(), '03', [
+            ['codigo' => 'P021', 'nombre' => 'Tornillo', 'cantidad' => 10, 'precio' => 2],
+        ]);
+        VentaDetalle::where('venta_id', $ventaHoy->id)->update(['producto_id' => $producto->id]);
+
+        $respuesta = $this->actingAs($this->admin(), 'web')->get(route('admin.reportes.utilidad'));
+
+        $respuesta->assertOk();
+        $this->assertSame(now()->startOfMonth()->toDateString(), $respuesta->viewData('filtros')['desde']);
+        $fila = $respuesta->viewData('items')->firstWhere('codigo', 'P021');
+        $this->assertEquals(10, $fila['cantidad']);
+    }
 }

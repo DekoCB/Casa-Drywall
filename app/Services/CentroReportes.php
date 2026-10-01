@@ -158,7 +158,11 @@ class CentroReportes
      */
     public function utilidadVentas(?string $desde, ?string $hasta, string $busqueda = ''): array
     {
-        $desde = $desde ?: now()->startOfYear()->toDateString();
+        // Mismo rango por defecto que la tarjeta de Utilidades del Dashboard
+        // (`DashboardController::rangoUtilidad()`, el mes actual) — antes acá
+        // caía a "desde el 1 de enero", así que sin filtro ambas pantallas
+        // mostraban números distintos aunque fuera el mismo cálculo.
+        $desde = $desde ?: now()->startOfMonth()->toDateString();
         $hasta = $hasta ?: now()->toDateString();
         $busqueda = trim($busqueda);
 

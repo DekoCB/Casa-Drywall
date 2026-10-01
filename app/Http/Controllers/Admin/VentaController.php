@@ -1066,9 +1066,32 @@ class VentaController extends Controller
             ? "{$venta->n_seri}-{$venta->n_comp}"
             : $venta->numero_venta;
 
-        return Pdf::loadView($vista, $datos)
-            ->setPaper('a4', 'portrait')
-            ->download("{$numero}.pdf");
+        $pdf = Pdf::loadView($vista, $datos)->setPaper('a4', 'portrait')->output();
+
+        // El PDF se arma bien (confirmado generándolo directo en el servidor:
+        // bytes válidos, tamaño normal) — lo que se corrompe es la entrega por
+        // HTTP. La sospecha real: `zlib.output_compression` de PHP (activado
+        // por defecto en varios hostings compartidos) recomprime la salida
+        // DESPUÉS de que el framework ya calculó el `Content-Length` sobre
+        // los bytes sin comprimir — el navegador recibe un tamaño anunciado
+        // que no coincide con lo que realmente llegó, y lo trata como dañado.
+        // Se apaga acá puntualmente y se arma la respuesta a mano con el
+        // Content-Length real, en vez de confiar en que el entorno de
+        // producción lo calcule bien.
+        if (function_exists('ini_set')) {
+            @ini_set('zlib.output_compression', '0');
+        }
+
+        $nombreArchivo = str_replace('"', '', "{$numero}.pdf");
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => "attachment; filename=\"{$nombreArchivo}\"",
+            'Content-Length' => (string) strlen($pdf),
+            'Content-Transfer-Encoding' => 'binary',
+            'Cache-Control' => 'private, max-age=0, must-revalidate',
+            'Pragma' => 'public',
+        ]);
     }
 
     /** Datos compartidos por `comprobante()` y `descargarPdf()` — misma vista, mismo desglose. */
