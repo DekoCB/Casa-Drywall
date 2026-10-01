@@ -317,6 +317,27 @@ class VentaController extends Controller
             ? Venta::where('tipcomp', 'COT')->find($datos['origen_id'])
             : null;
 
+        // Sin este freno, volver con el botón "atrás" del navegador a este
+        // mismo formulario precargado (ya generó la venta, pero la persona
+        // no se dio cuenta) y presionar "Guardar" de nuevo genera una
+        // SEGUNDA venta real desde la misma Cotización — `ventaGenerada()`
+        // es un hasOne, así que la vieja queda invisible en "Convertida en"
+        // aunque siga existiendo de verdad en el listado (el "duplicado" que
+        // reportó el negocio). Solo cuenta una conversión vigente (una
+        // anulada/eliminada no bloquea volver a generar).
+        if ($origenCotizacion) {
+            $conversionExistente = Venta::where('origen_cotizacion_id', $origenCotizacion->id)
+                ->where(fn ($q) => $q->whereNull('estado')->orWhereNotIn('estado', ['cancelada', 'eliminada']))
+                ->first();
+
+            if ($conversionExistente) {
+                return back()->with(
+                    'error',
+                    "Esta Cotización ya generó el comprobante {$conversionExistente->n_seri}-{$conversionExistente->n_comp} — anúlalo o elimínalo antes de generar otro."
+                );
+            }
+        }
+
         $almacenId = ! empty($datos['almacen_id']) ? (int) $datos['almacen_id'] : null;
 
         // Una Cotización es un presupuesto: nunca mueve stock, sin importar

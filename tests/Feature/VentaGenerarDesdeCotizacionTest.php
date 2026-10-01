@@ -105,6 +105,67 @@ class VentaGenerarDesdeCotizacionTest extends TestCase
         $this->assertTrue($cot->ventaGenerada->is($nueva));
     }
 
+    /**
+     * Volver con "atrás" del navegador al formulario ya enviado (todavía
+     * precargado con el mismo `origen_id`) y presionar "Guardar" de nuevo no
+     * debe generar una segunda venta real desde la misma Cotización — antes
+     * no había ningún freno, y la primera quedaba "invisible" en "Convertida
+     * en" (`ventaGenerada()` es un hasOne) aunque las dos existieran de
+     * verdad en el listado.
+     */
+    public function test_no_se_puede_generar_dos_veces_desde_la_misma_cotizacion(): void
+    {
+        $cot = Venta::create([
+            'fecha' => '2026-09-01', 'tipcomp' => 'COT', 'n_seri' => 'CT01', 'n_comp' => '00000001',
+            'razonsocial' => 'Cliente de Prueba', 'estado' => 'activa',
+        ]);
+
+        $datosVenta = [
+            'fecha' => '2026-09-01', 'fecha_vencimiento' => '2026-09-01', 'tipcomp' => '03',
+            'razonsocial' => 'Cliente de Prueba', 'monto' => 100, 'tipo_operacion' => 'gravada',
+            'precios_incluyen_igv' => 1, 'pagos' => [['metodo_pago' => 'Efectivo', 'monto' => 100]],
+            'origen_id' => $cot->id,
+        ];
+
+        $admin = $this->actingAs($this->admin(), 'web');
+        $admin->post(route('admin.ventas.factura.store'), $datosVenta + ['n_seri' => 'B001', 'n_comp' => '00000099'])
+            ->assertRedirect();
+
+        $respuesta = $admin->post(route('admin.ventas.factura.store'), $datosVenta + ['n_seri' => 'B001', 'n_comp' => '00000100']);
+
+        $respuesta->assertRedirect();
+        $respuesta->assertSessionHas('error');
+        $this->assertStringContainsString('ya generó el comprobante', session('error'));
+
+        $this->assertSame(1, Venta::where('origen_cotizacion_id', $cot->id)->count());
+        $this->assertSame('activa', $cot->fresh()->estado);
+    }
+
+    /** Anulando (o eliminando) la primera conversión, sí se puede regenerar. */
+    public function test_se_puede_regenerar_si_la_conversion_anterior_fue_anulada(): void
+    {
+        $cot = Venta::create([
+            'fecha' => '2026-09-01', 'tipcomp' => 'COT', 'n_seri' => 'CT01', 'n_comp' => '00000001',
+            'razonsocial' => 'Cliente de Prueba', 'estado' => 'activa',
+        ]);
+
+        $primera = Venta::create([
+            'fecha' => '2026-09-01', 'tipcomp' => '03', 'n_seri' => 'B001', 'n_comp' => '00000099',
+            'razonsocial' => 'Cliente de Prueba', 'estado' => 'cancelada', 'origen_cotizacion_id' => $cot->id,
+        ]);
+
+        $respuesta = $this->actingAs($this->admin(), 'web')->post(route('admin.ventas.factura.store'), [
+            'fecha' => '2026-09-01', 'fecha_vencimiento' => '2026-09-01', 'tipcomp' => '03',
+            'n_seri' => 'B001', 'n_comp' => '00000100', 'razonsocial' => 'Cliente de Prueba',
+            'monto' => 100, 'tipo_operacion' => 'gravada', 'precios_incluyen_igv' => 1,
+            'pagos' => [['metodo_pago' => 'Efectivo', 'monto' => 100]], 'origen_id' => $cot->id,
+        ]);
+
+        $respuesta->assertRedirect();
+        $respuesta->assertSessionHasNoErrors();
+        $this->assertSame(2, Venta::where('origen_cotizacion_id', $cot->id)->count());
+    }
+
     public function test_cotizacion_no_aparece_ni_suma_en_el_listado_general(): void
     {
         Venta::create([
