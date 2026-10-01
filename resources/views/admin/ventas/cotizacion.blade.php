@@ -1,4 +1,8 @@
 @php
+    // true cuando dompdf arma el PDF descargable (VentaController::descargarPdf).
+    $paraDescarga = $paraDescarga ?? false;
+    // dompdf no puede pedir el logo por HTTP — ver el mismo comentario en comprobante.blade.php.
+    $logoPro = $paraDescarga ? public_path('img/Logo-docs.png') : asset('img/Logo-docs.png');
     $numero = trim($venta->n_seri.'-'.$venta->n_comp, '-') ?: $venta->numero_venta;
     $simbolo = $venta->moneda === 'USD' ? 'US$' : 'S/';
     $monedaTexto = $venta->moneda === 'USD' ? 'Dólares' : 'S/ Soles';
@@ -116,6 +120,7 @@
 </head>
 <body>
 
+@unless ($paraDescarga)
 <div class="barra">
     @if (session('mensaje'))
         <div class="ok">✅ {{ session('mensaje') }}</div>
@@ -126,12 +131,14 @@
 
     <a href="{{ route('admin.ventas.index') }}">← Ventas</a>
     <a href="{{ route('admin.ventas.factura.create') }}">＋ Nueva venta</a>
+    <a href="{{ route('admin.ventas.descargar-pdf', $venta) }}" target="_blank">⬇ Descargar PDF</a>
 
     <div class="imprimir-grupo">
         <button type="button" onclick="imprimirComo('80mm')">Imprimir 80mm</button>
         <button type="button" onclick="imprimirComo('a4')">Imprimir A4</button>
     </div>
 </div>
+@endunless
 
 <div class="hoja">
 
@@ -140,7 +147,7 @@
         <div class="cab-izq">
             <div class="cab-marca">
                 <div class="cab-logo-cel">
-                    <img src="{{ asset('img/Logo-docs.png') }}" alt="{{ config('rentaltech.empresa.razon_social') }}">
+                    <img src="{{ $logoPro }}" alt="{{ config('rentaltech.empresa.razon_social') }}">
                 </div>
                 <div class="cab-emp-cel cab-emp">
                     <b>{{ config('rentaltech.empresa.razon_social') }}</b>
@@ -217,7 +224,7 @@
         @forelse ($venta->detalles as $detalle)
             <tr>
                 <td>{{ $detalle->prod_codigo ?: '—' }}</td>
-                <td class="r">{{ number_format($detalle->cantidad, 0) }}</td>
+                <td class="r">{{ number_format($detalle->cantidad, 3) }}</td>
                 <td class="c">{{ $detalle->producto?->presentacion ?: '' }}</td>
                 <td>{{ $detalle->prod_nombre }}</td>
                 <td class="r">{{ number_format($detalle->precio_unitario, 2) }}</td>

@@ -22,7 +22,7 @@
         'nombre' => $d->prod_nombre,
         'codigo' => $d->prod_codigo,
         'precio' => (float) $d->precio_unitario,
-        'cantidad' => (int) $d->cantidad,
+        'cantidad' => (float) $d->cantidad,
     ])->values() : [];
 
     // El monto único solo tiene sentido si la venta no tiene productos
@@ -555,7 +555,7 @@ function filaFacturaHtml(i, producto, cantidad) {
         <td><input type="text" name="items[${i}][producto_nombre]" class="item-nombre-f"
                    value="${nombre.replace(/"/g, '&quot;')}" placeholder="Nombre del producto o servicio…"></td>
         <td><input type="text" name="items[${i}][producto_codigo]" class="item-codigo-f" value="${codigo}"></td>
-        <td><input type="number" name="items[${i}][cantidad]" value="${cantidad}" min="1" step="1" class="item-cantidad-f"></td>
+        <td><input type="number" name="items[${i}][cantidad]" value="${cantidad}" min="0.001" step="0.001" class="item-cantidad-f"></td>
         <td><input type="number" name="items[${i}][precio_unitario]" value="${precio}" step="0.01" min="0" class="item-precio-f"></td>
         <td class="item-subtotal-f">S/ 0.00</td>
         <td><button type="button" class="btn btn-danger btn-sm btn-quitar-f">✕</button></td>

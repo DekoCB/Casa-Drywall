@@ -253,7 +253,7 @@
                     </td>
                     <td class="prod-vendido">
                         @if ($venta)
-                            <b>{{ number_format($venta['unidades']) }} uds</b>
+                            <b>{{ number_format($venta['unidades'], 3) }} uds</b>
                         @else
                             <span class="prod-mudo">—</span>
                         @endif

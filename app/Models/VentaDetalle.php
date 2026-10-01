@@ -19,7 +19,7 @@ class VentaDetalle extends Model
     protected function casts(): array
     {
         return [
-            'cantidad' => 'integer',
+            'cantidad' => 'decimal:3',
             'precio_unitario' => 'decimal:2',
             'descuento_pct' => 'decimal:2',
             'subtotal' => 'decimal:2',

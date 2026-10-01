@@ -68,7 +68,7 @@
                     <td>{{ $fila['nombre'] }}</td>
                     <td class="num" style="color:{{ $fila['stock'] > 0 ? 'inherit' : '#A8231F' }};">{{ number_format($fila['stock']) }}</td>
                     <td class="num">{{ number_format($fila['minimo']) }}</td>
-                    <td class="num">{{ number_format($fila['vendido']) }}</td>
+                    <td class="num">{{ number_format($fila['vendido'], 3) }}</td>
                     <td class="num">{{ $fila['rotacion'] }}x</td>
                     <td class="num">{{ $fila['dias_stock'] ?? '∞' }}</td>
                     <td><span class="rep-badge estado-{{ strtolower($fila['estado']) }}">{{ $fila['estado'] }}</span></td>

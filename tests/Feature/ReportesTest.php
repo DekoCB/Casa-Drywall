@@ -76,7 +76,7 @@ class ReportesTest extends TestCase
         $items = $respuesta->viewData('items');
 
         $placa = $items->firstWhere('codigo', 'P001');
-        $this->assertSame(100, $placa['cantidad']); // no 600 — la cotización no cuenta.
+        $this->assertEquals(100, $placa['cantidad']); // no 600 — la cotización no cuenta.
         $this->assertSame('A', $placa['clase']);
     }
 
@@ -120,7 +120,7 @@ class ReportesTest extends TestCase
         $respuesta->assertOk();
         $fila = $respuesta->viewData('items')->firstWhere('codigo', 'P020');
 
-        $this->assertSame(10, $fila['cantidad']); // no 110 — la cotización no cuenta
+        $this->assertEquals(10, $fila['cantidad']); // no 110 — la cotización no cuenta
         $this->assertSame(500.0, $fila['ingreso']); // 10 * 50
         $this->assertSame(300.0, $fila['costo']); // 10 * 30
         $this->assertSame(200.0, $fila['utilidad']); // 500 - 300

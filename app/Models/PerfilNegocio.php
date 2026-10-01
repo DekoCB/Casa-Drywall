@@ -38,6 +38,18 @@ class PerfilNegocio extends Model
         return $this->logo_claro ? Storage::disk('public')->url($this->logo_claro) : null;
     }
 
+    /**
+     * Ruta real en disco del logo claro (no la URL pública) — para incrustarlo
+     * en un PDF generado con dompdf, que no puede pedir `logoClaroUrl()` por
+     * HTTP (las peticiones remotas vienen deshabilitadas por defecto, y en
+     * este hosting el symlink `public/storage` tampoco es confiable). Leer
+     * el archivo directo del disco evita depender de ninguno de los dos.
+     */
+    public function logoClaroPath(): ?string
+    {
+        return $this->logo_claro ? Storage::disk('public')->path($this->logo_claro) : null;
+    }
+
     public function logoOscuroUrl(): ?string
     {
         return $this->logo_oscuro ? Storage::disk('public')->url($this->logo_oscuro) : null;

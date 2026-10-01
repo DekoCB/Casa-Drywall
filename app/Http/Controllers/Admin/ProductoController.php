@@ -499,7 +499,7 @@ class ProductoController extends Controller
 
                 return [
                     ($codigo !== '' ? $codigo : '#'.$fila->id) => [
-                        'unidades' => (int) $fila->unidades,
+                        'unidades' => (float) $fila->unidades,
                     ],
                 ];
             })

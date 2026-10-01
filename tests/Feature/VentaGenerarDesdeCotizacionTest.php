@@ -58,7 +58,7 @@ class VentaGenerarDesdeCotizacionTest extends TestCase
         $this->assertSame('12345678', $origen['n_ruc']);
         $this->assertCount(1, $origen['items']);
         $this->assertSame('Plancha de Drywall', $origen['items'][0]['nombre']);
-        $this->assertSame(3, $origen['items'][0]['cantidad']);
+        $this->assertEquals(3, $origen['items'][0]['cantidad']);
     }
 
     public function test_desde_ignora_un_origen_que_no_es_cotizacion(): void

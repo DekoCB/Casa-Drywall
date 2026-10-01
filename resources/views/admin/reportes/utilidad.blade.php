@@ -66,7 +66,7 @@
                 <tr>
                     <td>{{ $fila['codigo'] }}</td>
                     <td>{{ $fila['nombre'] }}</td>
-                    <td class="num">{{ number_format($fila['cantidad']) }}</td>
+                    <td class="num">{{ number_format($fila['cantidad'], 3) }}</td>
                     <td class="num">S/ {{ number_format($fila['ingreso'], 2) }}</td>
                     <td class="num">S/ {{ number_format($fila['costo'], 2) }}</td>
                     <td class="num" style="color:{{ $fila['utilidad'] < 0 ? '#A8231F' : '#1f6b5e' }};font-weight:600;">S/ {{ number_format($fila['utilidad'], 2) }}</td>

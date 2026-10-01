@@ -120,7 +120,7 @@ class VentaEditarFacturaTest extends TestCase
         $respuesta->assertRedirect();
         $this->assertEquals(5, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
         $this->assertEquals(5, $producto->fresh()->stock);
-        $this->assertSame(5, VentaDetalle::where('venta_id', $venta->id)->value('cantidad'));
+        $this->assertEquals(5, VentaDetalle::where('venta_id', $venta->id)->value('cantidad'));
 
         // Un solo movimiento adicional (la diferencia), no dos que se cancelan.
         $this->assertSame(2, MovimientoAlmacen::where('producto_id', $producto->id)->count());
@@ -189,7 +189,7 @@ class VentaEditarFacturaTest extends TestCase
         $respuesta->assertRedirect();
         $this->assertEquals(10, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
         $this->assertSame(0, MovimientoAlmacen::count());
-        $this->assertSame(8, VentaDetalle::where('venta_id', $venta->id)->value('cantidad'));
+        $this->assertEquals(8, VentaDetalle::where('venta_id', $venta->id)->value('cantidad'));
     }
 
     public function test_totales_se_recalculan_a_partir_de_los_items_nuevos(): void

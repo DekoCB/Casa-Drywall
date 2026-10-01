@@ -345,6 +345,11 @@ Route::middleware(['auth', 'rol:admin,secretaria,ventas'])
         // No es solo de admin: Secretaria y Ventas cobran en el POS y necesitan
         // el mismo comprobante, aunque no tengan acceso al resto de Ventas/Facturas.
         Route::get('ventas/{venta}/comprobante', [VentaController::class, 'comprobante'])->name('ventas.comprobante');
+        // PDF descargable (Cotización/Nota de Venta/Boleta/Factura) para mandar
+        // al interesado — distinto del "PDF oficial" de SUNAT (ventas.pdf-sunat,
+        // solo existe una vez aceptado): este se genera al vuelo desde el mismo
+        // diseño que ya se imprime, sin depender de ningún estado SUNAT.
+        Route::get('ventas/{venta}/descargar-pdf', [VentaController::class, 'descargarPdf'])->name('ventas.descargar-pdf');
 
         // Abrir/cerrar una sesión de caja ya existente (lo dispara el propio POS).
         // El catálogo de cajas físicas (crear "Caja 01", etc.) sigue siendo solo de

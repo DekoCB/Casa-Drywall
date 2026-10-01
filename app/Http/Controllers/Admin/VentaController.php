@@ -17,6 +17,7 @@ use App\Services\GeneradorCorrelativo;
 use App\Services\NumeroALetras;
 use App\Services\PrecioCalculador;
 use App\Services\Sunat\ApiGoEmisionService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -122,7 +123,7 @@ class VentaController extends Controller
                 'nombre' => $d->prod_nombre,
                 'codigo' => $d->prod_codigo,
                 'precio' => (float) $d->precio_unitario,
-                'cantidad' => (int) $d->cantidad,
+                'cantidad' => (float) $d->cantidad,
             ])->values(),
             // Solo tiene sentido cuando no hay items: el monto único que se
             // usó en la cotización, ya desglosado a bruto para el formulario.
@@ -592,12 +593,12 @@ class VentaController extends Controller
             $oldQtyPorProducto = $venta->detalles
                 ->filter(fn (VentaDetalle $d) => $d->producto_id !== null)
                 ->groupBy('producto_id')
-                ->map(fn ($g) => (int) $g->sum('cantidad'));
+                ->map(fn ($g) => (float) $g->sum('cantidad'));
 
             $newQtyPorProducto = collect($items)
                 ->filter(fn (array $i) => $i['producto_id'] !== null)
                 ->groupBy('producto_id')
-                ->map(fn ($g) => (int) $g->sum('cantidad'));
+                ->map(fn ($g) => (float) $g->sum('cantidad'));
 
             // Una Cotización es un presupuesto: nunca movió stock al crearse
             // (sin importar si sus líneas enlazan productos reales, ver
@@ -617,7 +618,10 @@ class VentaController extends Controller
                     foreach ($productoIds as $productoId) {
                         $delta = ($newQtyPorProducto[$productoId] ?? 0) - ($oldQtyPorProducto[$productoId] ?? 0);
 
-                        if ($delta !== 0 && $almacenId) {
+                        // Comparación floja a propósito: con cantidades decimales,
+                        // 0.0 !== 0 (son tipos distintos) dispararía un movimiento
+                        // de stock vacío en cada edición sin cambios reales.
+                        if ($delta != 0 && $almacenId) {
                             $this->ajustarStockDelta((int) $productoId, $almacenId, $delta, $venta, $request, $avisosStock);
                         }
                     }
@@ -934,14 +938,14 @@ class VentaController extends Controller
             );
 
             $anterior = (float) $fila->stock;
-            $nuevo = $anterior + (int) $detalle->cantidad;
+            $nuevo = $anterior + (float) $detalle->cantidad;
             $fila->update(['stock' => $nuevo]);
 
             MovimientoAlmacen::create([
                 'producto_id' => $detalle->producto_id,
                 'almacen_id' => $venta->almacen_id,
                 'tipo' => 'entrada',
-                'cantidad' => (int) $detalle->cantidad,
+                'cantidad' => (float) $detalle->cantidad,
                 'stock_anterior' => $anterior,
                 'stock_nuevo' => $nuevo,
                 'motivo' => $motivo,
@@ -1013,32 +1017,64 @@ class VentaController extends Controller
         return back()->with('mensaje', "Comprobante {$comprobante} eliminado.");
     }
 
-    /** Vista imprimible del comprobante. */
     /** Vista imprimible del comprobante, con el desglose de productos y el monto en letras. */
     public function comprobante(Venta $venta, NumeroALetras $numeroALetras): View
+    {
+        [$vista, $datos] = $this->datosComprobante($venta, $numeroALetras);
+
+        return view($vista, $datos);
+    }
+
+    /**
+     * PDF descargable de Cotización/Nota de Venta/Boleta/Factura, para mandarlo
+     * al interesado — distinto del "PDF oficial" de SUNAT (`pdfSunat()`, que
+     * solo existe una vez que el comprobante ya fue aceptado): este se genera
+     * al vuelo desde el mismo diseño que ya se ve/imprime en pantalla, así que
+     * nunca depende de ningún estado de SUNAT ni de haber emitido todavía.
+     * Reusa exactamente esas vistas (con `paraDescarga: true` para ocultar la
+     * barra de acciones) en vez de duplicar el diseño en una plantilla aparte:
+     * su CSS ya es compatible con dompdf (tablas, sin flexbox/variables CSS
+     * en el documento en sí, solo en la barra que acá se oculta).
+     */
+    public function descargarPdf(Venta $venta, NumeroALetras $numeroALetras): \Illuminate\Http\Response
+    {
+        [$vista, $datos] = $this->datosComprobante($venta, $numeroALetras);
+        $datos['paraDescarga'] = true;
+
+        $numero = $venta->n_seri && $venta->n_comp
+            ? "{$venta->n_seri}-{$venta->n_comp}"
+            : $venta->numero_venta;
+
+        return Pdf::loadView($vista, $datos)
+            ->setPaper('a4', 'portrait')
+            ->download("{$numero}.pdf");
+    }
+
+    /** Datos compartidos por `comprobante()` y `descargarPdf()` — misma vista, mismo desglose. */
+    private function datosComprobante(Venta $venta, NumeroALetras $numeroALetras): array
     {
         $venta->load(['detalles.producto:id,presentacion', 'guias', 'ventaOrigen', 'usuario']);
 
         // La Cotización no es un comprobante SUNAT: usa un formato propio,
         // más simple, pensado para enviarse al cliente antes de la venta.
         if ($venta->tipcomp === 'COT') {
-            return view('admin.ventas.cotizacion', [
+            return ['admin.ventas.cotizacion', [
                 'venta' => $venta,
                 'tipos' => self::TIPOS,
                 'cuentasBancarias' => CuentaBancaria::orderBy('id')->get(),
-            ]);
+            ]];
         }
 
         $moneda = $venta->moneda === 'USD' ? 'DÓLARES AMERICANOS' : 'SOLES';
 
-        return view('admin.ventas.comprobante', [
+        return ['admin.ventas.comprobante', [
             'venta' => $venta,
             'tipos' => self::TIPOS,
             'montoLetras' => $numeroALetras->convertir((float) $venta->total, $moneda),
             'diasCredito' => $venta->fecha && $venta->fecha_vencimiento
                 ? $venta->fecha->diffInDays($venta->fecha_vencimiento)
                 : null,
-        ]);
+        ]];
     }
 
     public function show(Venta $venta): View
@@ -1176,7 +1212,7 @@ class VentaController extends Controller
             'items'                        => ['nullable', 'array'],
             'items.*.producto_codigo'      => ['nullable', 'string', 'max:50'],
             'items.*.producto_nombre'      => ['nullable', 'string', 'max:255'],
-            'items.*.cantidad'             => ['nullable', 'integer', 'min:0'],
+            'items.*.cantidad'             => ['nullable', 'numeric', 'min:0'],
             'items.*.precio_unitario'      => ['nullable', 'numeric', 'min:0'],
             'precios_incluyen_igv'         => ['nullable', 'boolean'],
             'origen_id'                    => ['nullable', 'integer', 'exists:ventas,id'],
@@ -1239,7 +1275,7 @@ class VentaController extends Controller
             'items'                    => ['nullable', 'array'],
             'items.*.producto_codigo'  => ['nullable', 'string', 'max:50'],
             'items.*.producto_nombre'  => ['nullable', 'string', 'max:255'],
-            'items.*.cantidad'         => ['nullable', 'integer', 'min:0'],
+            'items.*.cantidad'         => ['nullable', 'numeric', 'min:0'],
             'items.*.precio_unitario'  => ['nullable', 'numeric', 'min:0'],
             'precios_incluyen_igv'     => ['nullable', 'boolean'],
         ]);
@@ -1289,7 +1325,7 @@ class VentaController extends Controller
 
         foreach ($items as $item) {
             $nombre = trim((string) ($item['producto_nombre'] ?? ''));
-            $cantidad = (int) ($item['cantidad'] ?? 0);
+            $cantidad = (float) ($item['cantidad'] ?? 0);
 
             if ($nombre === '' || $cantidad <= 0) {
                 continue;
@@ -1347,7 +1383,7 @@ class VentaController extends Controller
      * vende menos (devuelve) — mismo criterio "nunca bloquea" y "puede
      * quedar negativo" que `storeFactura()`.
      */
-    private function ajustarStockDelta(int $productoId, int $almacenId, int $delta, Venta $venta, Request $request, array &$avisosStock): void
+    private function ajustarStockDelta(int $productoId, int $almacenId, float $delta, Venta $venta, Request $request, array &$avisosStock): void
     {
         $fila = StockAlmacen::lockForUpdate()->firstOrCreate(
             ['producto_id' => $productoId, 'almacen_id' => $almacenId],

@@ -282,7 +282,7 @@ function filaNotaHtml(i, producto) {
         <td><input type="text" name="items[${i}][producto_nombre]" class="item-nombre-n"
                    value="${nombre.replace(/"/g, '&quot;')}" placeholder="Nombre del producto o servicio…"></td>
         <td><input type="text" name="items[${i}][producto_codigo]" class="item-codigo-n" value="${codigo}"></td>
-        <td><input type="number" name="items[${i}][cantidad]" value="1" min="1" step="1" class="item-cantidad-n"></td>
+        <td><input type="number" name="items[${i}][cantidad]" value="1" min="0.001" step="0.001" class="item-cantidad-n"></td>
         <td><input type="number" name="items[${i}][precio_unitario]" value="${precio}" step="0.01" min="0" class="item-precio-n"></td>
         <td class="item-subtotal-n">S/ 0.00</td>
         <td><button type="button" class="btn btn-danger btn-sm btn-quitar-n">✕</button></td>

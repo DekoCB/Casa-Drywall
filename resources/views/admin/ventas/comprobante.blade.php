@@ -1,4 +1,8 @@
 @php
+    // true cuando dompdf arma el PDF descargable (VentaController::descargarPdf) —
+    // oculta la barra de acciones y el aviso de SUNAT, que no tienen sentido
+    // metidos dentro de un archivo que se manda al cliente.
+    $paraDescarga = $paraDescarga ?? false;
     $numero   = $venta->n_seri && $venta->n_comp ? $venta->n_seri.'-'.$venta->n_comp : $venta->numero_venta;
     $simbolo  = $venta->moneda === 'USD' ? 'US$' : 'S/';
     $monedaTexto = $venta->moneda === 'USD' ? 'Dólares' : 'Soles';
@@ -14,6 +18,12 @@
     $saldo = $venta->monto_pendiente !== null ? (float) $venta->monto_pendiente : (float) $venta->total;
     $pagado = (float) ($venta->monto_pagado ?? 0);
 
+    // dompdf no puede pedir el logo por HTTP (peticiones remotas deshabilitadas
+    // por defecto, y en este hosting el symlink público tampoco es confiable)
+    // — para el PDF descargable se le pasa la ruta real en disco en vez de la
+    // URL que sí usa la pantalla en vivo.
+    $logoPro = $paraDescarga ? public_path('img/Logo-docs.png') : asset('img/Logo-docs.png');
+
     // Plantilla "Personalizada" (Configuración > Plantillas de Impresión):
     // PDF (A4) y Ticket (80mm) salen de este mismo archivo, así que cada
     // formato consulta su propia elección — ver App\Models\PlantillaImpresion.
@@ -23,7 +33,9 @@
     if ($personalizadaPdf || $personalizadaTicket) {
         $perfilNegocio = \App\Models\PerfilNegocio::actual();
         $colorAcento = \App\Models\EstiloSistema::actual()->paleta()['brand'];
-        $logoPersonalizado = $perfilNegocio->logoClaroUrl() ?? asset('img/Logo-docs.png');
+        $logoPersonalizado = $paraDescarga
+            ? ($perfilNegocio->logoClaroPath() ?? $logoPro)
+            : ($perfilNegocio->logoClaroUrl() ?? $logoPro);
         $nombrePersonalizado = $perfilNegocio->nombre_comercial ?: ($perfilNegocio->razon_social ?: config('rentaltech.empresa.razon_social'));
     }
 @endphp
@@ -173,6 +185,7 @@
 </head>
 <body>
 
+@unless ($paraDescarga)
 <div class="barra">
     @if (session('mensaje'))
         <div class="ok">✅ {{ session('mensaje') }}</div>
@@ -213,6 +226,11 @@
     <a href="{{ route('admin.ventas.index') }}">← Ventas</a>
     <a href="{{ route('admin.ventas.factura.create') }}">＋ Nueva venta</a>
 
+    {{-- Siempre disponible (a diferencia del "PDF oficial" de arriba, que
+         solo existe una vez aceptado por SUNAT) — para mandarle al cliente
+         una copia del documento aunque todavía no se haya enviado. --}}
+    <a href="{{ route('admin.ventas.descargar-pdf', $venta) }}" target="_blank">⬇ Descargar PDF</a>
+
     <div class="imprimir-grupo">
         <button type="button" onclick="imprimirComo('80mm')">Imprimir 80mm</button>
         <button type="button" onclick="imprimirComo('a4')">Imprimir A4</button>
@@ -222,6 +240,7 @@
 @if ($esComprobanteElectronico && in_array($venta->estado_factura, ['rechazado', 'error']) && $venta->nota_contadora)
     <div class="nota-sunat"><b>Motivo:</b> {{ $venta->nota_contadora }}</div>
 @endif
+@endunless
 
 <div class="hoja">
 
@@ -230,7 +249,7 @@
         <div class="cab-izq">
             <div class="cab-marca cab-marca-pro">
                 <div class="cab-logo-cel">
-                    <img src="{{ asset('img/Logo-docs.png') }}" alt="{{ config('rentaltech.empresa.razon_social') }}">
+                    <img src="{{ $logoPro }}" alt="{{ config('rentaltech.empresa.razon_social') }}">
                 </div>
                 <div class="cab-emp-cel cab-emp">
                     <b>{{ config('rentaltech.empresa.razon_social') }}</b>
@@ -344,7 +363,7 @@
         @forelse ($venta->detalles as $detalle)
             <tr>
                 <td>{{ $detalle->prod_codigo ?: '—' }}</td>
-                <td class="r">{{ number_format($detalle->cantidad, 2) }}</td>
+                <td class="r">{{ number_format($detalle->cantidad, 3) }}</td>
                 <td class="c">{{ $detalle->producto?->presentacion ?: 'UND' }}</td>
                 <td>{{ $detalle->prod_nombre }}</td>
                 <td class="r">{{ number_format($detalle->precio_unitario, 2) }}</td>

@@ -287,4 +287,56 @@ class VentaFacturaStockTest extends TestCase
         $entrada = MovimientoAlmacen::where('producto_id', $producto->id)->where('tipo', 'entrada')->firstOrFail();
         $this->assertStringContainsString('Eliminación', $entrada->motivo);
     }
+
+    /**
+     * El negocio pidió poder vender fracciones de un producto (media, un
+     * cuarto, un tercio) — ej. cortar un rollo o una plancha y vender solo
+     * una parte. `venta_detalle.cantidad` pasó de entero a decimal(12,3)
+     * para esto.
+     */
+    public function test_venta_con_cantidad_fraccionaria_descuenta_el_stock_exacto(): void
+    {
+        ['almacen' => $almacen, 'producto' => $producto] = $this->crearEscenario(stock: 10);
+
+        $respuesta = $this->actingAs($this->admin(), 'web')->post(route('admin.ventas.factura.store'), $this->datosBase() + [
+            'almacen_id' => $almacen->id,
+            'items' => [['producto_codigo' => 'DRY-001', 'producto_nombre' => 'Placa Drywall 1/2"', 'cantidad' => '0.333', 'precio_unitario' => 25]],
+        ]);
+
+        $respuesta->assertRedirect();
+
+        $venta = Venta::where('n_seri', 'NV01')->where('n_comp', '00000001')->firstOrFail();
+        $detalle = VentaDetalle::where('venta_id', $venta->id)->firstOrFail();
+        $this->assertEquals(0.333, $detalle->cantidad);
+        $this->assertEquals(round(0.333 * 25, 2), $detalle->subtotal);
+
+        $this->assertEquals(9.667, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
+        $this->assertEquals(9.667, $producto->fresh()->stock);
+    }
+
+    /** Editar una venta con cantidades fraccionarias ajusta el stock por la diferencia real, no la redondea. */
+    public function test_editar_cantidad_fraccionaria_ajusta_el_stock_por_la_diferencia(): void
+    {
+        ['almacen' => $almacen, 'producto' => $producto] = $this->crearEscenario(stock: 10);
+        $admin = $this->admin();
+
+        $this->actingAs($admin, 'web')->post(route('admin.ventas.factura.store'), $this->datosBase() + [
+            'almacen_id' => $almacen->id,
+            'items' => [['producto_codigo' => 'DRY-001', 'producto_nombre' => 'Placa Drywall 1/2"', 'cantidad' => '0.5', 'precio_unitario' => 25]],
+        ]);
+        $venta = Venta::where('n_seri', 'NV01')->firstOrFail();
+        $this->assertEquals(9.5, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
+
+        $respuesta = $this->actingAs($admin, 'web')->put(route('admin.ventas.factura.update', $venta), [
+            'fecha' => '2026-09-15', 'fecha_vencimiento' => '2026-09-15', 'tipcomp' => 'NV',
+            'n_seri' => 'NV01', 'n_comp' => '00000001', 'razonsocial' => 'Cliente de Prueba',
+            'precios_incluyen_igv' => 1, 'almacen_id' => $almacen->id,
+            'pagos' => [['metodo_pago' => 'Efectivo', 'monto' => 1]],
+            'items' => [['producto_codigo' => 'DRY-001', 'producto_nombre' => 'Placa Drywall 1/2"', 'cantidad' => '0.75', 'precio_unitario' => 25]],
+        ]);
+
+        $respuesta->assertRedirect();
+        // 10 - 0.75 (la diferencia real 0.25 se suma al 0.5 ya descontado).
+        $this->assertEquals(9.25, StockAlmacen::where('producto_id', $producto->id)->value('stock'));
+    }
 }

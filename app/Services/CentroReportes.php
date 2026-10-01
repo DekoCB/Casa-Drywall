@@ -61,7 +61,7 @@ class CentroReportes
                 'n' => $i + 1,
                 'codigo' => $fila->codigo ?: '—',
                 'nombre' => $fila->nombre,
-                'cantidad' => (int) $fila->cantidad,
+                'cantidad' => (float) $fila->cantidad,
                 'ingreso' => round($ingreso, 2),
                 'pct' => round($pct, 2),
                 'acumulado' => round($acumulado, 2),
@@ -112,11 +112,11 @@ class CentroReportes
 
         $items = Producto::activos()->orderBy('nombre')->get(['id', 'codigo', 'nombre', 'stock', 'stock_minimo'])
             ->map(function (Producto $p) use ($vendidos, $dias) {
-                $vendido = (int) ($vendidos[$p->id] ?? 0);
+                $vendido = (float) ($vendidos[$p->id] ?? 0);
                 $stock = (float) $p->stock;
                 $rotacion = $vendido > 0 ? round($vendido / max($stock, 1), 2) : 0.0;
                 $diasStock = $vendido > 0 ? (int) round($stock / ($vendido / $dias)) : null;
-                $estado = $vendido === 0 ? 'Baja' : ($rotacion < 1 ? 'Media' : 'Alta');
+                $estado = $vendido <= 0 ? 'Baja' : ($rotacion < 1 ? 'Media' : 'Alta');
 
                 return [
                     'codigo' => $p->codigo ?: '—',
@@ -187,7 +187,7 @@ class CentroReportes
             return [
                 'codigo' => $fila->codigo ?: '—',
                 'nombre' => $fila->nombre,
-                'cantidad' => (int) $fila->cantidad,
+                'cantidad' => (float) $fila->cantidad,
                 'ingreso' => round($ingreso, 2),
                 'costo' => round($costo, 2),
                 'utilidad' => round($utilidad, 2),

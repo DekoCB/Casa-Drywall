@@ -74,7 +74,7 @@
                     <td>{{ $fila['n'] }}</td>
                     <td>{{ $fila['codigo'] }}</td>
                     <td>{{ $fila['nombre'] }}</td>
-                    <td class="num">{{ number_format($fila['cantidad']) }}</td>
+                    <td class="num">{{ number_format($fila['cantidad'], 3) }}</td>
                     <td class="num">S/ {{ number_format($fila['ingreso'], 2) }}</td>
                     <td class="num">{{ number_format($fila['pct'], 2) }}%</td>
                     <td class="num">{{ number_format($fila['acumulado'], 2) }}%</td>

@@ -49,7 +49,7 @@
                     <tr>
                         <td>{{ $detalle->prod_codigo ?: '—' }}</td>
                         <td>{{ $detalle->prod_nombre }}</td>
-                        <td>{{ number_format($detalle->cantidad) }}</td>
+                        <td>{{ number_format($detalle->cantidad, 3) }}</td>
                         <td>S/ {{ number_format($detalle->precio_unitario, 2) }}</td>
                         <td><strong>S/ {{ number_format($detalle->subtotal, 2) }}</strong></td>
                     </tr>
