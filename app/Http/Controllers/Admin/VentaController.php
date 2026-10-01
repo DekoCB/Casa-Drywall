@@ -81,14 +81,35 @@ class VentaController extends Controller
             'productos' => Producto::activos()->with(['categoria:id,nombre', 'marca:id,nombre'])->orderBy('nombre')
                 ->get(['id', 'codigo', 'nombre', 'presentacion', 'categoria_id', 'marca_id', 'precio_venta', 'stock']),
             // Cotización y Nota de Venta no admiten número libre: se muestra
-            // de una vez el correlativo que le tocará al guardar.
+            // de una vez el correlativo que le tocará al guardar. Boleta y
+            // Factura siguen siendo editables (puede venir de un talonario
+            // físico), pero se sugiere el correlativo real de SUNAT cuando
+            // API-GO responde — si no, el campo queda vacío y se escribe a
+            // mano como siempre; `crearComprobante()` corrige el número
+            // final de todas formas si no coincide con el real.
             'correlativosInternos' => [
                 'COT' => $this->correlativo->documentoInterno('COT', self::TIPOS['COT']['serie']),
                 'NV' => $this->correlativo->documentoInterno('NV', self::TIPOS['NV']['serie']),
+                '01' => $this->sugerenciaCorrelativoSunat('01'),
+                '03' => $this->sugerenciaCorrelativoSunat('03'),
             ],
             'origen' => $this->origenParaFactura($request),
             'metodosPago' => MetodoPago::activosOrdenados(),
         ]);
+    }
+
+    /**
+     * Sugerencia de solo lectura para el N° Comprobante de Boleta/Factura
+     * (null si está deshabilitado o API-GO no respondió) — nunca bloquea la
+     * carga del formulario por esto.
+     */
+    private function sugerenciaCorrelativoSunat(string $tipcomp): ?string
+    {
+        if (! config('empresas.activa.sunat_habilitado', true)) {
+            return null;
+        }
+
+        return $this->emisionSunat->siguienteCorrelativo($tipcomp, self::TIPOS[$tipcomp]['serie']);
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace App\Services\Sunat;
 
+use App\Models\Cobranza;
 use App\Models\Venta;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -87,7 +88,72 @@ class ApiGoEmisionService
             'numero_sunat' => $respuesta['data']['numero_completo'] ?? null,
         ]);
 
+        $this->sincronizarNumeroReal($venta, $respuesta['data']);
+
         return true;
+    }
+
+    /**
+     * API-GO asigna el correlativo real (el que de verdad queda ante SUNAT)
+     * con su propio contador por sucursal+serie, sin importar qué `n_seri`/
+     * `n_comp` haya escrito la persona en el formulario de RentalBoosted
+     * (son dos numeraciones independientes) — si no coinciden, el
+     * comprobante quedaría mostrando/imprimiendo un número distinto al que
+     * SUNAT realmente aceptó. Se corrige acá, apenas se conoce el número
+     * real, para que el comprobante y la Cobranza queden siempre con el
+     * número verdadero sin depender de que lo hayan tipeado bien.
+     */
+    private function sincronizarNumeroReal(Venta $venta, array $datos): void
+    {
+        $serieReal = $datos['serie'] ?? null;
+        $correlativoReal = $datos['correlativo'] ?? null;
+
+        if (! $serieReal || ! $correlativoReal) {
+            return;
+        }
+
+        if ($venta->n_seri === $serieReal && $venta->n_comp === $correlativoReal) {
+            return;
+        }
+
+        $venta->update(['n_seri' => $serieReal, 'n_comp' => $correlativoReal]);
+
+        if ($venta->cobranza_id) {
+            Cobranza::where('id', $venta->cobranza_id)->update(['numero' => "{$serieReal}-{$correlativoReal}"]);
+        }
+    }
+
+    /**
+     * Sugerencia del próximo N° Comprobante real para Boleta/Factura, para
+     * no hacer que la persona lo escriba a ciegas — a diferencia de
+     * Cotización/Nota de Venta (numeración 100% interna), este es solo un
+     * adelanto de lo que API-GO va a asignar en el momento real de crear el
+     * comprobante (`crearComprobante()`, que corrige el número final igual
+     * si otra venta se cuela antes). Devuelve null si API-GO no responde o
+     * no tiene un correlativo configurado para esa serie — el formulario
+     * cae entonces al campo editable de siempre, no bloquea la venta.
+     */
+    public function siguienteCorrelativo(string $tipcomp, string $serie): ?string
+    {
+        if (! array_key_exists($tipcomp, self::TIPO_DOCUMENTO)) {
+            return null;
+        }
+
+        $branchId = config('services.api_go.branch_id');
+        $respuesta = $this->peticion('get', "/branches/{$branchId}/correlatives");
+        $correlativos = $respuesta['data']['correlatives'] ?? null;
+
+        if (! is_array($correlativos)) {
+            return null;
+        }
+
+        foreach ($correlativos as $correlativo) {
+            if (($correlativo['tipo_documento'] ?? null) === $tipcomp && ($correlativo['serie'] ?? null) === $serie) {
+                return str_pad((string) (((int) ($correlativo['correlativo_actual'] ?? 0)) + 1), 6, '0', STR_PAD_LEFT);
+            }
+        }
+
+        return null;
     }
 
     /**

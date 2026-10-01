@@ -174,6 +174,9 @@
                 <small id="f-n-comp-hint" style="display:block; margin-top:4px; font-size:11px; color:var(--ink-3);" hidden>
                     Correlativo automático: no se puede editar.
                 </small>
+                <small id="f-n-comp-hint-sunat" style="display:block; margin-top:4px; font-size:11px; color:var(--ink-3);" hidden>
+                    Sugerido según el correlativo real de SUNAT — edítalo solo si sabes que debe ser otro.
+                </small>
             </div>
             <div class="form-group">
                 <label for="f-vencimiento">Fecha de vencimiento <span>*</span></label>
@@ -338,6 +341,7 @@ const fTipcomp = document.getElementById('f-tipcomp');
 const fNSeri   = document.getElementById('f-n-seri');
 const fNComp   = document.getElementById('f-n-comp');
 const fNCompHint = document.getElementById('f-n-comp-hint');
+const fNCompHintSunat = document.getElementById('f-n-comp-hint-sunat');
 
 // Se sugiere de nuevo cada vez que cambia el tipo, salvo que el usuario ya
 // haya escrito su propia serie a mano (si solo se chequeara "está vacío",
@@ -346,9 +350,18 @@ const fNCompHint = document.getElementById('f-n-comp-hint');
 let fSerieEditada = EDITANDO;
 fNSeri.addEventListener('input', () => { fSerieEditada = true; });
 
+// Igual que con la serie: si la persona ya tocó el N° Comprobante a mano,
+// no se le pisa con la sugerencia de SUNAT al cambiar de tipo.
+let fCompEditada = EDITANDO;
+fNComp.addEventListener('input', () => { fCompEditada = true; });
+
 // Cotización y Nota de Venta no admiten número libre: el servidor siempre
 // reemplaza lo que se escriba aquí por el siguiente correlativo, así que el
-// campo se bloquea y se muestra el número que realmente va a quedar.
+// campo se bloquea y se muestra el número que realmente va a quedar. Boleta
+// y Factura siguen siendo editables (puede venir de un talonario físico),
+// pero se precarga el correlativo real de SUNAT como sugerencia cuando
+// está disponible — si la persona lo cambia, el registro en API-GO corrige
+// el número final de todas formas, así que esto nunca bloquea la venta.
 function sugerirSerieFactura() {
     if (EDITANDO) return;
 
@@ -357,12 +370,16 @@ function sugerirSerieFactura() {
     }
 
     const esInterno = ['COT', 'NV'].includes(fTipcomp.value);
+    const esSunat = ['01', '03'].includes(fTipcomp.value);
     const comp = fTipcomp.selectedOptions[0]?.dataset.comp || '';
 
     fNComp.readOnly = esInterno;
     fNCompHint.hidden = !esInterno;
+    fNCompHintSunat.hidden = !(esSunat && comp !== '');
 
     if (esInterno) {
+        fNComp.value = comp;
+    } else if (esSunat && comp !== '' && !fCompEditada) {
         fNComp.value = comp;
     }
 }
