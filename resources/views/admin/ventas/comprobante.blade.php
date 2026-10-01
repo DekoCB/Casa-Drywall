@@ -49,6 +49,12 @@
         *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
         body { font-family: Arial, Helvetica, sans-serif; font-size: 10px; color:#000; background:#EFEEE8; padding:24px 14px; }
         .hoja { width: 760px; max-width: 100%; margin:0 auto; background:#fff; padding:30px 34px; box-shadow:0 8px 30px rgba(0,0,0,.10); }
+        /* dompdf (usado por "Descargar PDF") ignora @media print — renderiza
+           siempre en modo "screen" — así que el ancho fijo de .hoja para
+           pantalla se recortaba contra el área imprimible real de A4 (210mm
+           menos 15mm de margen a cada lado ≈ 680px a 96dpi). Se angosta acá,
+           sin depender de @media print, para que no quede cortado. */
+        body.pdf-descarga .hoja { width: 680px; }
 
         .barra { width: 760px; max-width:100%; margin:0 auto 12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
         .barra .ok {
@@ -183,7 +189,7 @@
         @endif
     </style>
 </head>
-<body>
+<body @class(['pdf-descarga' => $paraDescarga])>
 
 @unless ($paraDescarga)
 <div class="barra">
