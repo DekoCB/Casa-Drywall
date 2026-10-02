@@ -139,6 +139,12 @@
     @csrf
     @if ($venta) @method('PUT') @endif
     <input type="hidden" name="origen_id" value="{{ old('origen_id', $origen['id'] ?? '') }}">
+    {{-- Un reenvío del mismo formulario (doble clic, red lenta, volver con
+         "atrás" a mitad de la redirección) no debe crear un segundo
+         comprobante — mismo token por carga de página que ya usa el POS. --}}
+    @unless ($venta)
+        <input type="hidden" name="form_token" id="f-form-token" value="">
+    @endunless
 
     <div class="content-card">
         <h3>Comprobante</h3>
@@ -335,6 +341,15 @@
 <script>
 const IGV_VENTAS = {{ config('rentaltech.igv') }};
 const EDITANDO = {{ $venta ? 'true' : 'false' }};
+
+// Un token por carga de página (no por clic): si la persona reenvía el
+// mismo formulario — doble clic en "Guardar", o vuelve con "atrás" del
+// navegador a mitad de la redirección y éste reintenta el POST — el
+// servidor ve el mismo token y devuelve el comprobante ya creado en vez
+// de generar uno nuevo.
+if (!EDITANDO) {
+    document.getElementById('f-form-token').value = crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random();
+}
 
 // Serie sugerida según el tipo de comprobante.
 const fTipcomp = document.getElementById('f-tipcomp');

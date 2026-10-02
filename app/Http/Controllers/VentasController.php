@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Venta;
+use App\Models\VentaPago;
 use App\Services\Pos\CajaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -118,16 +119,41 @@ class VentasController extends Controller
      * siempre el mismo layout) — "Sin especificar" solo se agrega si hay
      * algo ahí (Notas de Crédito, que no tienen medio de pago propio, o
      * ventas de antes de que este campo existiera).
+     *
+     * Se suma por `venta_pagos` (una fila por medio), no por el
+     * `Venta.metodo_pago` resumido — antes una venta con pago mixto (ej.
+     * mitad Efectivo, mitad Yape) metía el total COMPLETO en un solo
+     * bucket ("Transferencia", por caer "Mixto" ahí), así que ningún medio
+     * reflejaba lo que realmente se cobró por él.
      */
     private function desglosePorMedioPago(Collection $ventasDelRango): Collection
     {
-        $porBucket = $ventasDelRango->groupBy(fn (Venta $v) => $this->bucketMetodoPago($v->metodo_pago));
+        $ventasDelRango->loadMissing('pagos');
+
+        $filas = $ventasDelRango->flatMap(function (Venta $venta) {
+            $signo = $venta->tipcomp === '07' ? -1 : 1;
+
+            // Nota de Crédito/Débito (no registra pagos propios, corrige el
+            // total de otra venta) o una venta histórica de antes de que
+            // existiera el desglose por pagos: se cuenta una sola vez por
+            // el medio resumido de la venta, igual que antes.
+            if ($venta->pagos->isEmpty()) {
+                return [['bucket' => $this->bucketMetodoPago($venta->metodo_pago), 'monto' => $signo * (float) $venta->total]];
+            }
+
+            return $venta->pagos->map(fn (VentaPago $pago) => [
+                'bucket' => $this->bucketMetodoPago($pago->metodo_pago),
+                'monto' => $signo * (float) $pago->monto,
+            ])->all();
+        });
+
+        $porBucket = $filas->groupBy('bucket');
 
         return collect([...self::ORDEN_MEDIOS_PAGO, 'Sin especificar'])
             ->map(function (string $etiqueta) use ($porBucket) {
                 $grupo = $porBucket->get($etiqueta, collect());
 
-                return ['etiqueta' => $etiqueta, 'n' => $grupo->count(), 'monto' => $this->totalConSigno($grupo)];
+                return ['etiqueta' => $etiqueta, 'n' => $grupo->count(), 'monto' => (float) $grupo->sum('monto')];
             })
             ->filter(fn (array $fila) => $fila['etiqueta'] !== 'Sin especificar' || $fila['n'] > 0)
             ->values();

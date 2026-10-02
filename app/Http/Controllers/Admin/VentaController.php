@@ -294,6 +294,23 @@ class VentaController extends Controller
      */
     public function storeFactura(Request $request): RedirectResponse
     {
+        // Idempotencia: un reenvío del mismo formulario (doble clic, red
+        // lenta, o volver con el botón "atrás" del navegador a mitad de la
+        // redirección y que el navegador reintente el POST) no debe crear un
+        // segundo comprobante — mismo patrón que ya usa el POS con
+        // `pos_token`. El campo se llama distinto en el formulario, pero
+        // reutiliza la misma columna.
+        $formToken = trim((string) $request->input('form_token', ''));
+
+        if ($formToken !== '') {
+            $existente = Venta::where('pos_token', $formToken)->first();
+
+            if ($existente) {
+                return redirect()->route('admin.ventas.comprobante', $existente)
+                    ->with('mensaje', "Comprobante {$existente->n_seri}-{$existente->n_comp} generado para {$existente->cliente_nombre}.");
+            }
+        }
+
         $datos = $this->conNumeroInterno($this->validarFactura($request));
         $items = $this->itemsValidos($datos['items'] ?? []);
         $items = $this->resolverProductoIds($items);
@@ -373,7 +390,7 @@ class VentaController extends Controller
         // después de guardar (no se corta la venta a mitad de camino).
         $avisosStock = [];
 
-        $venta = DB::transaction(function () use ($request, $datos, $items, $importes, $origenCotizacion, $almacenId, $aplicaStock, $pagos, $metodoPago, &$avisosStock) {
+        $venta = DB::transaction(function () use ($request, $datos, $items, $importes, $origenCotizacion, $almacenId, $aplicaStock, $pagos, $metodoPago, $formToken, &$avisosStock) {
             $stockFilas = collect();
 
             if ($aplicaStock) {
@@ -436,6 +453,7 @@ class VentaController extends Controller
                     ? "Generado desde Cotización {$origenCotizacion->n_seri}-{$origenCotizacion->n_comp}"
                     : null,
                 'origen_cotizacion_id' => $origenCotizacion?->id,
+                'pos_token' => $formToken !== '' ? $formToken : null,
             ]);
 
             foreach ($items as $item) {

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Usuario;
 use App\Models\Venta;
+use App\Models\VentaPago;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -198,5 +199,33 @@ class VentasPanelTotalesTest extends TestCase
 
         $this->assertSame(100.0, $porMedio['Sin especificar']['monto']);
         $this->assertSame(0.0, $porMedio['Efectivo']['monto']);
+    }
+
+    /**
+     * El negocio reportó que un pago mixto no se reflejaba por separado en
+     * cada medio del recuadro de Inicio — antes se agrupaba por
+     * `Venta.metodo_pago` (que para pago mixto vale literalmente "Mixto",
+     * cayendo entero en el bucket "Transferencia", sin importar los medios
+     * reales usados). Ahora se suma por cada fila de `venta_pagos`.
+     */
+    public function test_pago_mixto_se_refleja_por_separado_en_cada_medio(): void
+    {
+        $ella = $this->ventas();
+
+        $venta = Venta::create([
+            'fecha' => now()->toDateString(), 'tipcomp' => '03', 'n_seri' => 'B001', 'n_comp' => '00000001',
+            'estado' => 'activa', 'total' => 100, 'metodo_pago' => 'Mixto',
+        ]);
+        VentaPago::create(['venta_id' => $venta->id, 'metodo_pago' => 'Efectivo', 'monto' => 60]);
+        VentaPago::create(['venta_id' => $venta->id, 'metodo_pago' => 'Yape', 'monto' => 40]);
+
+        $respuesta = $this->actingAs($ella, 'web')->get(route('ventas.index'));
+        $porMedio = $respuesta->viewData('ventasPorMedioPago')->keyBy('etiqueta');
+
+        $this->assertSame(60.0, $porMedio['Efectivo']['monto']);
+        $this->assertSame(40.0, $porMedio['Yape']['monto']);
+        // "Transferencia" siempre aparece (en cero), no se le coló nada del
+        // pago mixto — antes ahí caía el total completo de la venta.
+        $this->assertSame(0.0, $porMedio['Transferencia']['monto']);
     }
 }

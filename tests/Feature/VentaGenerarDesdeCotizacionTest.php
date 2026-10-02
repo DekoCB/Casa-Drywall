@@ -24,6 +24,32 @@ class VentaGenerarDesdeCotizacionTest extends TestCase
         return Usuario::create(['username' => 'admin_'.uniqid(), 'password' => 'x', 'rol' => 'admin']);
     }
 
+    /**
+     * El negocio reportó que las Cotizaciones se duplicaban al "retroceder
+     * abruptamente en medio del proceso" (doble clic, red lenta, volver con
+     * el botón atrás del navegador antes de que termine la redirección) —
+     * mismo patrón de idempotencia que ya usa el POS (`pos_token`), ahora
+     * también en el alta normal de Cotización/NV/Boleta/Factura.
+     */
+    public function test_reenviar_el_mismo_form_token_no_duplica_la_venta(): void
+    {
+        $admin = $this->actingAs($this->admin(), 'web');
+
+        $datos = [
+            'fecha' => '2026-09-01', 'fecha_vencimiento' => '2026-09-01', 'tipcomp' => 'COT', 'n_seri' => 'CT01', 'n_comp' => '00000001',
+            'razonsocial' => 'Cliente de Prueba', 'monto' => 100, 'tipo_operacion' => 'gravada',
+            'precios_incluyen_igv' => 1, 'form_token' => 'token-fijo-de-prueba',
+        ];
+
+        $primera = $admin->post(route('admin.ventas.factura.store'), $datos);
+        $primera->assertRedirect(route('admin.ventas.comprobante', Venta::first()));
+
+        $segunda = $admin->post(route('admin.ventas.factura.store'), $datos);
+        $segunda->assertRedirect(route('admin.ventas.comprobante', Venta::first()));
+
+        $this->assertSame(1, Venta::where('tipcomp', 'COT')->count());
+    }
+
     public function test_filtro_tipcomp_muestra_solo_ese_tipo(): void
     {
         Venta::create(['fecha' => '2026-09-01', 'tipcomp' => 'COT', 'n_seri' => 'CT01', 'n_comp' => '00000001']);
