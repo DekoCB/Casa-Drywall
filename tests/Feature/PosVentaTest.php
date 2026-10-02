@@ -28,7 +28,10 @@ class PosVentaTest extends TestCase
     {
         $usuario = Usuario::create(['username' => 'cajero_'.uniqid(), 'password' => 'x', 'rol' => $rol]);
         $almacen = Almacen::create(['nombre' => 'Principal', 'activo' => true]);
-        $producto = Producto::create(['nombre' => 'Placa Drywall 1/2"', 'codigo' => 'DRY-001', 'precio_venta' => 11.80]);
+        // Código único por llamada: `productos.codigo` ahora es único de
+        // verdad (ver migración `unique_codigo_en_productos`) y varios tests
+        // de este archivo llaman a este helper más de una vez.
+        $producto = Producto::create(['nombre' => 'Placa Drywall 1/2"', 'codigo' => 'DRY-'.uniqid(), 'precio_venta' => 11.80]);
         StockAlmacen::create(['producto_id' => $producto->id, 'almacen_id' => $almacen->id, 'stock' => $stock]);
 
         $caja = Caja::create(['nombre' => 'Caja 01', 'activo' => true]);
