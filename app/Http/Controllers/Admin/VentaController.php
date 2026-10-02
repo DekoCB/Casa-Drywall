@@ -72,7 +72,7 @@ class VentaController extends Controller
 
         return view('admin.ventas.factura', [
             'tipos' => self::TIPOS,
-            'clientes' => Cliente::orderBy('nombres')->get(['id', 'nombres', 'numero_documento']),
+            'clientes' => Cliente::orderBy('nombres')->get(['id', 'nombres', 'numero_documento', 'direccion']),
             'almacenes' => $almacenes,
             // El primero que se registró (menor id), no el primero del
             // combo (que va alfabético) — así en producción siempre cae
@@ -139,6 +139,7 @@ class VentaController extends Controller
             'comprobante' => "{$venta->n_seri}-{$venta->n_comp}",
             'razonsocial' => $venta->razonsocial,
             'n_ruc' => $venta->n_ruc,
+            'direccion' => $venta->cliente_direccion,
             'cliente_id' => $venta->cliente_id,
             'items' => $venta->detalles->map(fn (VentaDetalle $d) => [
                 'nombre' => $d->prod_nombre,
@@ -433,7 +434,10 @@ class VentaController extends Controller
                 'tipo_comprobante' => self::TIPOS[$datos['tipcomp']]['nombre'] ?? null,
                 'n_ruc' => $datos['n_ruc'] ?? '',
                 'cliente_ruc' => $datos['n_ruc'] ?? null,
-                'cliente_direccion' => $cliente?->direccion,
+                // Dirección: la que se escribió a mano en el formulario tiene
+                // prioridad — si se dejó en blanco, cae a la de la ficha del
+                // cliente elegido (si hay una).
+                'cliente_direccion' => ! empty($datos['direccion']) ? $datos['direccion'] : $cliente?->direccion,
                 'cliente_telefono' => $cliente?->telefono,
                 'cliente_correo' => $cliente?->email,
                 'cliente_distrito' => $cliente?->distrito,
@@ -581,7 +585,7 @@ class VentaController extends Controller
 
         return view('admin.ventas.factura', [
             'tipos' => self::TIPOS,
-            'clientes' => Cliente::orderBy('nombres')->get(['id', 'nombres', 'numero_documento']),
+            'clientes' => Cliente::orderBy('nombres')->get(['id', 'nombres', 'numero_documento', 'direccion']),
             'almacenes' => $almacenes,
             'almacenPredeterminado' => $almacenes->min('id'),
             'productos' => Producto::activos()->with(['categoria:id,nombre', 'marca:id,nombre'])->orderBy('nombre')
@@ -739,7 +743,7 @@ class VentaController extends Controller
                 'cliente_id' => $cliente?->id,
                 'cliente_ruc' => $datos['n_ruc'] ?? null,
                 'cliente_nombre' => $datos['razonsocial'],
-                'cliente_direccion' => $cliente?->direccion,
+                'cliente_direccion' => ! empty($datos['direccion']) ? $datos['direccion'] : $cliente?->direccion,
                 'cliente_telefono' => $cliente?->telefono,
                 'cliente_correo' => $cliente?->email,
                 'cliente_distrito' => $cliente?->distrito,
@@ -1287,6 +1291,7 @@ class VentaController extends Controller
             'n_comp'                       => ['required', 'string', 'max:20'],
             'n_ruc'                        => ['nullable', 'string', 'max:20'],
             'razonsocial'                  => ['required', 'string', 'max:300'],
+            'direccion'                    => ['nullable', 'string', 'max:255'],
             'cliente_id'                   => ['nullable', 'integer', 'exists:clientes,id'],
             'condicion_pago'               => ['nullable', 'string', 'max:100'],
             'almacen_id'                   => ['nullable', 'integer', 'exists:almacenes,id'],

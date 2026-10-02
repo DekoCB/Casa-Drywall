@@ -16,6 +16,18 @@
         'presentacion' => $p->presentacion,
     ])->values();
 
+    // Catálogo para el buscador de clientes — en variable aparte (no inline
+    // dentro de @json()) por la misma razón que $productosJs: un @json()
+    // con una expresión de 4+ claves anidada en un fn() trunca la
+    // compilación de este archivo a mitad de camino (ya pasó una vez con
+    // el pago mixto, ver commit f11413c).
+    $clientesJs = $clientes->map(fn ($c) => [
+        'id' => $c->id,
+        'nombre' => $c->nombres,
+        'doc' => $c->numero_documento,
+        'direccion' => $c->direccion,
+    ])->values();
+
     // Al editar, el detalle ya guardado precarga la tabla de productos por
     // JS — igual mecanismo que "Generar venta desde Cotización" de abajo.
     $edicionItems = $venta ? $venta->detalles->map(fn ($d) => [
@@ -234,6 +246,11 @@
                     <button type="button" class="btn btn-secondary" id="btnBuscarDocFactura" title="Buscar en SUNAT/RENIEC">Buscar</button>
                 </div>
                 <small id="docFacturaEstado" style="display:block;margin-top:4px;color:var(--ink-3);"></small>
+            </div>
+            <div class="form-group">
+                <label for="f-direccion">Dirección</label>
+                <input type="text" id="f-direccion" name="direccion" maxlength="255"
+                       placeholder="Opcional" value="{{ old('direccion', $venta?->cliente_direccion ?? '') }}">
             </div>
             <input type="hidden" id="f-cliente-id" name="cliente_id" value="{{ old('cliente_id', $venta?->cliente_id ?? '') }}">
         </div>
@@ -489,7 +506,7 @@ if (PAGOS_EXISTENTES.length > 0) {
 }
 
 // ── Buscador de cliente (mismo estilo que el de productos) ───────────────
-const CLIENTES = @json($clientes->map(fn ($c) => ['id' => $c->id, 'nombre' => $c->nombres, 'doc' => $c->numero_documento])->values());
+const CLIENTES = @json($clientesJs);
 
 const clienteBuscar = document.getElementById('cliente-buscar');
 const clienteDropdown = document.getElementById('cliente-dd');
@@ -537,6 +554,7 @@ function clienteElegir(i) {
 
     document.getElementById('f-razonsocial').value = c.nombre;
     document.getElementById('f-n-ruc').value        = c.doc || '';
+    document.getElementById('f-direccion').value    = c.direccion || '';
     document.getElementById('f-cliente-id').value   = c.id;
     clienteBuscar.value = c.nombre;
     clienteCerrarBuscador();
@@ -568,6 +586,7 @@ document.getElementById('f-razonsocial').addEventListener('input', () => {
 document.getElementById('btnClienteVarios').addEventListener('click', () => {
     document.getElementById('f-razonsocial').value = 'Cliente Varios';
     document.getElementById('f-n-ruc').value = '';
+    document.getElementById('f-direccion').value = '';
     document.getElementById('f-cliente-id').value = '';
     clienteBuscar.value = '';
     clienteCerrarBuscador();
@@ -802,6 +821,7 @@ const ORIGEN = @json($origen);
 if (ORIGEN) {
     document.getElementById('f-razonsocial').value = ORIGEN.razonsocial || '';
     document.getElementById('f-n-ruc').value        = ORIGEN.n_ruc || '';
+    document.getElementById('f-direccion').value    = ORIGEN.direccion || '';
     document.getElementById('f-cliente-id').value   = ORIGEN.cliente_id || '';
 
     if (ORIGEN.items.length > 0) {
