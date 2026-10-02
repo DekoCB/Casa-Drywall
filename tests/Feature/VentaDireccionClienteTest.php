@@ -90,4 +90,14 @@ class VentaDireccionClienteTest extends TestCase
         $respuesta->assertOk();
         $respuesta->assertSee('name="direccion"', false);
     }
+
+    /** El mapa (Google Maps embed, sin API key) vive dentro del mismo card Cliente. */
+    public function test_el_formulario_muestra_el_mapa_de_la_direccion(): void
+    {
+        $respuesta = $this->actingAs($this->admin(), 'web')->get(route('admin.ventas.factura.create'));
+
+        $respuesta->assertOk();
+        $respuesta->assertSee('id="f-direccion-mapa"', false);
+        $respuesta->assertSee('google.com/maps', false);
+    }
 }

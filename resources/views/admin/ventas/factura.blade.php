@@ -254,6 +254,15 @@
             </div>
             <input type="hidden" id="f-cliente-id" name="cliente_id" value="{{ old('cliente_id', $venta?->cliente_id ?? '') }}">
         </div>
+        {{-- Mapa de la dirección — Google Maps sin API key (modo "embed" por
+             búsqueda de texto): no requiere cuenta de Google Cloud ni
+             facturación, solo un iframe. Se oculta mientras no haya
+             dirección escrita. --}}
+        <div class="form-group" id="f-direccion-mapa-wrap" style="margin-top:14px;" hidden>
+            <label>Ubicación en el mapa</label>
+            <iframe id="f-direccion-mapa" width="100%" height="220" style="border:0;border-radius:8px;display:block;"
+                    loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+        </div>
     </div>
 
     <div class="content-card">
@@ -513,6 +522,37 @@ const clienteDropdown = document.getElementById('cliente-dd');
 let clienteResultados = [];
 let clienteIndice = -1;
 
+// ── Mapa de la Dirección (Google Maps, sin API key) ───────────────────────
+// El modo "embed" por búsqueda de texto (`output=embed`) no exige cuenta de
+// Google Cloud ni facturación — alcanza con un iframe apuntando a la
+// dirección escrita. Se actualiza con un debounce corto mientras se tipea,
+// y de una vez cuando el campo se llena programáticamente (buscador de
+// cliente, "Generar venta desde Cotización", o al editar).
+const fDireccion = document.getElementById('f-direccion');
+const fDireccionMapaWrap = document.getElementById('f-direccion-mapa-wrap');
+const fDireccionMapa = document.getElementById('f-direccion-mapa');
+let direccionMapaTimeout = null;
+
+function actualizarMapaDireccion() {
+    const direccion = fDireccion.value.trim();
+
+    if (direccion === '') {
+        fDireccionMapaWrap.hidden = true;
+        fDireccionMapa.src = '';
+        return;
+    }
+
+    fDireccionMapa.src = 'https://www.google.com/maps?q=' + encodeURIComponent(direccion) + '&output=embed';
+    fDireccionMapaWrap.hidden = false;
+}
+
+fDireccion.addEventListener('input', () => {
+    clearTimeout(direccionMapaTimeout);
+    direccionMapaTimeout = setTimeout(actualizarMapaDireccion, 700);
+});
+
+actualizarMapaDireccion(); // Por si ya trae dirección precargada (editar).
+
 function clienteCerrarBuscador() {
     clienteDropdown.classList.remove('activo');
     clienteIndice = -1;
@@ -558,6 +598,7 @@ function clienteElegir(i) {
     document.getElementById('f-cliente-id').value   = c.id;
     clienteBuscar.value = c.nombre;
     clienteCerrarBuscador();
+    actualizarMapaDireccion();
 }
 
 clienteBuscar.addEventListener('input', (e) => clienteBuscarFn(e.target.value));
@@ -590,6 +631,7 @@ document.getElementById('btnClienteVarios').addEventListener('click', () => {
     document.getElementById('f-cliente-id').value = '';
     clienteBuscar.value = '';
     clienteCerrarBuscador();
+    actualizarMapaDireccion();
 });
 
 // Tabla de productos: filas dinámicas con recálculo en vivo del total.
@@ -823,6 +865,7 @@ if (ORIGEN) {
     document.getElementById('f-n-ruc').value        = ORIGEN.n_ruc || '';
     document.getElementById('f-direccion').value    = ORIGEN.direccion || '';
     document.getElementById('f-cliente-id').value   = ORIGEN.cliente_id || '';
+    actualizarMapaDireccion();
 
     if (ORIGEN.items.length > 0) {
         ORIGEN.items.forEach((it) => {
