@@ -72,7 +72,7 @@ class VentaController extends Controller
 
         return view('admin.ventas.factura', [
             'tipos' => self::TIPOS,
-            'clientes' => Cliente::orderBy('nombres')->get(['id', 'nombres', 'numero_documento', 'direccion']),
+            'clientes' => Cliente::orderBy('nombres')->get(['id', 'nombres', 'numero_documento', 'direccion', 'distrito', 'provincia', 'departamento']),
             'almacenes' => $almacenes,
             // El primero que se registró (menor id), no el primero del
             // combo (que va alfabético) — así en producción siempre cae
@@ -140,6 +140,9 @@ class VentaController extends Controller
             'razonsocial' => $venta->razonsocial,
             'n_ruc' => $venta->n_ruc,
             'direccion' => $venta->cliente_direccion,
+            'distrito' => $venta->cliente_distrito,
+            'provincia' => $venta->cliente_provincia,
+            'departamento' => $venta->cliente_departamento,
             'cliente_id' => $venta->cliente_id,
             'items' => $venta->detalles->map(fn (VentaDetalle $d) => [
                 'nombre' => $d->prod_nombre,
@@ -440,7 +443,9 @@ class VentaController extends Controller
                 'cliente_direccion' => ! empty($datos['direccion']) ? $datos['direccion'] : $cliente?->direccion,
                 'cliente_telefono' => $cliente?->telefono,
                 'cliente_correo' => $cliente?->email,
-                'cliente_distrito' => $cliente?->distrito,
+                'cliente_distrito' => ! empty($datos['distrito']) ? $datos['distrito'] : $cliente?->distrito,
+                'cliente_provincia' => ! empty($datos['provincia']) ? $datos['provincia'] : $cliente?->provincia,
+                'cliente_departamento' => ! empty($datos['departamento']) ? $datos['departamento'] : $cliente?->departamento,
                 'condicion_pago' => $datos['condicion_pago'] ?? null,
                 'metodo_pago' => $metodoPago,
                 'almacen_id' => $almacenId,
@@ -585,7 +590,7 @@ class VentaController extends Controller
 
         return view('admin.ventas.factura', [
             'tipos' => self::TIPOS,
-            'clientes' => Cliente::orderBy('nombres')->get(['id', 'nombres', 'numero_documento', 'direccion']),
+            'clientes' => Cliente::orderBy('nombres')->get(['id', 'nombres', 'numero_documento', 'direccion', 'distrito', 'provincia', 'departamento']),
             'almacenes' => $almacenes,
             'almacenPredeterminado' => $almacenes->min('id'),
             'productos' => Producto::activos()->with(['categoria:id,nombre', 'marca:id,nombre'])->orderBy('nombre')
@@ -746,7 +751,9 @@ class VentaController extends Controller
                 'cliente_direccion' => ! empty($datos['direccion']) ? $datos['direccion'] : $cliente?->direccion,
                 'cliente_telefono' => $cliente?->telefono,
                 'cliente_correo' => $cliente?->email,
-                'cliente_distrito' => $cliente?->distrito,
+                'cliente_distrito' => ! empty($datos['distrito']) ? $datos['distrito'] : $cliente?->distrito,
+                'cliente_provincia' => ! empty($datos['provincia']) ? $datos['provincia'] : $cliente?->provincia,
+                'cliente_departamento' => ! empty($datos['departamento']) ? $datos['departamento'] : $cliente?->departamento,
                 'condicion_pago' => $datos['condicion_pago'] ?? null,
                 'metodo_pago' => $metodoPago,
                 'almacen_id' => $almacenId,
@@ -1354,6 +1361,12 @@ class VentaController extends Controller
             'n_ruc'                        => ['nullable', 'string', 'max:20'],
             'razonsocial'                  => ['required', 'string', 'max:300'],
             'direccion'                    => ['nullable', 'string', 'max:255'],
+            // No tienen campo visible todavía (solo Dirección) — se llenan
+            // solas con lo que trae la búsqueda de RUC/cliente, listas para
+            // cuando se arme el selector de ubigeo completo.
+            'distrito'                     => ['nullable', 'string', 'max:100'],
+            'provincia'                    => ['nullable', 'string', 'max:100'],
+            'departamento'                 => ['nullable', 'string', 'max:100'],
             'cliente_id'                   => ['nullable', 'integer', 'exists:clientes,id'],
             'condicion_pago'               => ['nullable', 'string', 'max:100'],
             'almacen_id'                   => ['nullable', 'integer', 'exists:almacenes,id'],

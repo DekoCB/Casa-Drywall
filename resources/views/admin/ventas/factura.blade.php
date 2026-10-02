@@ -26,6 +26,9 @@
         'nombre' => $c->nombres,
         'doc' => $c->numero_documento,
         'direccion' => $c->direccion,
+        'distrito' => $c->distrito,
+        'provincia' => $c->provincia,
+        'departamento' => $c->departamento,
     ])->values();
 
     // Al editar, el detalle ya guardado precarga la tabla de productos por
@@ -253,6 +256,12 @@
                        placeholder="Opcional" value="{{ old('direccion', $venta?->cliente_direccion ?? '') }}">
             </div>
             <input type="hidden" id="f-cliente-id" name="cliente_id" value="{{ old('cliente_id', $venta?->cliente_id ?? '') }}">
+            {{-- Sin campo visible todavía (llega el selector de ubigeo
+                 completo más adelante si hace falta) — se llenan solas con
+                 lo que traiga la búsqueda de RUC o la ficha del cliente. --}}
+            <input type="hidden" id="f-distrito" name="distrito" value="{{ old('distrito', $venta?->cliente_distrito ?? '') }}">
+            <input type="hidden" id="f-provincia" name="provincia" value="{{ old('provincia', $venta?->cliente_provincia ?? '') }}">
+            <input type="hidden" id="f-departamento" name="departamento" value="{{ old('departamento', $venta?->cliente_departamento ?? '') }}">
         </div>
         {{-- Mapa de la dirección — Google Maps sin API key (modo "embed" por
              búsqueda de texto): no requiere cuenta de Google Cloud ni
@@ -595,6 +604,9 @@ function clienteElegir(i) {
     document.getElementById('f-razonsocial').value = c.nombre;
     document.getElementById('f-n-ruc').value        = c.doc || '';
     document.getElementById('f-direccion').value    = c.direccion || '';
+    document.getElementById('f-distrito').value     = c.distrito || '';
+    document.getElementById('f-provincia').value    = c.provincia || '';
+    document.getElementById('f-departamento').value = c.departamento || '';
     document.getElementById('f-cliente-id').value   = c.id;
     clienteBuscar.value = c.nombre;
     clienteCerrarBuscador();
@@ -628,6 +640,9 @@ document.getElementById('btnClienteVarios').addEventListener('click', () => {
     document.getElementById('f-razonsocial').value = 'Cliente Varios';
     document.getElementById('f-n-ruc').value = '';
     document.getElementById('f-direccion').value = '';
+    document.getElementById('f-distrito').value = '';
+    document.getElementById('f-provincia').value = '';
+    document.getElementById('f-departamento').value = '';
     document.getElementById('f-cliente-id').value = '';
     clienteBuscar.value = '';
     clienteCerrarBuscador();
@@ -864,6 +879,9 @@ if (ORIGEN) {
     document.getElementById('f-razonsocial').value = ORIGEN.razonsocial || '';
     document.getElementById('f-n-ruc').value        = ORIGEN.n_ruc || '';
     document.getElementById('f-direccion').value    = ORIGEN.direccion || '';
+    document.getElementById('f-distrito').value     = ORIGEN.distrito || '';
+    document.getElementById('f-provincia').value    = ORIGEN.provincia || '';
+    document.getElementById('f-departamento').value = ORIGEN.departamento || '';
     document.getElementById('f-cliente-id').value   = ORIGEN.cliente_id || '';
     actualizarMapaDireccion();
 
@@ -910,6 +928,18 @@ document.getElementById('btnBuscarDocFactura').addEventListener('click', async (
         }
 
         document.getElementById('f-razonsocial').value = (tipo === 'dni' ? j.datos.nombre_completo : j.datos.razon_social) || '';
+
+        // RENIEC (DNI) no devuelve dirección — solo nombre. El RUC (SUNAT o
+        // un Cliente/Proveedor ya registrado) sí trae dirección/ubigeo: se
+        // completa solo, sin que la persona tenga que escribirla aparte.
+        if (tipo === 'ruc') {
+            document.getElementById('f-direccion').value    = j.datos.direccion || '';
+            document.getElementById('f-distrito').value     = j.datos.distrito || '';
+            document.getElementById('f-provincia').value    = j.datos.provincia || '';
+            document.getElementById('f-departamento').value = j.datos.departamento || '';
+            actualizarMapaDireccion();
+        }
+
         docFacturaEstado.textContent = j.origen === 'local' ? 'Datos de un registro existente' : 'Datos obtenidos de ' + (tipo === 'dni' ? 'RENIEC' : 'SUNAT');
     } catch (e) {
         docFacturaEstado.textContent = 'Servicio de consulta no disponible';

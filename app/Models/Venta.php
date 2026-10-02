@@ -43,7 +43,7 @@ class Venta extends Model
         'numero_venta', 'tipo_comprobante', 'subtotal', 'igv', 'total',
         'metodo_pago', 'fecha', 'observaciones', 'usuario_id', 'almacen_id', 'estado',
         'cliente_id', 'cliente_nombre', 'cliente_ruc', 'cliente_telefono', 'cliente_correo',
-        'cliente_direccion', 'cliente_distrito',
+        'cliente_direccion', 'cliente_distrito', 'cliente_provincia', 'cliente_departamento',
         'condicion_pago', 'empresa_transporte', 'vendedor', 'codigo_vendedor',
         'destino_entrega', 'tipo_envio', 'costo_transporte', 'gasto_gasolina',
         'moneda', 'tipo_cambio', 'tiene_regalo', 'regalo_descripcion', 'regalo_precio',

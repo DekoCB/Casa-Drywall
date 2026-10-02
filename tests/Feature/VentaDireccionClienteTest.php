@@ -100,4 +100,61 @@ class VentaDireccionClienteTest extends TestCase
         $respuesta->assertSee('id="f-direccion-mapa"', false);
         $respuesta->assertSee('google.com/maps', false);
     }
+
+    /**
+     * Distrito/Provincia/Departamento: sin campo visible todavía (la
+     * búsqueda de RUC los llena solos por JS en un input oculto) — el
+     * negocio pidió esto explícitamente porque la búsqueda de RUC ya
+     * trae esos datos y no se estaban guardando.
+     */
+    public function test_distrito_provincia_departamento_se_guardan_si_llegan(): void
+    {
+        $this->actingAs($this->admin(), 'web')->post(route('admin.ventas.factura.store'), $this->datosBase() + [
+            'direccion' => 'Av. Los Próceres 123', 'distrito' => 'San Isidro',
+            'provincia' => 'Lima', 'departamento' => 'Lima',
+        ])->assertRedirect();
+
+        $venta = Venta::where('n_seri', 'CT01')->firstOrFail();
+        $this->assertSame('San Isidro', $venta->cliente_distrito);
+        $this->assertSame('Lima', $venta->cliente_provincia);
+        $this->assertSame('Lima', $venta->cliente_departamento);
+    }
+
+    public function test_distrito_provincia_departamento_caen_a_la_ficha_del_cliente_si_faltan(): void
+    {
+        $cliente = Cliente::create([
+            'tipo_documento' => 'RUC', 'numero_documento' => '20123456789',
+            'nombres' => 'Constructora Andina S.A.C.', 'direccion' => 'Jr. Titanita 160',
+            'distrito' => 'Comas', 'provincia' => 'Lima', 'departamento' => 'Lima',
+        ]);
+
+        $this->actingAs($this->admin(), 'web')->post(route('admin.ventas.factura.store'), $this->datosBase() + [
+            'cliente_id' => $cliente->id,
+        ])->assertRedirect();
+
+        $venta = Venta::where('n_seri', 'CT01')->firstOrFail();
+        $this->assertSame('Comas', $venta->cliente_distrito);
+        $this->assertSame('Lima', $venta->cliente_provincia);
+        $this->assertSame('Lima', $venta->cliente_departamento);
+    }
+
+    public function test_la_busqueda_de_ruc_devuelve_direccion_y_ubigeo_para_un_cliente_ya_registrado(): void
+    {
+        Cliente::create([
+            'tipo_documento' => 'RUC', 'numero_documento' => '20601111111',
+            'nombres' => 'Servicio y Construcciones A&L S.A.C.', 'direccion' => 'Jr. Titanita 160',
+            'distrito' => 'Comas', 'provincia' => 'Lima', 'departamento' => 'Lima',
+        ]);
+
+        $respuesta = $this->actingAs($this->admin(), 'web')
+            ->getJson(route('admin.documentos.buscar', ['tipo' => 'ruc', 'numero' => '20601111111']));
+
+        $respuesta->assertOk();
+        $respuesta->assertJsonFragment([
+            'direccion' => 'Jr. Titanita 160',
+            'distrito' => 'Comas',
+            'provincia' => 'Lima',
+            'departamento' => 'Lima',
+        ]);
+    }
 }
