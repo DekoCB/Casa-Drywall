@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Producto;
+use App\Models\Usuario;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -37,5 +38,61 @@ class ProductoCodigoUnicoTest extends TestCase
         Producto::create(['codigo' => null, 'nombre' => 'Producto sin código 2']);
 
         $this->assertSame(2, Producto::whereNull('codigo')->count());
+    }
+
+    private function admin(): Usuario
+    {
+        return Usuario::create(['username' => 'admin_'.uniqid(), 'password' => 'x', 'rol' => 'admin']);
+    }
+
+    private function datosProducto(array $overrides = []): array
+    {
+        return array_merge([
+            'codigo' => 'DUP-002', 'nombre' => 'Placa Drywall', 'precio_compra' => 10,
+            'precio_venta' => 15, 'stock_minimo' => 1,
+        ], $overrides);
+    }
+
+    /**
+     * Antes, intentar guardar un código repetido desde "Agregar producto"
+     * tiraba un 500 crudo (UniqueConstraintViolationException sin
+     * capturar) en vez de un error claro — la restricción de la base ya
+     * protegía los datos, pero no había validación de Laravel delante que
+     * lo atajara con un mensaje entendible.
+     */
+    public function test_crear_con_codigo_repetido_da_un_error_claro_no_un_500(): void
+    {
+        Producto::create(['codigo' => 'DUP-002', 'nombre' => 'Superboard existente']);
+
+        $respuesta = $this->actingAs($this->admin(), 'web')
+            ->post(route('admin.productos.store'), $this->datosProducto());
+
+        $respuesta->assertSessionHasErrors('codigo');
+        $this->assertSame(1, Producto::where('codigo', 'DUP-002')->count());
+    }
+
+    /** Editar un producto sin cambiar su propio código no debe chocar consigo mismo. */
+    public function test_editar_sin_cambiar_el_codigo_no_falla(): void
+    {
+        $producto = Producto::create(['codigo' => 'DUP-003', 'nombre' => 'Placa Drywall']);
+
+        $respuesta = $this->actingAs($this->admin(), 'web')
+            ->put(route('admin.productos.update', $producto), $this->datosProducto(['codigo' => 'DUP-003', 'nombre' => 'Placa Drywall editada']));
+
+        $respuesta->assertSessionDoesntHaveErrors();
+        $this->assertSame('Placa Drywall editada', $producto->fresh()->nombre);
+    }
+
+    /** Editar para usar el código de OTRO producto sí debe rechazarse. */
+    public function test_editar_al_codigo_de_otro_producto_es_rechazado(): void
+    {
+        Producto::create(['codigo' => 'DUP-004', 'nombre' => 'Producto A']);
+        $productoB = Producto::create(['codigo' => 'DUP-005', 'nombre' => 'Producto B']);
+
+        $respuesta = $this->actingAs($this->admin(), 'web')
+            ->put(route('admin.productos.update', $productoB), $this->datosProducto(['codigo' => 'DUP-004']));
+
+        $respuesta->assertSessionHasErrors('codigo');
+        $this->assertSame('DUP-005', $productoB->fresh()->codigo);
     }
 }

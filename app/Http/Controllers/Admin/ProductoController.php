@@ -15,6 +15,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -242,7 +243,7 @@ class ProductoController extends Controller
 
     public function update(Request $request, Producto $producto): RedirectResponse
     {
-        $datos = $this->validar($request);
+        $datos = $this->validar($request, $producto);
 
         DB::transaction(function () use ($request, $producto, $datos) {
             $producto->update($datos);
@@ -525,11 +526,19 @@ class ProductoController extends Controller
         $producto->recalcularStock();
     }
 
-    /** Mismos obligatorios que el formulario del original. */
-    private function validar(Request $request): array
+    /**
+     * Mismos obligatorios que el formulario del original. `$producto` solo
+     * se pasa al editar — para que el propio código del producto (sin
+     * cambiarlo) no choque contra la regla `unique` como si fuera otro
+     * producto.
+     */
+    private function validar(Request $request, ?Producto $producto = null): array
     {
         return $request->validate([
-            'codigo' => ['required', 'string', 'max:50'],
+            'codigo' => [
+                'required', 'string', 'max:50',
+                Rule::unique('productos', 'codigo')->ignore($producto?->id),
+            ],
             'nombre' => ['required', 'string', 'max:255'],
             'categoria_id' => ['nullable', 'integer', 'exists:categorias,id'],
             'marca_id' => ['nullable', 'integer', 'exists:marcas,id'],
@@ -540,6 +549,8 @@ class ProductoController extends Controller
             'precio_venta' => ['required', 'numeric', 'min:0'],
             'stock_minimo' => ['required', 'numeric', 'min:0'],
             'peso' => ['nullable', 'numeric', 'min:0'],
+        ], [
+            'codigo.unique' => 'Ya existe un producto con ese código — usa uno distinto.',
         ]);
     }
 }
