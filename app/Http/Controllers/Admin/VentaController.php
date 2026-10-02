@@ -966,6 +966,68 @@ class VentaController extends Controller
     }
 
     /**
+     * Copia manual de una Cotización: una fila nueva e independiente, con
+     * fecha de hoy y su propio correlativo — no un comprobante "generado
+     * desde" (no lleva `origen_cotizacion_id`, así que no aparece como
+     * "Convertida en" de la original ni la bloquea para generar su propia
+     * venta real después). Al ser Cotización, nunca mueve stock ni entra
+     * en ningún total — duplicar no desalinea nada de eso.
+     */
+    public function duplicarCotizacion(Venta $venta): RedirectResponse
+    {
+        abort_unless($venta->tipcomp === 'COT', 404);
+
+        $venta->loadMissing('detalles');
+
+        $nueva = DB::transaction(function () use ($venta) {
+            $copia = Venta::create([
+                'fecha' => now()->toDateString(),
+                'tipcomp' => 'COT',
+                'n_seri' => self::TIPOS['COT']['serie'],
+                'n_comp' => $this->correlativo->documentoInterno('COT', self::TIPOS['COT']['serie']),
+                'numero_venta' => $this->correlativo->venta(),
+                'estado' => 'activa',
+                'razonsocial' => $venta->razonsocial,
+                'n_ruc' => $venta->n_ruc,
+                'cliente_id' => $venta->cliente_id,
+                'cliente_nombre' => $venta->cliente_nombre,
+                'cliente_ruc' => $venta->cliente_ruc,
+                'cliente_direccion' => $venta->cliente_direccion,
+                'cliente_telefono' => $venta->cliente_telefono,
+                'cliente_correo' => $venta->cliente_correo,
+                'cliente_distrito' => $venta->cliente_distrito,
+                'condicion_pago' => $venta->condicion_pago,
+                'baseimp' => $venta->baseimp,
+                'subtotal' => $venta->subtotal,
+                'igv' => $venta->igv,
+                'exonerado' => $venta->exonerado,
+                'inafecto' => $venta->inafecto,
+                'total' => $venta->total,
+                'moneda' => $venta->moneda,
+                'tipo_cambio' => $venta->tipo_cambio,
+                'tipcambio' => $venta->tipcambio,
+            ]);
+
+            foreach ($venta->detalles as $detalle) {
+                VentaDetalle::create([
+                    'venta_id' => $copia->id,
+                    'producto_id' => $detalle->producto_id,
+                    'prod_codigo' => $detalle->prod_codigo,
+                    'prod_nombre' => $detalle->prod_nombre,
+                    'cantidad' => $detalle->cantidad,
+                    'precio_unitario' => $detalle->precio_unitario,
+                    'subtotal' => $detalle->subtotal,
+                ]);
+            }
+
+            return $copia;
+        });
+
+        return redirect()->route('admin.ventas.comprobante', $nueva)
+            ->with('mensaje', "Cotización duplicada como {$nueva->n_seri}-{$nueva->n_comp}.");
+    }
+
+    /**
      * Si ya se envió a SUNAT (o no aplica, por ser Cotización/Nota de Venta,
      * ninguna de las dos SUNAT-electrónicas) es seguro anular o eliminar sin
      * dejar rastro huérfano allá. Boleta/Factura ya registradas solo se

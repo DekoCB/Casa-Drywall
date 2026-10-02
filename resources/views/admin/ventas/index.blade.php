@@ -260,6 +260,14 @@
                                             <a href="{{ route('admin.ventas.factura.create', ['tipo' => '01', 'desde' => $venta->id]) }}">Factura</a>
                                         </div>
                                     </details>
+                                    {{-- Copia manual de la Cotización: una fila nueva e independiente
+                                         (sin origen_cotizacion_id) — no afecta a "Convertida en" de la
+                                         original ni a ningún total, las Cotizaciones ya están excluidas
+                                         de todos esos cálculos en todo el sistema. --}}
+                                    <form method="POST" action="{{ route('admin.ventas.duplicar', $venta) }}" style="display:inline;">
+                                        @csrf
+                                        <button type="submit" class="btn-edit-v" title="Duplicar esta cotización">⧉</button>
+                                    </form>
                                 @endif
 
                                 @php
