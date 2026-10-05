@@ -44,14 +44,17 @@ class ConsultaDocumentoService
         }
 
         return Cache::remember("sunat:ruc:{$ruc}", self::TTL_CACHE_SEGUNDOS, function () use ($ruc) {
-            $datos = $this->peticion('https://api.apis.net.pe/v1/ruc', ['numero' => $ruc]);
+            $datos = $this->primeraRespuesta([
+                'https://api.apis.net.pe/v2/sunat/ruc',
+                'https://api.apis.net.pe/v1/ruc',
+            ], ['numero' => $ruc]);
 
             if ($datos === null) {
                 return null;
             }
 
             return [
-                'razon_social' => $datos['nombre'] ?? '',
+                'razon_social' => $datos['razonSocial'] ?? $datos['nombre'] ?? '',
                 'direccion'    => $datos['direccion'] ?? '',
                 'distrito'     => $datos['distrito'] ?? '',
                 'provincia'    => $datos['provincia'] ?? '',
@@ -69,7 +72,10 @@ class ConsultaDocumentoService
         }
 
         return Cache::remember("sunat:dni:{$dni}", self::TTL_CACHE_SEGUNDOS, function () use ($dni) {
-            $datos = $this->peticion('https://api.apis.net.pe/v1/dni', ['numero' => $dni]);
+            $datos = $this->primeraRespuesta([
+                'https://api.apis.net.pe/v2/reniec/dni',
+                'https://api.apis.net.pe/v1/dni',
+            ], ['numero' => $dni]);
 
             if ($datos === null) {
                 return null;
@@ -86,6 +92,24 @@ class ConsultaDocumentoService
                 'nombre_completo'   => trim("{$nombres} {$apellidoPaterno} {$apellidoMaterno}"),
             ];
         });
+    }
+
+    /**
+     * v2 tiene el padrón más actualizado (v1 no encuentra varios DNI
+     * recientes, ej. los que empiezan en 7) y no limita tan rápido; v1 queda
+     * de respaldo por si v2 se cae o tampoco tiene el documento.
+     */
+    private function primeraRespuesta(array $urls, array $query): ?array
+    {
+        foreach ($urls as $url) {
+            $datos = $this->peticion($url, $query);
+
+            if (! empty($datos)) {
+                return $datos;
+            }
+        }
+
+        return null;
     }
 
     private function peticion(string $url, array $query): ?array
