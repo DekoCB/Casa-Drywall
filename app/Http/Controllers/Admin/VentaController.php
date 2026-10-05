@@ -1298,7 +1298,8 @@ class VentaController extends Controller
      * Ficha del módulo Clientes a la que pertenece el comprobante.
      *
      * Si el usuario eligió un cliente del buscador viene ya resuelto; si escribió
-     * el documento a mano se busca por ahí, y en último caso por razón social.
+     * el documento a mano se busca por ahí y, si es un DNI/RUC nuevo, se
+     * registra en Clientes en ese momento; sin documento, por razón social.
      * Así el comprobante nace enlazado y no hace falta vincularlo después.
      */
     private function fichaDelCliente(array $datos): ?Cliente
@@ -1307,14 +1308,10 @@ class VentaController extends Controller
             return Cliente::find($datos['cliente_id']);
         }
 
-        $documento = preg_replace('/\D/', '', (string) ($datos['n_ruc'] ?? ''));
+        $porDoc = Cliente::registrarDesdeComprobante($datos['n_ruc'] ?? null, $datos['razonsocial'] ?? null, $datos);
 
-        if ($documento !== '') {
-            $porDoc = Cliente::whereRaw("REGEXP_REPLACE(numero_documento, '[^0-9]', '') = ?", [$documento])->first();
-
-            if ($porDoc) {
-                return $porDoc;
-            }
+        if ($porDoc) {
+            return $porDoc;
         }
 
         $nombre = trim((string) ($datos['razonsocial'] ?? ''));

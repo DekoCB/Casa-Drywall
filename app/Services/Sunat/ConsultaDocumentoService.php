@@ -2,6 +2,8 @@
 
 namespace App\Services\Sunat;
 
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -74,8 +76,15 @@ class ConsultaDocumentoService
         try {
             $token = config('services.apisperu.token');
 
+            // Sin token, apis.net.pe limita las consultas por minuto y
+            // responde 429 seguido: se reintenta en vez de dejar al vendedor
+            // con el error a la primera.
             $respuesta = Http::timeout(8)
                 ->when($token, fn ($http) => $http->withToken($token))
+                ->retry(3, 1200, function (\Throwable $e) {
+                    return $e instanceof ConnectionException
+                        || ($e instanceof RequestException && in_array($e->response->status(), [429, 500, 502, 503, 504], true));
+                }, throw: false)
                 ->get($url, $query);
 
             if ($respuesta->failed()) {

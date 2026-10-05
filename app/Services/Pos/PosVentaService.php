@@ -140,7 +140,9 @@ class PosVentaService
             $serie = VentaController::TIPOS[$tipcomp]['serie'];
             $nComp = $this->correlativo->documentoInterno($tipcomp, $serie);
 
-            $cliente = ! empty($datos['cliente_id']) ? Cliente::find($datos['cliente_id']) : null;
+            $cliente = ! empty($datos['cliente_id'])
+                ? Cliente::find($datos['cliente_id'])
+                : Cliente::registrarDesdeComprobante($datos['n_ruc'] ?? null, $datos['razonsocial'] ?? null);
             $metodoPago = count($pagos) === 1 ? $pagos[0]['metodo_pago'] : 'Mixto';
 
             // 4. Venta + detalle + pagos.

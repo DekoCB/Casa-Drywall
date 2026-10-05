@@ -918,32 +918,53 @@ document.getElementById('btnBuscarDocFactura').addEventListener('click', async (
 
     docFacturaEstado.textContent = 'Buscando...';
 
+    let r;
+    let j;
+
     try {
-        const r = await fetch(`{{ url('admin/documentos/buscar') }}/${tipo}/${numero}`, { headers: { Accept: 'application/json' } });
-        const j = await r.json();
-
-        if (!j.ok) {
-            docFacturaEstado.textContent = j.error || 'No se encontró el documento';
-            return;
-        }
-
-        document.getElementById('f-razonsocial').value = (tipo === 'dni' ? j.datos.nombre_completo : j.datos.razon_social) || '';
-
-        // RENIEC (DNI) no devuelve dirección — solo nombre. El RUC (SUNAT o
-        // un Cliente/Proveedor ya registrado) sí trae dirección/ubigeo: se
-        // completa solo, sin que la persona tenga que escribirla aparte.
-        if (tipo === 'ruc') {
-            document.getElementById('f-direccion').value    = j.datos.direccion || '';
-            document.getElementById('f-distrito').value     = j.datos.distrito || '';
-            document.getElementById('f-provincia').value    = j.datos.provincia || '';
-            document.getElementById('f-departamento').value = j.datos.departamento || '';
-            actualizarMapaDireccion();
-        }
-
-        docFacturaEstado.textContent = j.origen === 'local' ? 'Datos de un registro existente' : 'Datos obtenidos de ' + (tipo === 'dni' ? 'RENIEC' : 'SUNAT');
+        r = await fetch(`{{ url('admin/documentos/buscar') }}/${tipo}/${numero}`, { headers: { Accept: 'application/json' } });
     } catch (e) {
-        docFacturaEstado.textContent = 'Servicio de consulta no disponible';
+        docFacturaEstado.textContent = 'Sin conexión con el servidor. Revisa el internet e intenta de nuevo.';
+        return;
     }
+
+    // Si la sesión venció o el servidor pidió la verificación "no soy un
+    // robot", llega una página HTML en vez de JSON: se avisa en vez de
+    // decir que el DNI no existe.
+    if (r.status === 401 || r.status === 419 || r.redirected || !(r.headers.get('Content-Type') || '').includes('json')) {
+        docFacturaEstado.textContent = 'La sesión expiró o el servidor pidió verificación. Recarga la página (F5) e intenta de nuevo.';
+        return;
+    }
+
+    try {
+        j = await r.json();
+    } catch (e) {
+        docFacturaEstado.textContent = 'Respuesta inválida del servidor. Recarga la página (F5) e intenta de nuevo.';
+        return;
+    }
+
+    if (!j.ok) {
+        docFacturaEstado.textContent = j.error || 'No se encontró el documento';
+        return;
+    }
+
+    document.getElementById('f-razonsocial').value = (tipo === 'dni' ? j.datos.nombre_completo : j.datos.razon_social) || '';
+    document.getElementById('f-cliente-id').value  = j.datos.cliente_id || '';
+
+    // RENIEC (DNI) no devuelve dirección — solo nombre; un cliente ya
+    // registrado o el RUC (SUNAT) sí la traen y se completa sola, sin que la
+    // persona tenga que escribirla aparte. Sin dirección se deja lo escrito.
+    if (j.datos.direccion || tipo === 'ruc') {
+        document.getElementById('f-direccion').value    = j.datos.direccion || '';
+        document.getElementById('f-distrito').value     = j.datos.distrito || '';
+        document.getElementById('f-provincia').value    = j.datos.provincia || '';
+        document.getElementById('f-departamento').value = j.datos.departamento || '';
+        actualizarMapaDireccion();
+    }
+
+    docFacturaEstado.textContent = j.origen === 'local'
+        ? 'Cliente ya registrado'
+        : 'Datos obtenidos de ' + (tipo === 'dni' ? 'RENIEC' : 'SUNAT') + ' — se registrará como cliente al guardar';
 });
 </script>
 @endpush

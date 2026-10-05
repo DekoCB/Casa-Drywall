@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Cliente;
 use App\Models\Proveedor;
+use App\Models\Venta;
 use App\Services\Sunat\ConsultaDocumentoService;
 use Illuminate\Http\JsonResponse;
 
@@ -48,6 +49,7 @@ class DocumentoController extends Controller
                 'ok' => true,
                 'origen' => 'local',
                 'datos' => [
+                    'cliente_id' => $cliente->id,
                     'razon_social' => $cliente->nombre_empresa ?: $cliente->nombres,
                     'direccion' => $cliente->direccion,
                     'distrito' => $cliente->distrito,
@@ -78,14 +80,43 @@ class DocumentoController extends Controller
             return response()->json([
                 'ok' => true,
                 'origen' => 'local',
-                'datos' => ['nombre_completo' => $cliente->nombres],
+                'datos' => [
+                    'cliente_id' => $cliente->id,
+                    'nombre_completo' => $cliente->nombres,
+                    'direccion' => $cliente->direccion,
+                    'distrito' => $cliente->distrito,
+                    'provincia' => $cliente->provincia,
+                    'departamento' => $cliente->departamento,
+                ],
+            ]);
+        }
+
+        // Comprobantes emitidos antes de que Ventas registrara al cliente
+        // solo: el nombre ya quedó en la venta, no hace falta ir a RENIEC.
+        $venta = Venta::where(fn ($q) => $q->where('n_ruc', $dni)->orWhere('cliente_ruc', $dni))
+            ->whereNotNull('razonsocial')
+            ->where('razonsocial', '!=', '')
+            ->latest('id')
+            ->first();
+
+        if ($venta) {
+            return response()->json([
+                'ok' => true,
+                'origen' => 'local',
+                'datos' => [
+                    'nombre_completo' => $venta->razonsocial,
+                    'direccion' => $venta->cliente_direccion,
+                    'distrito' => $venta->cliente_distrito,
+                    'provincia' => $venta->cliente_provincia,
+                    'departamento' => $venta->cliente_departamento,
+                ],
             ]);
         }
 
         $datos = $this->consulta->consultarDni($dni);
 
         if ($datos === null) {
-            return response()->json(['ok' => false, 'error' => 'No se encontró el DNI o el servicio no respondió'], 502);
+            return response()->json(['ok' => false, 'error' => 'RENIEC no respondió o no encontró el DNI. Intenta de nuevo en unos segundos.'], 502);
         }
 
         return response()->json(['ok' => true, 'origen' => 'reniec', 'datos' => $datos]);
