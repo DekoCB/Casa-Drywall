@@ -62,7 +62,9 @@ class DocumentoController extends Controller
         $datos = $this->consulta->consultarRuc($ruc);
 
         if ($datos === null) {
-            return response()->json(['ok' => false, 'error' => 'No se encontró el RUC o el servicio no respondió'], 502);
+            return $this->consulta->noEncontrado()
+                ? response()->json(['ok' => false, 'error' => 'No se encontró ese RUC en SUNAT. Verifica el número o completa los datos a mano.'], 404)
+                : response()->json(['ok' => false, 'error' => 'El servicio de SUNAT no respondió (demasiadas consultas). Espera unos segundos e intenta de nuevo — reintentar varias veces seguidas no ayuda.'], 502);
         }
 
         return response()->json(['ok' => true, 'origen' => 'sunat', 'datos' => $datos]);
@@ -116,7 +118,9 @@ class DocumentoController extends Controller
         $datos = $this->consulta->consultarDni($dni);
 
         if ($datos === null) {
-            return response()->json(['ok' => false, 'error' => 'RENIEC no respondió o no encontró el DNI. Intenta de nuevo en unos segundos.'], 502);
+            return $this->consulta->noEncontrado()
+                ? response()->json(['ok' => false, 'error' => 'No se encontró ese DNI en RENIEC. Verifica el número o escribe el nombre a mano.'], 404)
+                : response()->json(['ok' => false, 'error' => 'RENIEC no respondió (demasiadas consultas). Espera unos segundos e intenta de nuevo — reintentar varias veces seguidas no ayuda.'], 502);
         }
 
         return response()->json(['ok' => true, 'origen' => 'reniec', 'datos' => $datos]);

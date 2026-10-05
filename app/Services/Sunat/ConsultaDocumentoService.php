@@ -20,6 +20,23 @@ class ConsultaDocumentoService
 {
     private const TTL_CACHE_SEGUNDOS = 86400;
 
+    private ?int $ultimoStatus = null;
+
+    /**
+     * True si el último `consultarRuc()`/`consultarDni()` que devolvió null
+     * fue porque el documento genuinamente no existe en SUNAT/RENIEC (404)
+     * — no porque el servicio esté caído o limitando peticiones. Distinguir
+     * esto importa: un 404 no se arregla reintentando, pero el mensaje
+     * genérico anterior ("intenta de nuevo") empujaba a la persona a
+     * presionar Buscar varias veces seguidas, y cada click dispara hasta 3
+     * peticiones reales por los reintentos — eso sí termina agotando el
+     * límite real del servicio en segundos.
+     */
+    public function noEncontrado(): bool
+    {
+        return $this->ultimoStatus === 404;
+    }
+
     public function consultarRuc(string $ruc): ?array
     {
         if (! preg_match('/^\d{11}$/', $ruc)) {
@@ -73,6 +90,8 @@ class ConsultaDocumentoService
 
     private function peticion(string $url, array $query): ?array
     {
+        $this->ultimoStatus = null;
+
         try {
             $token = config('services.apisperu.token');
 
@@ -88,6 +107,7 @@ class ConsultaDocumentoService
                 ->get($url, $query);
 
             if ($respuesta->failed()) {
+                $this->ultimoStatus = $respuesta->status();
                 Log::warning('Consulta SUNAT/RENIEC falló', ['url' => $url, 'status' => $respuesta->status()]);
 
                 return null;
