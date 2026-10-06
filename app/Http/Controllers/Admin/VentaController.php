@@ -13,6 +13,7 @@ use App\Models\Producto;
 use App\Models\StockAlmacen;
 use App\Models\Venta;
 use App\Models\VentaDetalle;
+use App\Services\CodigoQrService;
 use App\Services\GeneradorCorrelativo;
 use App\Services\NumeroALetras;
 use App\Services\PrecioCalculador;
@@ -63,6 +64,7 @@ class VentaController extends Controller
         private readonly GeneradorCorrelativo $correlativo,
         private readonly ApiGoEmisionService $emisionSunat,
         private readonly PrecioCalculador $precios,
+        private readonly CodigoQrService $codigoQr,
     ) {}
 
     /** Página de alta de comprobante: monto único o detalle de productos. */
@@ -1230,7 +1232,23 @@ class VentaController extends Controller
             'diasCredito' => $venta->fecha && $venta->fecha_vencimiento
                 ? $venta->fecha->diffInDays($venta->fecha_vencimiento)
                 : null,
+            'rutaQrDisco' => $this->codigoQr->rutaEnDisco($venta),
         ]];
+    }
+
+    /**
+     * Imagen del código QR para el `<img>` en pantalla (dompdf, que arma el
+     * PDF descargable, no puede pedirla por HTTP — usa `rutaQrDisco` directo
+     * en su lugar). Reusa el mismo cacheo en disco de `CodigoQrService`, así
+     * que no vuelve a golpear el servicio externo si ya se generó antes.
+     */
+    public function qr(Venta $venta): Response
+    {
+        $ruta = $this->codigoQr->rutaEnDisco($venta);
+
+        abort_if($ruta === null, 404);
+
+        return response(file_get_contents($ruta), 200, ['Content-Type' => 'image/png']);
     }
 
     public function show(Venta $venta): View

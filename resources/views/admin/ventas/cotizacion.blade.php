@@ -48,12 +48,12 @@
         .cab-der { width:38%; padding-left:16px; }
 
         .cab-marca { display:table; width:100%; }
-        .cab-logo-cel { display:table-cell; width:64px; vertical-align:top; }
-        .cab-logo-cel img { width:54px; height:54px; object-fit:contain; }
+        .cab-logo-cel { display:table-cell; width:80px; vertical-align:top; }
+        .cab-logo-cel img { width:70px; height:70px; object-fit:contain; }
         /* Mismo tamaño que el comprobante de Boleta/Factura (no en el ticket
            80mm), centrado en su celda. */
-        body:not(.formato-80mm) .cab-logo-cel { width:100px; text-align:left; vertical-align:middle; }
-        body:not(.formato-80mm) .cab-logo-cel img { width:92px; height:92px; margin:0; }
+        body:not(.formato-80mm) .cab-logo-cel { width:128px; text-align:left; vertical-align:middle; }
+        body:not(.formato-80mm) .cab-logo-cel img { width:120px; height:120px; margin:0; }
         .cab-emp-cel { display:table-cell; vertical-align:top; padding-left:12px; text-align:center; }
         .cab-emp b { font-size:12px; }
         .cab-emp p { font-size:8.7px; line-height:1.55; margin-top:1px; }

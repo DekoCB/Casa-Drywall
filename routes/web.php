@@ -346,6 +346,9 @@ Route::middleware(['auth', 'rol:admin,secretaria,ventas'])
         // No es solo de admin: Secretaria y Ventas cobran en el POS y necesitan
         // el mismo comprobante, aunque no tengan acceso al resto de Ventas/Facturas.
         Route::get('ventas/{venta}/comprobante', [VentaController::class, 'comprobante'])->name('ventas.comprobante');
+        // Imagen del código QR (Boleta/Factura) que ve el navegador — dompdf, en
+        // cambio, lee el archivo directo del disco (ver VentaController::qr()).
+        Route::get('ventas/{venta}/qr', [VentaController::class, 'qr'])->name('ventas.qr');
         // PDF descargable (Cotización/Nota de Venta/Boleta/Factura) para mandar
         // al interesado — distinto del "PDF oficial" de SUNAT (ventas.pdf-sunat,
         // solo existe una vez aceptado): este se genera al vuelo desde el mismo

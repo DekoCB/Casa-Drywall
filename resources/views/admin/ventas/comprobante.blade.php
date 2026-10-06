@@ -94,13 +94,13 @@
         .cab-der { width:38%; padding-left:16px; }
 
         .cab-marca { display:table; width:100%; }
-        .cab-logo-cel { display:table-cell; width:64px; vertical-align:top; }
-        .cab-logo-cel img { width:54px; height:54px; object-fit:contain; }
+        .cab-logo-cel { display:table-cell; width:80px; vertical-align:top; }
+        .cab-logo-cel img { width:70px; height:70px; object-fit:contain; }
         /* Logo un poco más grande en hoja A4 (no en el ticket 80mm), centrado
            en su celda; vuelve a ir al lado del bloque de la empresa, ya sin
            apretar el texto a este tamaño. */
-        body:not(.formato-80mm) .cab-logo-cel { width:100px; text-align:left; vertical-align:middle; }
-        body:not(.formato-80mm) .cab-logo-cel img { width:92px; height:92px; margin:0; }
+        body:not(.formato-80mm) .cab-logo-cel { width:128px; text-align:left; vertical-align:middle; }
+        body:not(.formato-80mm) .cab-logo-cel img { width:120px; height:120px; margin:0; }
         .cab-emp-cel { display:table-cell; vertical-align:top; padding-left:12px; text-align:center; }
         .cab-emp b { font-size:12px; }
         .cab-emp p { font-size:8.7px; line-height:1.55; margin-top:1px; }
@@ -149,6 +149,10 @@
         .cb-info .cuenta { font-weight:bold; font-size:10.5px; letter-spacing:.02em; }
 
         .aviso { margin-top:20px; font-size:8.5px; color:#555; line-height:1.5; text-align:center; }
+
+        .qr-doc { text-align:center; margin-top:16px; }
+        .qr-doc img { width:90px; height:90px; }
+        .qr-doc-texto { font-size:8.5px; color:#555; margin-top:4px; }
 
         @media print {
             body { background:#fff; padding:0; }
@@ -412,6 +416,13 @@
                     </div>
                 </div>
             @endforeach
+        </div>
+    @endif
+
+    @if ($rutaQrDisco)
+        <div class="qr-doc">
+            <img src="{{ $paraDescarga ? $rutaQrDisco : route('admin.ventas.qr', $venta) }}" alt="Código QR del comprobante">
+            <div class="qr-doc-texto">Código QR del comprobante</div>
         </div>
     @endif
 
