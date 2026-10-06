@@ -266,6 +266,7 @@ Route::middleware(['auth', 'rol:admin,ventas'])
         Route::get('ventas/notas/crear/{origen?}', [VentaController::class, 'createNota'])->name('ventas.notas.create');
         Route::post('ventas/notas', [VentaController::class, 'storeNota'])->name('ventas.notas.store');
         Route::post('ventas/{venta}/enviar-sunat', [VentaController::class, 'enviarSunat'])->name('ventas.enviar-sunat');
+        Route::post('ventas/{venta}/reintentar-sunat', [VentaController::class, 'reintentarRegistroSunat'])->name('ventas.reintentar-sunat');
         Route::post('ventas/{venta}/anular', [VentaController::class, 'anular'])->name('ventas.anular');
         Route::post('ventas/{venta}/duplicar', [VentaController::class, 'duplicarCotizacion'])->name('ventas.duplicar');
         Route::get('ventas/{venta}/pdf-sunat', [VentaController::class, 'pdfSunat'])->name('ventas.pdf-sunat');

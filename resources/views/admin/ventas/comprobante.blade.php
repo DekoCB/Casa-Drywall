@@ -217,7 +217,7 @@
         @endphp
         <span class="estado-sunat {{ $estado }}">SUNAT: {{ $estadosSunat[$estado] ?? $estado }}</span>
 
-        @if ($estado === 'registrado' || $estado === 'rechazado' || $estado === 'error')
+        @if ($venta->api_go_document_id && in_array($estado, ['registrado', 'rechazado', 'error'], true))
             <form method="POST" action="{{ route('admin.ventas.enviar-sunat', $venta) }}" style="display:contents;">
                 @csrf
                 <button type="submit" class="enviar">Enviar a SUNAT</button>
@@ -249,6 +249,50 @@
 
 @if ($esComprobanteElectronico && in_array($venta->estado_factura, ['rechazado', 'error']) && $venta->nota_contadora)
     <div class="nota-sunat"><b>Motivo:</b> {{ $venta->nota_contadora }}</div>
+@endif
+
+{{-- Un comprobante que nunca llegó a registrarse en el sistema de
+     facturación electrónica (ej. Factura rechazada por bancarización
+     faltante) no tiene "Enviar a SUNAT" disponible arriba — ese botón
+     reenvía algo ya registrado, esto lo registra por primera vez. --}}
+@if ($esComprobanteElectronico && ! $venta->api_go_document_id && config('empresas.activa.sunat_habilitado', true))
+    <div class="nota-sunat">
+        <form method="POST" action="{{ route('admin.ventas.reintentar-sunat', $venta) }}">
+            @csrf
+            @if ($venta->tipcomp === '01')
+                <p style="margin:0 0 10px;"><b>Este comprobante nunca se registró ante SUNAT.</b> Si es por bancarización (Ley N° 28194, Facturas mayores a S/ 2,000), completa estos datos antes de reintentar:</p>
+                <div class="form-grid" style="margin-bottom:10px;">
+                    <div class="form-group">
+                        <label for="retry-banc-medio">Medio de pago</label>
+                        <select id="retry-banc-medio" name="bancarizacion_medio_pago">
+                            <option value="">— Selecciona —</option>
+                            @foreach ($mediosPagoBancarizacion ?? [] as $medio)
+                                <option value="{{ $medio['codigo'] }}" @selected(old('bancarizacion_medio_pago', $venta->bancarizacion_medio_pago) === $medio['codigo'])>{{ $medio['descripcion'] }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="retry-banc-operacion">N° de operación</label>
+                        <input type="text" id="retry-banc-operacion" name="bancarizacion_numero_operacion" maxlength="100"
+                               value="{{ old('bancarizacion_numero_operacion', $venta->bancarizacion_numero_operacion) }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="retry-banc-fecha">Fecha de pago</label>
+                        <input type="date" id="retry-banc-fecha" name="bancarizacion_fecha_pago"
+                               value="{{ old('bancarizacion_fecha_pago', optional($venta->bancarizacion_fecha_pago)->format('Y-m-d')) }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="retry-banc-banco">Banco</label>
+                        <input type="text" id="retry-banc-banco" name="bancarizacion_banco" maxlength="100"
+                               value="{{ old('bancarizacion_banco', $venta->bancarizacion_banco) }}">
+                    </div>
+                </div>
+            @else
+                <p style="margin:0 0 10px;"><b>Este comprobante nunca se registró ante SUNAT.</b> Puede haber sido un problema pasajero del servicio.</p>
+            @endif
+            <button type="submit" class="enviar">🔁 Reintentar registro SUNAT</button>
+        </form>
+    </div>
 @endif
 @endunless
 

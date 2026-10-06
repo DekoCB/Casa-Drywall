@@ -928,6 +928,41 @@ class VentaController extends Controller
         );
     }
 
+    /**
+     * Reintenta el registro en API-GO de un comprobante que nunca llegó a
+     * registrarse ahí (sin `api_go_document_id`) — distinto de
+     * `enviarSunat()`, que reenvía uno que YA está registrado localmente
+     * pero no se había mandado a SUNAT. Hace falta este segundo camino
+     * porque antes un fallo acá (ej. bancarización faltante en una
+     * Factura) dejaba el comprobante sin ninguna forma de reintentarse
+     * desde el sistema — el caso real que lo disparó: una Factura de
+     * S/ 3,263.88 rechazada el 6 de octubre.
+     */
+    public function reintentarRegistroSunat(Request $request, Venta $venta): RedirectResponse
+    {
+        abort_unless(in_array($venta->tipcomp, ['01', '03'], true), 404);
+        abort_if($venta->api_go_document_id, 404);
+
+        if ($venta->tipcomp === '01') {
+            $venta->update($request->validate([
+                'bancarizacion_medio_pago' => ['nullable', 'string', 'max:10'],
+                'bancarizacion_numero_operacion' => ['nullable', 'string', 'max:100'],
+                'bancarizacion_fecha_pago' => ['nullable', 'date'],
+                'bancarizacion_banco' => ['nullable', 'string', 'max:100'],
+                'bancarizacion_observaciones' => ['nullable', 'string', 'max:500'],
+            ]));
+        }
+
+        $registrado = $this->emisionSunat->crearComprobante($venta);
+
+        return back()->with(
+            $registrado ? 'mensaje' : 'error',
+            $registrado
+                ? 'Comprobante registrado correctamente en el sistema de facturación electrónica.'
+                : ($venta->fresh()->nota_contadora ?: 'No se pudo registrar el comprobante. Intenta de nuevo en unos segundos.')
+        );
+    }
+
     /** Descarga el PDF oficial (firmado, generado por API-GO) del comprobante. */
     public function pdfSunat(Venta $venta): Response|RedirectResponse
     {
@@ -1164,6 +1199,14 @@ class VentaController extends Controller
     public function comprobante(Venta $venta, NumeroALetras $numeroALetras): View
     {
         [$vista, $datos] = $this->datosComprobante($venta, $numeroALetras);
+
+        // El catálogo de bancarización solo hace falta cuando de verdad se
+        // va a poder usar: una Factura que nunca llegó a registrarse en
+        // API-GO (ver reintentarRegistroSunat()) — evita golpear API-GO en
+        // cada vista de un comprobante ya resuelto.
+        if ($venta->tipcomp === '01' && ! $venta->api_go_document_id) {
+            $datos['mediosPagoBancarizacion'] = $this->emisionSunat->mediosPagoBancarizacion();
+        }
 
         return view($vista, $datos);
     }
