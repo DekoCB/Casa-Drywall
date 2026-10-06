@@ -56,6 +56,20 @@ class ApiGoEmisionService
 
         if ($tipo === 'invoice') {
             $payload['forma_pago_tipo'] = $this->esCredito($venta) ? 'Credito' : 'Contado';
+
+            // Ley N° 28194 (Bancarización): facturas mayores a S/ 2,000 / US$
+            // 500 necesitan estos datos o API-GO rechaza el comprobante —
+            // confirmado en producción (venta real rechazada el 6 de
+            // octubre). Solo se manda si el formulario lo pidió y se llenó.
+            if ($venta->bancarizacion_medio_pago) {
+                $payload['bancarizacion'] = array_filter([
+                    'medio_pago' => $venta->bancarizacion_medio_pago,
+                    'numero_operacion' => $venta->bancarizacion_numero_operacion,
+                    'fecha_pago' => optional($venta->bancarizacion_fecha_pago)->format('Y-m-d'),
+                    'banco' => $venta->bancarizacion_banco,
+                    'observaciones' => $venta->bancarizacion_observaciones,
+                ], fn ($valor) => $valor !== null && $valor !== '');
+            }
         }
 
         if (in_array($tipo, ['credit_note', 'debit_note'], true)) {
@@ -76,6 +90,17 @@ class ApiGoEmisionService
             Log::warning('No se pudo registrar el comprobante en API-GO', [
                 'venta_id' => $venta->id,
                 'respuesta' => $respuesta,
+            ]);
+
+            // Antes quedaba solo en el log — la persona que vende nunca se
+            // enteraba de que el comprobante NO se registró ante SUNAT (ej.
+            // bancarización faltante en una Factura grande), y el número
+            // tipeado se quedaba ahí pareciendo válido sin serlo. El mismo
+            // bloque del comprobante que ya muestra "rechazado"/"error" de
+            // `enviarSunat()` también cubre este caso.
+            $venta->update([
+                'estado_factura' => 'error',
+                'nota_contadora' => $respuesta['message'] ?? 'No se pudo registrar el comprobante en el sistema de facturación electrónica.',
             ]);
 
             return false;
@@ -121,6 +146,37 @@ class ApiGoEmisionService
         if ($venta->cobranza_id) {
             Cobranza::where('id', $venta->cobranza_id)->update(['numero' => "{$serieReal}-{$correlativoReal}"]);
         }
+    }
+
+    /**
+     * Catálogo de respaldo si API-GO no responde al pedir la lista real —
+     * los mismos códigos que ya siembra su migración
+     * (`medios_pago_bancarizacion`), para que cualquier código elegido acá
+     * siga siendo válido cuando el comprobante se registre de verdad.
+     */
+    private const MEDIOS_PAGO_RESPALDO = [
+        ['codigo' => 'TRAN', 'descripcion' => 'Transferencia bancaria'],
+        ['codigo' => 'DEPO', 'descripcion' => 'Depósito en cuenta'],
+        ['codigo' => 'YAPE', 'descripcion' => 'Yape (BCP)'],
+        ['codigo' => 'PLIN', 'descripcion' => 'Plin (Consorcio de bancos)'],
+        ['codigo' => 'TDEB', 'descripcion' => 'Tarjeta de débito'],
+        ['codigo' => 'TCRE', 'descripcion' => 'Tarjeta de crédito'],
+    ];
+
+    /**
+     * Catálogo de medios de pago válidos para la bancarización de una
+     * Factura (Ley N° 28194) — vive en API-GO, no hay una lista fija de
+     * este lado. Si API-GO no responde, cae al respaldo de arriba en vez de
+     * dejar el formulario sin ninguna opción elegible — justo el escenario
+     * (API-GO caído o lento) en el que más hace falta poder seguir
+     * vendiendo.
+     */
+    public function mediosPagoBancarizacion(): array
+    {
+        $respuesta = $this->peticion('get', '/bancarizacion/medios-pago');
+        $datos = $respuesta['data'] ?? [];
+
+        return $datos !== [] ? $datos : self::MEDIOS_PAGO_RESPALDO;
     }
 
     /**

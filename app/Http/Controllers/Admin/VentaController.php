@@ -97,6 +97,9 @@ class VentaController extends Controller
             ],
             'origen' => $this->origenParaFactura($request),
             'metodosPago' => MetodoPago::activosOrdenados(),
+            'mediosPagoBancarizacion' => config('empresas.activa.sunat_habilitado', true)
+                ? $this->emisionSunat->mediosPagoBancarizacion()
+                : [],
         ]);
     }
 
@@ -448,6 +451,11 @@ class VentaController extends Controller
                 'cliente_distrito' => ! empty($datos['distrito']) ? $datos['distrito'] : $cliente?->distrito,
                 'cliente_provincia' => ! empty($datos['provincia']) ? $datos['provincia'] : $cliente?->provincia,
                 'cliente_departamento' => ! empty($datos['departamento']) ? $datos['departamento'] : $cliente?->departamento,
+                'bancarizacion_medio_pago' => $datos['bancarizacion_medio_pago'] ?? null,
+                'bancarizacion_numero_operacion' => $datos['bancarizacion_numero_operacion'] ?? null,
+                'bancarizacion_fecha_pago' => $datos['bancarizacion_fecha_pago'] ?? null,
+                'bancarizacion_banco' => $datos['bancarizacion_banco'] ?? null,
+                'bancarizacion_observaciones' => $datos['bancarizacion_observaciones'] ?? null,
                 'condicion_pago' => $datos['condicion_pago'] ?? null,
                 'metodo_pago' => $metodoPago,
                 'almacen_id' => $almacenId,
@@ -1383,6 +1391,16 @@ class VentaController extends Controller
             'provincia'                    => ['nullable', 'string', 'max:100'],
             'departamento'                 => ['nullable', 'string', 'max:100'],
             'cliente_id'                   => ['nullable', 'integer', 'exists:clientes,id'],
+            // Bancarización (Ley N° 28194) — solo aplica a Factura mayor a
+            // S/ 2,000, el formulario la pide condicionalmente. Nunca
+            // bloquea el guardado: si API-GO la exige y no llegó, el
+            // comprobante igual se guarda local y queda marcado como
+            // rechazado (ver ApiGoEmisionService::crearComprobante()).
+            'bancarizacion_medio_pago'      => ['nullable', 'string', 'max:10'],
+            'bancarizacion_numero_operacion' => ['nullable', 'string', 'max:100'],
+            'bancarizacion_fecha_pago'      => ['nullable', 'date'],
+            'bancarizacion_banco'           => ['nullable', 'string', 'max:100'],
+            'bancarizacion_observaciones'   => ['nullable', 'string', 'max:500'],
             'condicion_pago'               => ['nullable', 'string', 'max:100'],
             'almacen_id'                   => ['nullable', 'integer', 'exists:almacenes,id'],
             'monto'                        => ['nullable', 'numeric', 'min:0'],

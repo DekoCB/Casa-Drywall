@@ -44,6 +44,14 @@
     // detallados (se creó con "Monto único" en vez de la tabla de abajo).
     $edicionSinItems = $venta && $edicionItems->isEmpty();
 
+    // Catálogo de medios de pago para la bancarización de Factura (Ley N°
+    // 28194) — solo lo pasa createFactura(); editFactura() nunca aplica a
+    // Factura (abort_unless COT/NV), de ahí el valor por defecto.
+    $mediosPagoBancarizacionJs = collect($mediosPagoBancarizacion ?? [])->map(fn ($m) => [
+        'codigo' => $m['codigo'],
+        'descripcion' => $m['descripcion'],
+    ])->values();
+
     // Pagos ya guardados, para precargar sus filas al editar. Calculado
     // aparte (no inline dentro de @json en el script) porque Blade no
     // compila bien un @json() con una expresión multilínea así de anidada.
@@ -219,6 +227,40 @@
         <div style="display:flex;align-items:center;gap:12px;margin-top:4px;flex-wrap:wrap;">
             <button type="button" class="btn btn-secondary btn-sm" id="btnAgregarPago">＋ Agregar otro medio de pago</button>
             <span class="nv-hint" id="fPagosResumen" style="margin:0;"></span>
+        </div>
+    </div>
+
+    {{-- Bancarización (Ley N° 28194): obligatoria para Factura mayor a
+         S/ 2,000 — sin esto, API-GO rechaza el comprobante ante SUNAT y el
+         número se queda sin confirmar (fue justo lo que pasó en producción
+         el 6 de octubre). Oculto por defecto, aparece solo cuando aplica. --}}
+    <div class="content-card" id="tarjetaBancarizacion" hidden>
+        <h3>Bancarización <span>*</span></h3>
+        <p class="nv-hint">Esta Factura supera S/ 2,000 — la Ley N° 28194 exige el medio de pago bancario para que SUNAT la acepte.</p>
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="f-banc-medio">Medio de pago <span>*</span></label>
+                <select id="f-banc-medio" name="bancarizacion_medio_pago"></select>
+            </div>
+            <div class="form-group">
+                <label for="f-banc-operacion">N° de operación</label>
+                <input type="text" id="f-banc-operacion" name="bancarizacion_numero_operacion" maxlength="100"
+                       value="{{ old('bancarizacion_numero_operacion') }}">
+            </div>
+            <div class="form-group">
+                <label for="f-banc-fecha">Fecha de pago</label>
+                <input type="date" id="f-banc-fecha" name="bancarizacion_fecha_pago" value="{{ old('bancarizacion_fecha_pago') }}">
+            </div>
+            <div class="form-group">
+                <label for="f-banc-banco">Banco</label>
+                <input type="text" id="f-banc-banco" name="bancarizacion_banco" maxlength="100"
+                       value="{{ old('bancarizacion_banco') }}">
+            </div>
+            <div class="form-group" style="grid-column:1/-1;">
+                <label for="f-banc-obs">Observaciones</label>
+                <input type="text" id="f-banc-obs" name="bancarizacion_observaciones" maxlength="500"
+                       value="{{ old('bancarizacion_observaciones') }}">
+            </div>
         </div>
     </div>
 
@@ -443,6 +485,7 @@ sugerirSerieFactura(); // El tipo por defecto viene preseleccionado: sin esto, n
 // (una fila por medio, con su propio monto y referencia opcional).
 const METODOS_PAGO = @json($metodosPago->pluck('nombre')->values());
 const PAGOS_EXISTENTES = @json($pagosExistentesJs);
+const MEDIOS_PAGO_BANCARIZACION = @json($mediosPagoBancarizacionJs);
 
 const fPagosLista = document.getElementById('fPagosLista');
 const fPagosReq = document.getElementById('f-pagos-req');
@@ -825,10 +868,29 @@ function recalcularFactura() {
     document.getElementById('fTotIgv').textContent      = 'S/ ' + igv.toFixed(2);
     document.getElementById('fTotTotal').textContent    = 'S/ ' + (subtotal + igv).toFixed(2);
     actualizarResumenPagos();
+    actualizarBancarizacion(subtotal + igv);
+}
+
+// ── Bancarización (Ley N° 28194): obligatoria en Factura > S/ 2,000 ───────
+// Mismo umbral que ya valida API-GO del lado del servidor (ver
+// BancarizacionService::UMBRAL_PEN) — esto solo evita el viaje de ida y
+// vuelta cuando ya se sabe de antemano que va a hacer falta.
+const fBancarizacionCard = document.getElementById('tarjetaBancarizacion');
+const fBancMedio = document.getElementById('f-banc-medio');
+
+fBancMedio.innerHTML = '<option value="">— Selecciona —</option>' + MEDIOS_PAGO_BANCARIZACION.map((m) =>
+    `<option value="${m.codigo}">${m.descripcion}</option>`
+).join('');
+
+function actualizarBancarizacion(total) {
+    const aplica = fTipcomp.value === '01' && total > 2000;
+    fBancarizacionCard.hidden = !aplica;
+    fBancMedio.required = aplica;
 }
 
 fMonto?.addEventListener('input', recalcularFactura);
 fTipoOperacion?.addEventListener('change', recalcularFactura);
+fTipcomp.addEventListener('change', recalcularFactura);
 
 // Al desmarcar, se advierte: de ahí en más el sistema SUMA el IGV encima del
 // precio en vez de asumir que ya lo trae incluido — es fácil no notar el

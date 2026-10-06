@@ -44,6 +44,9 @@ class Venta extends Model
         'metodo_pago', 'fecha', 'observaciones', 'usuario_id', 'almacen_id', 'estado',
         'cliente_id', 'cliente_nombre', 'cliente_ruc', 'cliente_telefono', 'cliente_correo',
         'cliente_direccion', 'cliente_distrito', 'cliente_provincia', 'cliente_departamento',
+        // Bancarización (Ley N° 28194) de una Factura mayor a S/ 2,000.
+        'bancarizacion_medio_pago', 'bancarizacion_numero_operacion', 'bancarizacion_fecha_pago',
+        'bancarizacion_banco', 'bancarizacion_observaciones',
         'condicion_pago', 'empresa_transporte', 'vendedor', 'codigo_vendedor',
         'destino_entrega', 'tipo_envio', 'costo_transporte', 'gasto_gasolina',
         'moneda', 'tipo_cambio', 'tiene_regalo', 'regalo_descripcion', 'regalo_precio',
@@ -70,6 +73,7 @@ class Venta extends Model
             'fecha' => 'date',
             'fecha_vencimiento' => 'date',
             'fecha_pago' => 'date',
+            'bancarizacion_fecha_pago' => 'date',
             'subtotal' => 'decimal:2',
             'igv' => 'decimal:2',
             'total' => 'decimal:2',
