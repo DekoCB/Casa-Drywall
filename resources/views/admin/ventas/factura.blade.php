@@ -200,10 +200,10 @@
                 <label for="f-n-comp">N° Comprobante <span>*</span></label>
                 <input type="text" id="f-n-comp" name="n_comp" required maxlength="20"
                        placeholder="0000000001" value="{{ old('n_comp', $venta?->n_comp ?? '') }}">
-                <small id="f-n-comp-hint" style="display:block; margin-top:4px; font-size:11px; color:var(--ink-3);" hidden>
+                <small id="f-n-comp-hint" style="display:none; margin-top:4px; font-size:11px; color:var(--ink-3);">
                     Correlativo automático: no se puede editar.
                 </small>
-                <small id="f-n-comp-hint-sunat" style="display:block; margin-top:4px; font-size:11px; color:var(--ink-3);" hidden>
+                <small id="f-n-comp-hint-sunat" style="display:none; margin-top:4px; font-size:11px; color:var(--ink-3);">
                     Sugerido según el correlativo real de SUNAT — edítalo solo si sabes que debe ser otro.
                 </small>
             </div>
@@ -466,8 +466,8 @@ function sugerirSerieFactura() {
     const comp = fTipcomp.selectedOptions[0]?.dataset.comp || '';
 
     fNComp.readOnly = esInterno;
-    fNCompHint.hidden = !esInterno;
-    fNCompHintSunat.hidden = !(esSunat && comp !== '');
+    fNCompHint.style.display = esInterno ? 'block' : 'none';
+    fNCompHintSunat.style.display = (esSunat && comp !== '') ? 'block' : 'none';
 
     if (esInterno) {
         fNComp.value = comp;
