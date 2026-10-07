@@ -122,6 +122,70 @@ class VentasSubmenuTest extends TestCase
     }
 
     /**
+     * Regresión real del 6 de octubre: al agregar el estado 'error' (para
+     * que un registro fallido en API-GO quedara visible, ej. bancarización
+     * faltante), `seguroDeSunat()` solo comparaba contra el texto
+     * 'pendiente' — cualquier Factura/Boleta rechazada se quedaba sin
+     * poder anularse ni eliminarse, aunque nunca hubiera llegado a existir
+     * de verdad en el sistema de facturación (`api_go_document_id` nulo).
+     */
+    public function test_anular_funciona_sobre_factura_que_fallo_al_registrarse(): void
+    {
+        $venta = Venta::create([
+            'fecha' => '2026-10-06', 'tipcomp' => '01', 'n_seri' => 'F001', 'n_comp' => '001869',
+            'estado' => 'activa', 'estado_factura' => 'error', 'api_go_document_id' => null,
+        ]);
+
+        $this->actingAs($this->admin(), 'web')
+            ->post(route('admin.ventas.anular', $venta))
+            ->assertRedirect();
+
+        $this->assertSame('cancelada', $venta->fresh()->estado);
+    }
+
+    public function test_eliminar_funciona_sobre_factura_que_fallo_al_registrarse(): void
+    {
+        $venta = Venta::create([
+            'fecha' => '2026-10-06', 'tipcomp' => '01', 'n_seri' => 'F001', 'n_comp' => '001869',
+            'estado' => 'activa', 'estado_factura' => 'error', 'api_go_document_id' => null,
+        ]);
+
+        $this->actingAs($this->admin(), 'web')
+            ->delete(route('admin.ventas.destroy', $venta))
+            ->assertRedirect();
+
+        $this->assertSame('eliminada', $venta->fresh()->estado);
+    }
+
+    /** Un comprobante que ya tiene un documento real en API-GO ('registrado' en adelante) no se anula directo, aunque no haya llegado a 'aceptado'. */
+    public function test_anular_rechaza_una_factura_ya_registrada_en_api_go(): void
+    {
+        $venta = Venta::create([
+            'fecha' => '2026-10-06', 'tipcomp' => '01', 'n_seri' => 'F001', 'n_comp' => '001869',
+            'estado' => 'activa', 'estado_factura' => 'registrado', 'api_go_document_id' => 18,
+        ]);
+
+        $this->actingAs($this->admin(), 'web')
+            ->post(route('admin.ventas.anular', $venta))
+            ->assertRedirect();
+
+        $this->assertSame('activa', $venta->fresh()->estado);
+    }
+
+    public function test_muestra_anular_y_eliminar_para_factura_que_fallo_al_registrarse(): void
+    {
+        Venta::create([
+            'fecha' => '2026-10-06', 'tipcomp' => '01', 'n_seri' => 'F001', 'n_comp' => '001869',
+            'estado' => 'activa', 'estado_factura' => 'error', 'api_go_document_id' => null,
+        ]);
+
+        $respuesta = $this->actingAs($this->admin(), 'web')->get(route('admin.ventas.index'));
+
+        $respuesta->assertSee('title="Anular"', false);
+        $respuesta->assertSee('class="form-eliminar"', false);
+    }
+
+    /**
      * `destroy()` era un DELETE real — sin ningún rastro y sin forma de
      * revertirlo, ya causó un incidente real (cobranza huérfana de una
      * Cotización borrada). Ahora es baja lógica, igual que anular().

@@ -1121,7 +1121,21 @@ class VentaController extends Controller
             return true;
         }
 
-        return in_array($venta->tipcomp, ['01', '03'], true) && $venta->estado_factura === 'pendiente';
+        // Seguro de anular/eliminar directo mientras no exista nada creado
+        // del lado de API-GO todavía — cubre tanto 'pendiente' (nunca se
+        // intentó registrar) como 'error' (se intentó y falló, ej. la
+        // bancarización faltante del 6 de octubre: ese estado nuevo dejó
+        // sin querer sin esta opción a cualquier comprobante rechazado,
+        // porque antes solo se comparaba contra el texto 'pendiente').
+        // Desde que hay un `api_go_document_id` real, ya existe un
+        // documento allá con su propio correlativo consumido de SUNAT —
+        // anularlo local dejaría un registro huérfano, hace falta Nota de
+        // Crédito en su lugar. El chequeo de estado_factura queda además
+        // como defensa extra por si alguna vez 'aceptado'/'rechazado'
+        // llegara sin el id (no debería pasar en la práctica).
+        return in_array($venta->tipcomp, ['01', '03'], true)
+            && ! $venta->api_go_document_id
+            && ! in_array($venta->estado_factura, ['aceptado', 'rechazado'], true);
     }
 
     /** Devuelve al Inventario el stock que esta venta había descontado, si alguna vez descontó. */

@@ -273,10 +273,14 @@
                                 @php
                                     // Misma regla que VentaController::seguroDeSunat(): Cotización y Nota
                                     // de Venta nunca comprometen nada ante SUNAT; Boleta/Factura solo
-                                    // mientras sigan "pendiente" de enviarse. Ya enviada, la única
-                                    // corrección válida es una Nota de Crédito.
+                                    // mientras no exista un documento real allá todavía (sin
+                                    // api_go_document_id — cubre "pendiente" y "error" por igual). Ya con
+                                    // un documento real registrado, la única corrección válida es una
+                                    // Nota de Crédito.
                                     $seguroDeSunat = in_array($venta->tipcomp, ['COT', 'NV'], true)
-                                        || (in_array($venta->tipcomp, ['01', '03'], true) && $venta->estado_factura === 'pendiente');
+                                        || (in_array($venta->tipcomp, ['01', '03'], true)
+                                            && ! $venta->api_go_document_id
+                                            && ! in_array($venta->estado_factura, ['aceptado', 'rechazado'], true));
                                     $yaAnuladaOEliminada = in_array($venta->estado, ['cancelada', 'eliminada'], true);
                                 @endphp
 
