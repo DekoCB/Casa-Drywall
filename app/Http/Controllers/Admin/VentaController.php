@@ -107,6 +107,15 @@ class VentaController extends Controller
      * Sugerencia de solo lectura para el N° Comprobante de Boleta/Factura
      * (null si está deshabilitado o API-GO no respondió) — nunca bloquea la
      * carga del formulario por esto.
+     *
+     * El contador real de SUNAT solo avanza cuando un comprobante se
+     * registra con éxito — si uno se quedó sin registrarse (ej. rechazado
+     * por bancarización faltante, como pasó el 6 de octubre con la venta
+     * #211), ese número sigue "atascado" como la sugerencia de TODAS las
+     * Facturas nuevas, cada una choca contra el duplicado local y queda
+     * bloqueada. Se salta hacia adelante hasta un número que de verdad esté
+     * libre en este sistema, para que una sola Factura pendiente no vuelva
+     * a frenarle la numeración a todo el negocio.
      */
     private function sugerenciaCorrelativoSunat(string $tipcomp): ?string
     {
@@ -114,7 +123,19 @@ class VentaController extends Controller
             return null;
         }
 
-        return $this->emisionSunat->siguienteCorrelativo($tipcomp, self::TIPOS[$tipcomp]['serie']);
+        $siguiente = $this->emisionSunat->siguienteCorrelativo($tipcomp, self::TIPOS[$tipcomp]['serie']);
+
+        if ($siguiente === null) {
+            return null;
+        }
+
+        $serie = self::TIPOS[$tipcomp]['serie'];
+
+        while (Venta::where('tipcomp', $tipcomp)->where('n_seri', $serie)->where('n_comp', $siguiente)->exists()) {
+            $siguiente = str_pad((string) ((int) $siguiente + 1), strlen($siguiente), '0', STR_PAD_LEFT);
+        }
+
+        return $siguiente;
     }
 
     /**
@@ -327,10 +348,19 @@ class VentaController extends Controller
         $duplicado = Venta::where('tipcomp', $datos['tipcomp'])
             ->where('n_seri', $datos['n_seri'])
             ->where('n_comp', $datos['n_comp'])
-            ->exists();
+            ->first();
 
         if ($duplicado) {
-            return back()->with('error', "Ya existe el comprobante {$datos['n_seri']}-{$datos['n_comp']}.");
+            // Si ese "duplicado" nunca llegó a registrarse ante SUNAT, el
+            // mensaje genérico de siempre deja a la persona sin saber qué
+            // hacer — se le indica el arreglo real en vez de un callejón
+            // sin salida (ver sugerenciaCorrelativoSunat(), que ya evita
+            // que esto vuelva a pasar para los próximos comprobantes).
+            $ayuda = ! $duplicado->api_go_document_id
+                ? ' Ese comprobante nunca se registró ante SUNAT — abre su comprobante y usa "Reintentar registro SUNAT", o cambia el número aquí.'
+                : '';
+
+            return back()->withInput()->with('error', "Ya existe el comprobante {$datos['n_seri']}-{$datos['n_comp']}.{$ayuda}");
         }
 
         $importes = $this->calcularImportes($datos, $items);
