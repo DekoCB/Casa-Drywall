@@ -247,8 +247,12 @@
     </div>
 </div>
 
-@if ($esComprobanteElectronico && in_array($venta->estado_factura, ['rechazado', 'error']) && $venta->nota_contadora)
-    <div class="nota-sunat"><b>Motivo:</b> {{ $venta->nota_contadora }}</div>
+{{-- No se limita a estado rechazado/error: un comprobante puede quedar
+     "registrado" (de verdad, con su propio número real) y aun así necesitar
+     un aviso — ej. cuando ese número coincide con otro comprobante local
+     que nunca se registró (ver ApiGoEmisionService::sincronizarNumeroReal()). --}}
+@if ($esComprobanteElectronico && $venta->nota_contadora)
+    <div class="nota-sunat"><b>Aviso:</b> {{ $venta->nota_contadora }}</div>
 @endif
 
 {{-- Un comprobante que nunca llegó a registrarse en el sistema de

@@ -141,7 +141,37 @@ class ApiGoEmisionService
             return;
         }
 
-        $venta->update(['n_seri' => $serieReal, 'n_comp' => $correlativoReal]);
+        // El número real que acaba de asignar SUNAT puede coincidir con el
+        // de OTRO comprobante local que nunca llegó a registrarse de
+        // verdad (ej. rechazado por bancarización) — desde el punto de
+        // vista de SUNAT ese número nunca se consumió, así que lo vuelve a
+        // entregar aquí. Sin este aviso, los dos quedan mostrando el mismo
+        // número sin ninguna explicación (caso real: F001-001869 repetido
+        // entre la venta #211, atascada, y la #261, recién registrada, el
+        // 7 de octubre). El número real igual se aplica — es el correcto
+        // para ESTE comprobante — pero queda marcado para que alguien
+        // revise y corrija el otro.
+        $conflicto = Venta::where('id', '!=', $venta->id)
+            ->where('tipcomp', $venta->tipcomp)
+            ->where('n_seri', $serieReal)
+            ->where('n_comp', $correlativoReal)
+            ->first();
+
+        $venta->update([
+            'n_seri' => $serieReal,
+            'n_comp' => $correlativoReal,
+            'nota_contadora' => $conflicto
+                ? "Registrado con el número real {$serieReal}-{$correlativoReal} — pero ese mismo número ya aparece en el comprobante #{$conflicto->id} ({$conflicto->razonsocial}), que nunca se registró de verdad ante SUNAT. Revisa y corrige ese comprobante anterior (\"Reintentar registro SUNAT\" o anúlalo)."
+                : $venta->nota_contadora,
+        ]);
+
+        if ($conflicto) {
+            Log::warning('Número real de SUNAT coincide con otro comprobante local sin registrar', [
+                'venta_id' => $venta->id,
+                'conflicto_venta_id' => $conflicto->id,
+                'numero' => "{$serieReal}-{$correlativoReal}",
+            ]);
+        }
 
         if ($venta->cobranza_id) {
             Cobranza::where('id', $venta->cobranza_id)->update(['numero' => "{$serieReal}-{$correlativoReal}"]);
