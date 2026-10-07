@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Services\CentroNotificaciones;
+use App\Services\LostConnectionDetector;
+use Illuminate\Contracts\Database\LostConnectionDetector as LostConnectionDetectorContract;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -13,7 +15,11 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        // Ver App\Services\LostConnectionDetector: agrega un mensaje de
+        // error real de este hosting a la lista que Laravel ya reconoce
+        // para reconectar y reintentar solo, sin perder ninguno de sus
+        // patrones por defecto.
+        $this->app->bind(LostConnectionDetectorContract::class, LostConnectionDetector::class);
     }
 
     public function boot(): void
