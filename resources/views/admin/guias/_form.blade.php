@@ -42,9 +42,12 @@
                    value="{{ old('cliente_nombre', $guia?->cliente_nombre ?? $venta?->cliente_nombre) }}">
         </div>
         <div class="form-group">
-            <label for="cliente_ruc">RUC / DNI</label>
-            <input type="text" id="cliente_ruc" name="cliente_ruc" maxlength="20"
+            <label for="cliente_ruc">RUC / DNI <span>*</span></label>
+            <input type="text" id="cliente_ruc" name="cliente_ruc" required maxlength="20"
                    value="{{ old('cliente_ruc', $guia?->cliente_ruc ?? $venta?->cliente_ruc) }}">
+            <small style="display:block;margin-top:4px;font-size:11px;color:var(--ink-3);">
+                SUNAT exige identificar al destinatario — sin documento no se puede registrar la guía.
+            </small>
         </div>
         <div class="form-group">
             <label for="cliente_distrito">Distrito</label>
@@ -85,22 +88,31 @@
                    value="{{ old('fecha_traslado', $guia?->fecha_traslado?->format('Y-m-d')) }}">
         </div>
         <div class="form-group">
-            <label for="motivo_traslado">Motivo <span>*</span></label>
-            <select id="motivo_traslado" name="motivo_traslado" required>
-                @foreach ($motivos as $motivo)
-                    <option value="{{ $motivo }}" @selected(old('motivo_traslado', $guia?->motivo_traslado) === $motivo)>{{ $motivo }}</option>
+            <label for="cod_traslado">Motivo <span>*</span></label>
+            <select id="cod_traslado" name="cod_traslado" required>
+                @foreach ($motivos as $codigo => $nombre)
+                    <option value="{{ $codigo }}" @selected(old('cod_traslado', $guia?->cod_traslado) === $codigo)>{{ $codigo }} — {{ $nombre }}</option>
                 @endforeach
             </select>
         </div>
         <div class="form-group">
-            <label for="peso_total">Peso total</label>
-            <input type="text" id="peso_total" name="peso_total" maxlength="30"
+            <label for="mod_traslado">Modalidad de traslado <span>*</span></label>
+            <select id="mod_traslado" name="mod_traslado" required>
+                <option value="">— Selecciona —</option>
+                @foreach ($modalidades as $codigo => $nombre)
+                    <option value="{{ $codigo }}" @selected(old('mod_traslado', $guia?->mod_traslado) === $codigo)>{{ $nombre }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="peso_total">Peso total (kg) <span>*</span></label>
+            <input type="number" id="peso_total" name="peso_total" required step="0.001" min="0.001"
                    value="{{ old('peso_total', $guia?->peso_total) }}">
         </div>
         <div class="form-group">
-            <label for="bultos">Bultos</label>
-            <input type="number" id="bultos" name="bultos" min="0"
-                   value="{{ old('bultos', $guia?->bultos) }}">
+            <label for="bultos">Bultos <span>*</span></label>
+            <input type="number" id="bultos" name="bultos" required min="1"
+                   value="{{ old('bultos', $guia?->bultos ?? 1) }}">
         </div>
     </div>
 
@@ -111,19 +123,33 @@
                    value="{{ old('punto_partida', $guia?->punto_partida ?? config('rentaltech.empresa.direccion')) }}">
         </div>
         <div class="form-group">
+            <label for="partida_ubigeo">Ubigeo de partida <span>*</span></label>
+            <input type="text" id="partida_ubigeo" name="partida_ubigeo" required maxlength="6" pattern="\d{6}"
+                   value="{{ old('partida_ubigeo', $guia?->partida_ubigeo ?? $ubigeoPropio ?? '') }}">
+            <small style="display:block;margin-top:4px;font-size:11px;color:var(--ink-3);">Código SUNAT de 6 dígitos, no la dirección.</small>
+        </div>
+        <div class="form-group">
             <label for="punto_llegada">Punto de llegada <span>*</span></label>
             <input type="text" id="punto_llegada" name="punto_llegada" required maxlength="255"
                    value="{{ old('punto_llegada', $guia?->punto_llegada ?? $venta?->destino_entrega) }}">
+        </div>
+        <div class="form-group">
+            <label for="llegada_ubigeo">Ubigeo de llegada <span>*</span></label>
+            <input type="text" id="llegada_ubigeo" name="llegada_ubigeo" required maxlength="6" pattern="\d{6}"
+                   value="{{ old('llegada_ubigeo', $guia?->llegada_ubigeo) }}">
+            <small style="display:block;margin-top:4px;font-size:11px;color:var(--ink-3);">Código SUNAT de 6 dígitos, no la dirección.</small>
         </div>
     </div>
 </div>
 
 <div class="content-card" style="margin-top:25px;">
     <h3 style="margin-bottom:20px;font-size:18px;">Transportista</h3>
+    <p class="nv-hint" id="transporteHint" style="margin:0 0 14px;">Elige la modalidad de traslado arriba para ver los datos que corresponden.</p>
 
-    <div class="form-grid">
+    {{-- Transporte público (mod_traslado = 01): datos de la empresa transportista. --}}
+    <div class="form-grid" id="grupoTransportePublico" style="display:none;">
         <div class="form-group">
-            <label for="empresa_transporte">Empresa de transporte</label>
+            <label for="empresa_transporte">Empresa de transporte <span>*</span></label>
             <select id="empresa_transporte" name="empresa_transporte">
                 <option value="">—</option>
                 @foreach ($empresas as $emp)
@@ -135,22 +161,31 @@
             </select>
         </div>
         <div class="form-group">
-            <label for="transportista_ruc">RUC del transportista</label>
+            <label for="transportista_ruc">RUC del transportista <span>*</span></label>
             <input type="text" id="transportista_ruc" name="transportista_ruc" maxlength="20"
                    value="{{ old('transportista_ruc', $guia?->transportista_ruc) }}">
         </div>
+    </div>
+
+    {{-- Transporte privado (mod_traslado = 02): vehículo y conductor propios. --}}
+    <div class="form-grid" id="grupoTransportePrivado" style="display:none;">
         <div class="form-group">
-            <label for="placa_vehiculo">Placa del vehículo</label>
+            <label for="placa_vehiculo">Placa del vehículo <span>*</span></label>
             <input type="text" id="placa_vehiculo" name="placa_vehiculo" maxlength="20"
                    value="{{ old('placa_vehiculo', $guia?->placa_vehiculo) }}">
         </div>
         <div class="form-group">
-            <label for="conductor_nombre">Conductor</label>
+            <label for="conductor_nombre">Conductor <span>*</span></label>
             <input type="text" id="conductor_nombre" name="conductor_nombre" maxlength="200"
                    value="{{ old('conductor_nombre', $guia?->conductor_nombre) }}">
         </div>
         <div class="form-group">
-            <label for="licencia_conductor">Licencia</label>
+            <label for="conductor_dni">DNI del conductor <span>*</span></label>
+            <input type="text" id="conductor_dni" name="conductor_dni" maxlength="15"
+                   value="{{ old('conductor_dni', $guia?->conductor_dni) }}">
+        </div>
+        <div class="form-group">
+            <label for="licencia_conductor">Licencia <span>*</span></label>
             <input type="text" id="licencia_conductor" name="licencia_conductor" maxlength="20"
                    value="{{ old('licencia_conductor', $guia?->licencia_conductor) }}">
         </div>
@@ -226,6 +261,33 @@ cuerpo.addEventListener('click', (e) => {
         e.target.closest('tr').remove();
     }
 });
+
+// ── Modalidad de traslado: público muestra datos del transportista,
+// privado muestra vehículo/conductor propios — mismo patrón que la
+// tarjeta de Bancarización en Factura (style.display directo, no el
+// atributo `hidden`, para que no quede neutralizado por el estilo en línea).
+const modTraslado = document.getElementById('mod_traslado');
+const grupoPublico = document.getElementById('grupoTransportePublico');
+const grupoPrivado = document.getElementById('grupoTransportePrivado');
+const transporteHint = document.getElementById('transporteHint');
+
+function actualizarModalidadTraslado() {
+    const esPublico = modTraslado.value === '01';
+    const esPrivado = modTraslado.value === '02';
+
+    grupoPublico.style.display = esPublico ? 'grid' : 'none';
+    grupoPrivado.style.display = esPrivado ? 'grid' : 'none';
+    transporteHint.style.display = (esPublico || esPrivado) ? 'none' : 'block';
+
+    document.getElementById('transportista_ruc').required = esPublico;
+    document.getElementById('placa_vehiculo').required = esPrivado;
+    document.getElementById('conductor_nombre').required = esPrivado;
+    document.getElementById('conductor_dni').required = esPrivado;
+    document.getElementById('licencia_conductor').required = esPrivado;
+}
+
+modTraslado.addEventListener('change', actualizarModalidadTraslado);
+actualizarModalidadTraslado();
 
 // Al elegir una venta se copian los datos del destinatario y el destino.
 document.getElementById('venta_select')?.addEventListener('change', function () {
