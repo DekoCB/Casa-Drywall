@@ -211,6 +211,9 @@ Route::middleware(['auth', 'rol:admin'])
         Route::delete('transporte/tarifas/{tarifa}', [TransporteController::class, 'destroyTarifa'])->name('transporte.tarifas.destroy');
 
         Route::get('guias/{guia}/excel', [GuiaRemisionController::class, 'excel'])->name('guias.excel');
+        Route::post('guias/{guia}/reintentar-sunat', [GuiaRemisionController::class, 'reintentarRegistroSunat'])->name('guias.reintentar-sunat');
+        Route::post('guias/{guia}/enviar-sunat', [GuiaRemisionController::class, 'enviarSunat'])->name('guias.enviar-sunat');
+        Route::post('guias/{guia}/verificar-estado', [GuiaRemisionController::class, 'verificarEstadoSunat'])->name('guias.verificar-estado');
         Route::resource('guias', GuiaRemisionController::class)->parameters(['guias' => 'guia']);
 
         // ── Recursos humanos ────────────────────────────────────────────────

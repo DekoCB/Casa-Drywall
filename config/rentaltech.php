@@ -16,6 +16,10 @@ return [
         'direccion' => env('RT_DIRECCION', ''),
         'telefono' => env('RT_TELEFONO', ''),
         'email' => env('RT_EMAIL', ''),
+        // Código de ubigeo (6 dígitos) del local propio — SUNAT lo exige
+        // como punto de partida en toda Guía de Remisión. Se configura una
+        // sola vez, se precarga solo en el formulario.
+        'ubigeo' => env('RT_UBIGEO', ''),
     ],
 
     /*
