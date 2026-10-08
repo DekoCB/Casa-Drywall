@@ -13,11 +13,17 @@ class GuiaRemision extends Model
 
     protected $fillable = [
         'numero_guia', 'venta_id', 'numero_venta', 'fecha', 'fecha_traslado',
-        'motivo_traslado', 'cliente_nombre', 'cliente_ruc', 'cliente_direccion',
+        'motivo_traslado', 'cod_traslado', 'mod_traslado',
+        'cliente_nombre', 'cliente_ruc', 'cliente_direccion',
         'cliente_distrito', 'cliente_provincia', 'cliente_departamento',
-        'punto_partida', 'punto_llegada', 'empresa_transporte', 'transportista_ruc',
-        'placa_vehiculo', 'licencia_conductor', 'conductor_nombre', 'peso_total',
+        'punto_partida', 'partida_ubigeo', 'punto_llegada', 'llegada_ubigeo',
+        'empresa_transporte', 'transportista_ruc',
+        'placa_vehiculo', 'licencia_conductor', 'conductor_nombre', 'conductor_dni',
+        'peso_total', 'und_peso_total',
         'bultos', 'observaciones', 'productos', 'estado', 'usuario_id',
+        // Seguimiento ante SUNAT (vía API-GO) — ver migración
+        // add_sunat_a_guias_remision.
+        'estado_sunat', 'numero_sunat', 'nota_sunat', 'api_go_document_id', 'api_go_ticket',
     ];
 
     protected function casts(): array
