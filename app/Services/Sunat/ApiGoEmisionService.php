@@ -3,6 +3,7 @@
 namespace App\Services\Sunat;
 
 use App\Models\Cobranza;
+use App\Models\GuiaRemision;
 use App\Models\Venta;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -25,6 +26,14 @@ class ApiGoEmisionService
         '07' => 'credit_note',
         '08' => 'debit_note',
     ];
+
+    /**
+     * Serie sugerida para una Guía de Remisión — a diferencia de Boleta/
+     * Factura (donde la persona tipea o se sugiere desde el correlativo
+     * real), acá siempre es la misma de talonario electrónico estándar;
+     * API-GO corrige el correlativo real igual que con los demás documentos.
+     */
+    private const SERIE_GUIA_REMISION = 'T001';
 
     /**
      * Registra localmente en API-GO (sin enviar a SUNAT todavía) el
@@ -116,6 +125,216 @@ class ApiGoEmisionService
         $this->sincronizarNumeroReal($venta, $respuesta['data']);
 
         return true;
+    }
+
+    /**
+     * Registra la Guía de Remisión en API-GO — mismo "esqueleto" que
+     * `crearComprobante()`: nunca lanza excepciones, nunca bloquea el
+     * guardado local, deja el motivo real visible si falla. A diferencia
+     * de Boleta/Factura (que embeben el cliente inline, API-GO lo
+     * deduplica solo), el endpoint de Guías exige un `destinatario_id` ya
+     * existente — se resuelve antes de armar el resto del payload.
+     */
+    public function crearGuiaRemision(GuiaRemision $guia): bool
+    {
+        $destinatarioId = $this->resolverClienteApiGo($guia->cliente_ruc, $guia->cliente_nombre);
+
+        if ($destinatarioId === null) {
+            Log::warning('No se pudo resolver el destinatario en API-GO para la guía', ['guia_id' => $guia->id]);
+
+            $guia->update([
+                'estado_sunat' => 'error',
+                'nota_sunat' => 'No se pudo identificar al destinatario (RUC/DNI) en el sistema de facturación electrónica.',
+            ]);
+
+            return false;
+        }
+
+        $payload = [
+            'company_id' => config('services.api_go.company_id'),
+            'branch_id' => config('services.api_go.branch_id'),
+            'destinatario_id' => $destinatarioId,
+            'serie' => self::SERIE_GUIA_REMISION,
+            'fecha_emision' => optional($guia->fecha)->format('Y-m-d') ?: now()->format('Y-m-d'),
+            'cod_traslado' => $guia->cod_traslado,
+            'mod_traslado' => $guia->mod_traslado,
+            'fecha_traslado' => optional($guia->fecha_traslado)->format('Y-m-d')
+                ?: (optional($guia->fecha)->format('Y-m-d') ?: now()->format('Y-m-d')),
+            'peso_total' => (float) $guia->peso_total,
+            'und_peso_total' => $guia->und_peso_total ?: 'KGM',
+            'num_bultos' => max(1, (int) $guia->bultos),
+            'partida_ubigeo' => $guia->partida_ubigeo,
+            'partida_direccion' => $guia->punto_partida,
+            'llegada_ubigeo' => $guia->llegada_ubigeo,
+            'llegada_direccion' => $guia->punto_llegada,
+            'detalles' => $this->datosDetallesGuia($guia),
+            'observaciones' => $guia->observaciones,
+        ];
+
+        if ($guia->mod_traslado === '01') {
+            $payload['transportista_tipo_doc'] = $this->codigoTipoDocumento($guia->transportista_ruc);
+            $payload['transportista_num_doc'] = $guia->transportista_ruc;
+            $payload['transportista_razon_social'] = $guia->empresa_transporte;
+        } elseif ($guia->mod_traslado === '02') {
+            [$nombres, $apellidos] = $this->partirNombre($guia->conductor_nombre);
+
+            $payload['conductor_tipo_doc'] = '1';
+            $payload['conductor_num_doc'] = $guia->conductor_dni;
+            $payload['conductor_licencia'] = $guia->licencia_conductor;
+            $payload['conductor_nombres'] = $nombres;
+            $payload['conductor_apellidos'] = $apellidos;
+            $payload['vehiculo_placa'] = $guia->placa_vehiculo;
+        }
+
+        $respuesta = $this->peticion('post', '/dispatch-guides', $payload);
+
+        if (! $respuesta || empty($respuesta['success']) || empty($respuesta['data']['id'])) {
+            Log::warning('No se pudo registrar la guía de remisión en API-GO', [
+                'guia_id' => $guia->id,
+                'respuesta' => $respuesta,
+            ]);
+
+            $guia->update([
+                'estado_sunat' => 'error',
+                'nota_sunat' => $respuesta['message'] ?? 'No se pudo registrar la guía en el sistema de facturación electrónica.',
+            ]);
+
+            return false;
+        }
+
+        $guia->update([
+            'api_go_document_id' => $respuesta['data']['id'],
+            'estado_sunat' => 'registrado',
+            'nota_sunat' => null,
+        ]);
+
+        $this->sincronizarNumeroRealGuia($guia, $respuesta['data']);
+
+        return true;
+    }
+
+    /**
+     * Busca al destinatario en API-GO por documento y, si no existe, lo
+     * crea — a diferencia de Boleta/Factura, el endpoint de Guías exige
+     * el id ya resuelto de antemano, no acepta los datos embebidos.
+     */
+    private function resolverClienteApiGo(?string $numero, ?string $razonSocial): ?int
+    {
+        $numeroLimpio = preg_replace('/\D/', '', (string) $numero);
+
+        if ($numeroLimpio === '') {
+            return null;
+        }
+
+        $tipoDocumento = $this->codigoTipoDocumento($numeroLimpio);
+        $companyId = config('services.api_go.company_id');
+
+        $encontrado = $this->peticion('post', '/clients/search-by-document', [
+            'company_id' => $companyId,
+            'tipo_documento' => $tipoDocumento,
+            'numero_documento' => $numeroLimpio,
+        ]);
+
+        if (! empty($encontrado['success']) && ! empty($encontrado['data']['id'])) {
+            return (int) $encontrado['data']['id'];
+        }
+
+        $creado = $this->peticion('post', '/clients', [
+            'company_id' => $companyId,
+            'tipo_documento' => $tipoDocumento,
+            'numero_documento' => $numeroLimpio,
+            'razon_social' => $razonSocial ?: 'CLIENTE VARIOS',
+        ]);
+
+        return ! empty($creado['success']) && ! empty($creado['data']['id']) ? (int) $creado['data']['id'] : null;
+    }
+
+    /**
+     * El número local (`numero_guia`, formato GR-AAAAMMDD-NNNN) es solo una
+     * referencia interna — a diferencia de Boleta/Factura, nunca se
+     * reemplaza por el real, así que no hay forma de que choque con otra
+     * guía. El número real de SUNAT se guarda aparte, solo para mostrarlo.
+     */
+    private function sincronizarNumeroRealGuia(GuiaRemision $guia, array $datos): void
+    {
+        $serieReal = $datos['serie'] ?? null;
+        $correlativoReal = $datos['correlativo'] ?? null;
+
+        if (! $serieReal || ! $correlativoReal) {
+            return;
+        }
+
+        $guia->update(['numero_sunat' => "{$serieReal}-{$correlativoReal}"]);
+    }
+
+    /**
+     * Envía a SUNAT (real) la guía ya registrada en API-GO. A diferencia de
+     * Boleta/Factura, SUNAT procesa Guías de Remisión de forma asíncrona —
+     * esta respuesta trae un ticket a consultar después
+     * (`verificarEstadoGuiaRemision()`), no la aceptación final.
+     */
+    public function enviarGuiaRemisionSunat(GuiaRemision $guia): bool
+    {
+        if (! $guia->api_go_document_id) {
+            return false;
+        }
+
+        $respuesta = $this->peticion('post', "/dispatch-guides/{$guia->api_go_document_id}/send-sunat");
+
+        if (! $respuesta || empty($respuesta['success'])) {
+            $guia->update([
+                'estado_sunat' => 'error',
+                'nota_sunat' => $respuesta['message'] ?? 'No se pudo enviar la guía al servicio de facturación electrónica.',
+            ]);
+
+            return false;
+        }
+
+        $guia->update([
+            'estado_sunat' => $respuesta['data']['estado_sunat'] ?? 'enviado',
+            'api_go_ticket' => $respuesta['data']['ticket'] ?? $guia->api_go_ticket,
+            'nota_sunat' => $respuesta['message'] ?? null,
+        ]);
+
+        return true;
+    }
+
+    /** Consulta el estado real del envío async — SUNAT puede tardar en procesar una Guía de Remisión. */
+    public function verificarEstadoGuiaRemision(GuiaRemision $guia): void
+    {
+        if (! $guia->api_go_document_id) {
+            return;
+        }
+
+        $respuesta = $this->peticion('post', "/dispatch-guides/{$guia->api_go_document_id}/check-status");
+
+        if (! $respuesta || empty($respuesta['success'])) {
+            return;
+        }
+
+        $guia->update([
+            'estado_sunat' => $respuesta['data']['estado_sunat'] ?? $guia->estado_sunat,
+            'numero_sunat' => $respuesta['data']['numero_completo'] ?? $guia->numero_sunat,
+            'nota_sunat' => $respuesta['message'] ?? $guia->nota_sunat,
+        ]);
+    }
+
+    private function datosDetallesGuia(GuiaRemision $guia): array
+    {
+        return collect($guia->productos ?? [])->map(fn ($item) => [
+            'codigo' => $item['codigo'] ?? 'ITEM',
+            'descripcion' => $item['nombre'] ?? $item['descripcion'] ?? 'Producto',
+            'unidad' => $item['unidad'] ?? 'NIU',
+            'cantidad' => (float) ($item['cantidad'] ?? 1),
+        ])->values()->all();
+    }
+
+    /** "Juan Pérez Ramos" → ["Juan", "Pérez Ramos"] — SUNAT pide nombres y apellidos del conductor por separado. */
+    private function partirNombre(?string $nombreCompleto): array
+    {
+        $partes = preg_split('/\s+/', trim((string) $nombreCompleto), 2);
+
+        return [$partes[0] ?? '', $partes[1] ?? ($partes[0] ?? '')];
     }
 
     /**
