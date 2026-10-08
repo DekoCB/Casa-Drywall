@@ -39,7 +39,21 @@
             padding:9px 18px; border:1px solid #DCDAD2; border-radius:8px; background:#fff;
             font-family:inherit; font-size:13px; cursor:pointer; text-decoration:none; color:#14161B;
         }
+        .acciones form { display:contents; }
+        .estado-sunat {
+            padding:9px 14px; border-radius:8px; font-size:12.5px; font-weight:600;
+            display:flex; align-items:center;
+        }
+        .estado-sunat.pendiente  { background:#f1f0eb; color:#6b6560; }
+        .estado-sunat.registrado, .estado-sunat.enviado { background:#e8f0fb; color:#2563eb; }
+        .estado-sunat.aceptado   { background:#e8f5f3; color:#1f6b5e; }
+        .estado-sunat.rechazado, .estado-sunat.error { background:#fbeaea; color:#a12b2b; }
+        .nota-sunat {
+            max-width:820px; margin:0 auto 18px; padding:12px 16px; border-radius:8px;
+            background:#fbeaea; color:#a12b2b; font-size:12.5px;
+        }
         @media print {
+            .nota-sunat { display:none; }
             body { background:#fff; padding:0; }
             .hoja { box-shadow:none; border-radius:0; padding:0; max-width:none; }
             .acciones { display:none; }
@@ -51,6 +65,7 @@
 <div class="acciones">
     <a href="{{ url()->previous() }}">← Volver</a>
     <button type="button" onclick="window.print()">Imprimir / Guardar PDF</button>
+    @yield('acciones-extra')
 </div>
 
 <div class="hoja">

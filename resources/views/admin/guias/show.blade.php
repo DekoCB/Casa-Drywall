@@ -4,7 +4,44 @@
 @section('tipo-documento', 'Guía de Remisión — Remitente')
 @section('numero-documento', $guia->numero_guia)
 
+@php
+    $estadosSunat = [
+        'registrado' => 'Registrada, falta enviar',
+        'enviado'    => 'Enviada, esperando SUNAT',
+        'aceptado'   => 'Aceptada por SUNAT',
+        'rechazado'  => 'Rechazada por SUNAT',
+        'error'      => 'Error al registrar',
+    ];
+    $estadoSunat = $guia->estado_sunat;
+@endphp
+
+@section('acciones-extra')
+    @if ($estadoSunat)
+        <span class="estado-sunat {{ $estadoSunat }}">SUNAT: {{ $estadosSunat[$estadoSunat] ?? $estadoSunat }}</span>
+    @endif
+
+    @if (! $guia->api_go_document_id)
+        <form method="POST" action="{{ route('admin.guias.reintentar-sunat', $guia) }}">
+            @csrf
+            <button type="submit">🔁 Reintentar registro SUNAT</button>
+        </form>
+    @elseif (in_array($estadoSunat, ['registrado', 'error'], true))
+        <form method="POST" action="{{ route('admin.guias.enviar-sunat', $guia) }}">
+            @csrf
+            <button type="submit">Enviar a SUNAT</button>
+        </form>
+    @elseif ($estadoSunat === 'enviado')
+        <form method="POST" action="{{ route('admin.guias.verificar-estado', $guia) }}">
+            @csrf
+            <button type="submit">Verificar estado</button>
+        </form>
+    @endif
+@endsection
+
 @section('documento')
+    @if ($guia->nota_sunat && in_array($estadoSunat, ['error', 'rechazado'], true))
+        <div class="nota-sunat"><b>Motivo:</b> {{ $guia->nota_sunat }}</div>
+    @endif
 <div class="doc-bloques">
     <div class="doc-bloque">
         <h4>Destinatario</h4>

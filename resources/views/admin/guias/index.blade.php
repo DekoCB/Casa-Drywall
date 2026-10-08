@@ -71,7 +71,14 @@
                         {{ $guia->empresa_transporte ?: '—' }}
                         <div style="font-size:12px;color:#666;">{{ $guia->placa_vehiculo }}</div>
                     </td>
-                    <td>{{ ucfirst($guia->estado) }}</td>
+                    <td>
+                        {{ ucfirst($guia->estado) }}
+                        @if ($guia->estado_sunat)
+                            <div style="font-size:12px;color:{{ in_array($guia->estado_sunat, ['error', 'rechazado'], true) ? '#a12b2b' : '#666' }};">
+                                SUNAT: {{ $guia->estado_sunat }}
+                            </div>
+                        @endif
+                    </td>
                     <td style="white-space:nowrap;">
                         <a href="{{ route('admin.guias.show', $guia) }}" class="btn btn-secondary btn-sm">Ver</a>
                         <a href="{{ route('admin.guias.excel', $guia) }}" class="btn btn-secondary btn-sm">Excel</a>
