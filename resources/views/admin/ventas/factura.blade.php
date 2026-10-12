@@ -418,6 +418,14 @@
 <script>
 const IGV_VENTAS = {{ config('rentaltech.igv') }};
 const EDITANDO = {{ $venta ? 'true' : 'false' }};
+// Si el formulario se recarga por un error de validación en OTRO campo
+// (ej. olvidó elegir Cliente), old() trae de vuelta exactamente lo que la
+// persona ya había escrito en Serie/N° Comprobante — incluido un número de
+// talonario físico tipeado a mano. Sin esto, la sugerencia automática se
+// disparaba igual al cargar y lo pisaba en silencio con un número distinto,
+// sin ningún aviso: la persona reenviaba creyendo que su número seguía ahí.
+const HAY_N_SERI_PREVIO = {{ old('n_seri') !== null ? 'true' : 'false' }};
+const HAY_N_COMP_PREVIO = {{ old('n_comp') !== null ? 'true' : 'false' }};
 
 // Un token por carga de página (no por clic): si la persona reenvía el
 // mismo formulario — doble clic en "Guardar", o vuelve con "atrás" del
@@ -439,12 +447,12 @@ const fNCompHintSunat = document.getElementById('f-n-comp-hint-sunat');
 // haya escrito su propia serie a mano (si solo se chequeara "está vacío",
 // dejaría de re-sugerir después del primer autocompletado). Al editar, el
 // número ya es el real del comprobante — nunca se re-sugiere.
-let fSerieEditada = EDITANDO;
+let fSerieEditada = EDITANDO || HAY_N_SERI_PREVIO;
 fNSeri.addEventListener('input', () => { fSerieEditada = true; });
 
 // Igual que con la serie: si la persona ya tocó el N° Comprobante a mano,
 // no se le pisa con la sugerencia de SUNAT al cambiar de tipo.
-let fCompEditada = EDITANDO;
+let fCompEditada = EDITANDO || HAY_N_COMP_PREVIO;
 fNComp.addEventListener('input', () => { fCompEditada = true; });
 
 // Cotización y Nota de Venta no admiten número libre: el servidor siempre

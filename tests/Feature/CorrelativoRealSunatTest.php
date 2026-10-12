@@ -153,6 +153,28 @@ class CorrelativoRealSunatTest extends TestCase
         $this->assertMatchesRegularExpression('/^\d{6}$/', $respuesta->viewData('correlativosInternos')['01']);
     }
 
+    /**
+     * Relacionado con el bug de arriba, encontrado al revisarlo de nuevo:
+     * si el formulario se recarga por un error de validación en OTRO campo
+     * (ej. no eligió Cliente), Laravel repone con old() lo que la persona ya
+     * había escrito en N° Comprobante — incluido un número de talonario
+     * físico tipeado a mano, distinto de cualquier sugerencia. El JS de
+     * autocompletado no debe pisarlo en silencio al volver a cargar.
+     */
+    public function test_recarga_por_error_de_validacion_no_pisa_el_n_comp_ya_escrito(): void
+    {
+        $respuesta = $this->withSession(['_old_input' => ['tipcomp' => '01', 'n_seri' => 'F001', 'n_comp' => '000777']])
+            ->actingAs($this->admin(), 'web')
+            ->get(route('admin.ventas.factura.create'));
+
+        $respuesta->assertOk();
+        $respuesta->assertSee('value="000777"', false);
+        // La bandera que le dice al JS "no auto-sugieras, la persona ya
+        // escribió esto" debe quedar en true — antes no existía, y el
+        // autocompletado lo pisaba igual al cargar.
+        $respuesta->assertSee('const HAY_N_COMP_PREVIO = true;', false);
+    }
+
     public function test_sugerencia_de_factura_cae_a_correlativo_local_si_api_go_no_responde(): void
     {
         Http::fake(['*/branches/*/correlatives' => Http::response(null, 500)]);
