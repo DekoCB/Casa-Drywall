@@ -142,6 +142,57 @@ class CorrelativoRealSunatTest extends TestCase
 
         $respuesta->assertOk();
         $this->assertSame('001929', $respuesta->viewData('correlativosInternos')['03']);
-        $this->assertNull($respuesta->viewData('correlativosInternos')['01']);
+
+        // Antes: si API-GO no tenía un correlativo configurado para esa
+        // serie (acá, F001/01 no viene en la respuesta), la sugerencia
+        // quedaba en null y el campo N° Comprobante se veía en blanco con
+        // solo el placeholder — el negocio reportaba "no me deja guardar"
+        // sobre un campo que a simple vista parecía lleno. Ahora siempre
+        // cae a un correlativo local real, nunca null.
+        $this->assertNotNull($respuesta->viewData('correlativosInternos')['01']);
+        $this->assertMatchesRegularExpression('/^\d{6}$/', $respuesta->viewData('correlativosInternos')['01']);
+    }
+
+    public function test_sugerencia_de_factura_cae_a_correlativo_local_si_api_go_no_responde(): void
+    {
+        Http::fake(['*/branches/*/correlatives' => Http::response(null, 500)]);
+
+        Venta::create([
+            'fecha' => '2026-10-02', 'tipcomp' => '01', 'n_seri' => 'F001', 'n_comp' => '001868',
+            'razonsocial' => 'Empresa de Prueba SAC', 'cliente_nombre' => 'Empresa de Prueba SAC',
+            'n_ruc' => '20000000001', 'cliente_ruc' => '20000000001', 'total' => 118,
+        ]);
+
+        $respuesta = $this->actingAs($this->admin(), 'web')->get(route('admin.ventas.factura.create'));
+
+        $respuesta->assertOk();
+        // Máximo local (001868) + 1 — nunca vacío, el campo queda
+        // precargado con un número real aunque API-GO esté caído.
+        $this->assertSame('001869', $respuesta->viewData('correlativosInternos')['01']);
+    }
+
+    public function test_createFactura_pide_los_correlativos_una_sola_vez(): void
+    {
+        // Antes: una llamada a /branches/{id}/correlatives por cada tipo
+        // (Boleta y Factura), dos peticiones idénticas en cada carga de
+        // "Nueva Venta" — si API-GO estaba lento, hasta 30s de espera antes
+        // de que la página apareciera. El servicio ahora memoiza por
+        // instancia y el controlador reutiliza la misma instancia para
+        // ambos tipos, así que debe ser una sola petición — sin contar la
+        // de bancarización, un endpoint distinto que la misma página pide.
+        $llamadasCorrelativos = 0;
+
+        Http::fake([
+            '*/branches/*/correlatives' => function () use (&$llamadasCorrelativos) {
+                $llamadasCorrelativos++;
+
+                return Http::response(['success' => true, 'data' => ['correlatives' => []]], 200);
+            },
+            '*' => Http::response(['success' => true, 'data' => []], 200),
+        ]);
+
+        $this->actingAs($this->admin(), 'web')->get(route('admin.ventas.factura.create'))->assertOk();
+
+        $this->assertSame(1, $llamadasCorrelativos);
     }
 }
