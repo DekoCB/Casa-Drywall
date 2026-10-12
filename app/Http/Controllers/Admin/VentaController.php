@@ -104,9 +104,23 @@ class VentaController extends Controller
     }
 
     /**
-     * Sugerencia de solo lectura para el N° Comprobante de Boleta/Factura
-     * (null si está deshabilitado o API-GO no respondió) — nunca bloquea la
-     * carga del formulario por esto.
+     * Sugerencia para el N° Comprobante de Boleta/Factura — a diferencia de
+     * Cotización/Nota de Venta (100% interno, nunca falla), esto depende de
+     * una llamada en vivo a API-GO que puede fallar o tardar (caída, hipo de
+     * red, hosting compartido lento). Antes, si fallaba, el método devolvía
+     * null y el campo quedaba completamente vacío con solo un placeholder
+     * ("0000000001") que a simple vista parece un valor real — el negocio
+     * reportó repetidas veces "se rompe el correlativo" cuando en realidad
+     * el campo nunca se llenó y el navegador rechazaba el envío con "Completa
+     * este campo" sobre lo que parecía ya estar completo.
+     *
+     * Ahora SIEMPRE devuelve un número real utilizable: si API-GO no
+     * responde (o está deshabilitado), cae al mismo correlativo local que ya
+     * usan Cotización/Nota de Venta (máximo usado localmente + 1). Nunca es
+     * una pérdida — el campo sigue siendo editable y `crearComprobante()`
+     * corrige el número final al real de SUNAT de todas formas al guardar;
+     * lo único que cambia es que la persona ya no se topa con un campo vacío
+     * disfrazado de lleno.
      *
      * El contador real de SUNAT solo avanza cuando un comprobante se
      * registra con éxito — si uno se quedó sin registrarse (ej. rechazado
@@ -114,22 +128,21 @@ class VentaController extends Controller
      * #211), ese número sigue "atascado" como la sugerencia de TODAS las
      * Facturas nuevas, cada una choca contra el duplicado local y queda
      * bloqueada. Se salta hacia adelante hasta un número que de verdad esté
-     * libre en este sistema, para que una sola Factura pendiente no vuelva
-     * a frenarle la numeración a todo el negocio.
+     * libre en este sistema (aplica tanto al sugerido por SUNAT como al
+     * respaldo local), para que una sola Factura pendiente no vuelva a
+     * frenarle la numeración a todo el negocio.
      */
-    private function sugerenciaCorrelativoSunat(string $tipcomp): ?string
+    private function sugerenciaCorrelativoSunat(string $tipcomp): string
     {
-        if (! config('empresas.activa.sunat_habilitado', true)) {
-            return null;
-        }
+        $serie = self::TIPOS[$tipcomp]['serie'];
 
-        $siguiente = $this->emisionSunat->siguienteCorrelativo($tipcomp, self::TIPOS[$tipcomp]['serie']);
+        $siguiente = config('empresas.activa.sunat_habilitado', true)
+            ? $this->emisionSunat->siguienteCorrelativo($tipcomp, $serie)
+            : null;
 
         if ($siguiente === null) {
-            return null;
+            $siguiente = $this->correlativo->documentoInterno($tipcomp, $serie, 6);
         }
-
-        $serie = self::TIPOS[$tipcomp]['serie'];
 
         while (Venta::where('tipcomp', $tipcomp)->where('n_seri', $serie)->where('n_comp', $siguiente)->exists()) {
             $siguiente = str_pad((string) ((int) $siguiente + 1), strlen($siguiente), '0', STR_PAD_LEFT);

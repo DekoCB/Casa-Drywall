@@ -35,6 +35,11 @@ class ApiGoEmisionService
      */
     private const SERIE_GUIA_REMISION = 'T001';
 
+    /** Memoización por instancia de `correlativosDisponibles()` — ver su docblock. */
+    private ?array $correlativosCache = null;
+
+    private bool $correlativosFueronPedidos = false;
+
     /**
      * Registra localmente en API-GO (sin enviar a SUNAT todavía) el
      * comprobante de una Venta recién guardada. Aplica a Boleta (03),
@@ -435,8 +440,9 @@ class ApiGoEmisionService
      * adelanto de lo que API-GO va a asignar en el momento real de crear el
      * comprobante (`crearComprobante()`, que corrige el número final igual
      * si otra venta se cuela antes). Devuelve null si API-GO no responde o
-     * no tiene un correlativo configurado para esa serie — el formulario
-     * cae entonces al campo editable de siempre, no bloquea la venta.
+     * no tiene un correlativo configurado para esa serie — quien llama
+     * decide qué hacer con eso (ver `VentaController::sugerenciaCorrelativoSunat()`,
+     * que ahora cae a un correlativo local en vez de dejar el campo vacío).
      */
     public function siguienteCorrelativo(string $tipcomp, string $serie): ?string
     {
@@ -444,11 +450,9 @@ class ApiGoEmisionService
             return null;
         }
 
-        $branchId = config('services.api_go.branch_id');
-        $respuesta = $this->peticion('get', "/branches/{$branchId}/correlatives");
-        $correlativos = $respuesta['data']['correlatives'] ?? null;
+        $correlativos = $this->correlativosDisponibles();
 
-        if (! is_array($correlativos)) {
+        if ($correlativos === null) {
             return null;
         }
 
@@ -459,6 +463,37 @@ class ApiGoEmisionService
         }
 
         return null;
+    }
+
+    /**
+     * `createFactura()` pide la sugerencia dos veces por carga de página
+     * (una para Boleta, otra para Factura — la persona puede cambiar el
+     * tipo sin recargar) — sin esto, cada carga de "Nueva Venta" disparaba
+     * DOS peticiones idénticas a `/branches/{id}/correlatives` (mismo
+     * resultado las dos veces), doblando el peor caso de espera si API-GO
+     * está lento. Memoizado por instancia (`$correlativosCache` arriba):
+     * como el controlador inyecta un único `ApiGoEmisionService` por
+     * request, la segunda llamada reutiliza lo que ya se pidió, tanto si la
+     * primera tuvo éxito como si falló (evita reintentar un timeout dos
+     * veces en la misma carga).
+     */
+    private function correlativosDisponibles(): ?array
+    {
+        if ($this->correlativosFueronPedidos) {
+            return $this->correlativosCache;
+        }
+
+        $this->correlativosFueronPedidos = true;
+
+        $branchId = config('services.api_go.branch_id');
+        // Timeout corto a propósito: esto es solo una sugerencia de UI que
+        // nunca bloquea la venta (ver el fallback local en el controlador)
+        // — mejor fallar rápido que dejar "Nueva Venta" tardando hasta 15s
+        // en aparecer por un API-GO lento o caído.
+        $respuesta = $this->peticion('get', "/branches/{$branchId}/correlatives", [], 4);
+        $correlativos = $respuesta['data']['correlatives'] ?? null;
+
+        return $this->correlativosCache = is_array($correlativos) ? $correlativos : null;
     }
 
     /**
@@ -610,13 +645,13 @@ class ApiGoEmisionService
         return strlen((string) $numero) === 11 ? '6' : '1';
     }
 
-    private function peticion(string $metodo, string $ruta, array $datos = []): ?array
+    private function peticion(string $metodo, string $ruta, array $datos = [], int $timeoutSegundos = 15): ?array
     {
         try {
             $baseUrl = rtrim(config('services.api_go.base_url'), '/');
             $token = config('services.api_go.token');
 
-            $http = Http::timeout(15)->when($token, fn ($http) => $http->withToken($token));
+            $http = Http::timeout($timeoutSegundos)->when($token, fn ($http) => $http->withToken($token));
 
             $respuesta = $metodo === 'get'
                 ? $http->get("{$baseUrl}{$ruta}", $datos)

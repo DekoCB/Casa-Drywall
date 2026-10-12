@@ -204,7 +204,7 @@
                     Correlativo automático: no se puede editar.
                 </small>
                 <small id="f-n-comp-hint-sunat" style="display:none; margin-top:4px; font-size:11px; color:var(--ink-3);">
-                    Sugerido según el correlativo real de SUNAT — edítalo solo si sabes que debe ser otro.
+                    Sugerencia automática — edítalo solo si sabes que debe ser otro.
                 </small>
             </div>
             <div class="form-group">
@@ -451,9 +451,13 @@ fNComp.addEventListener('input', () => { fCompEditada = true; });
 // reemplaza lo que se escriba aquí por el siguiente correlativo, así que el
 // campo se bloquea y se muestra el número que realmente va a quedar. Boleta
 // y Factura siguen siendo editables (puede venir de un talonario físico),
-// pero se precarga el correlativo real de SUNAT como sugerencia cuando
-// está disponible — si la persona lo cambia, el registro en API-GO corrige
-// el número final de todas formas, así que esto nunca bloquea la venta.
+// pero SIEMPRE llegan con una sugerencia precargada (real de SUNAT si
+// API-GO respondió, local si no) — nunca vacías. Antes, si API-GO no
+// respondía, el campo quedaba vacío con solo el placeholder de ejemplo, que
+// a simple vista parece un valor ya escrito: el negocio terminaba
+// topándose con "Completa este campo" sobre algo que parecía completo. Si
+// la persona cambia el número de todas formas, el registro en API-GO
+// corrige el número final igual, así que esto nunca bloquea la venta.
 function sugerirSerieFactura() {
     if (EDITANDO) return;
 

@@ -85,8 +85,14 @@ class GeneradorCorrelativo
      * transacción que la generó termina, así la siguiente lectura ya ve el
      * número recién usado en vez de repetirlo. Para que el lock realmente
      * proteja algo, este método debe llamarse dentro de un `DB::transaction()`.
+     *
+     * También sirve como respaldo de la sugerencia de Boleta/Factura cuando
+     * API-GO no responde (ver `VentaController::sugerenciaCorrelativoSunat()`)
+     * — por eso el padding de dígitos es configurable: el formato real de
+     * SUNAT para esos dos es de 6 dígitos, distinto del de 8 que ya usan
+     * Cotización/Nota de Venta.
      */
-    public function documentoInterno(string $tipcomp, string $serie): string
+    public function documentoInterno(string $tipcomp, string $serie, int $digitos = 8): string
     {
         $ultimo = (int) DB::table('ventas')
             ->where('tipcomp', $tipcomp)
@@ -94,6 +100,6 @@ class GeneradorCorrelativo
             ->lockForUpdate()
             ->max(DB::raw('CAST(n_comp AS UNSIGNED)'));
 
-        return str_pad((string) ($ultimo + 1), 8, '0', STR_PAD_LEFT);
+        return str_pad((string) ($ultimo + 1), $digitos, '0', STR_PAD_LEFT);
     }
 }
