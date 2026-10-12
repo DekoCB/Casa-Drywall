@@ -85,6 +85,79 @@ class VentaGenerarDesdeCotizacionTest extends TestCase
         $this->assertCount(1, $origen['items']);
         $this->assertSame('Plancha de Drywall', $origen['items'][0]['nombre']);
         $this->assertEquals(3, $origen['items'][0]['cantidad']);
+        // En una carga fresca (sin reenvío previo) el JS sí debe aplicar la
+        // precarga del origen — ver los dos tests de abajo para el caso
+        // contrario (recarga por error de validación).
+        $respuesta->assertSee('const HAY_RAZONSOCIAL_PREVIA = false;', false);
+    }
+
+    /**
+     * Bug real reportado el 12 de octubre: la Factura F001-001879 se generó
+     * desde la Cotización #282 (que era "Cliente Varios" desde el 7 de
+     * octubre). El vendedor aseguró que sí buscó y eligió al cliente real
+     * durante la conversión — pero la venta quedó guardada con los datos
+     * originales de la Cotización de todas formas. Causa real encontrada:
+     * la precarga de ORIGEN (cliente, dirección, items) se ejecutaba de
+     * nuevo en CADA carga de la página — incluida una recarga por un error
+     * de validación en otro campo (ej. Forma de pago, en una Factura grande
+     * como esta) — pisando en silencio lo que la persona ya había elegido a
+     * mano. Mismo patrón que el de N° Comprobante arreglado el mismo día
+     * (HAY_N_SERI_PREVIO/HAY_N_COMP_PREVIO).
+     */
+    public function test_una_recarga_por_error_no_pisa_el_cliente_real_elegido_sobre_el_origen(): void
+    {
+        $cot = Venta::create([
+            'fecha' => '2026-10-07', 'tipcomp' => 'COT', 'n_seri' => 'CT01', 'n_comp' => '00000131',
+            'razonsocial' => 'Cliente Varios', 'n_ruc' => '',
+        ]);
+
+        $respuesta = $this->withSession(['_old_input' => [
+            'tipcomp' => '01', 'razonsocial' => 'Contratistas Reales S.A.C.', 'n_ruc' => '20601111116',
+        ]])
+            ->actingAs($this->admin(), 'web')
+            ->get(route('admin.ventas.factura.create', ['tipo' => '01', 'desde' => $cot->id]));
+
+        $respuesta->assertOk();
+        // El origen (la Cotización) sigue siendo "Cliente Varios" — lo que
+        // cambia es que el JS ya no debe volver a aplicarlo encima porque
+        // hay datos reales de un envío anterior.
+        $this->assertSame('Cliente Varios', $respuesta->viewData('origen')['razonsocial']);
+        $respuesta->assertSee('const HAY_RAZONSOCIAL_PREVIA = true;', false);
+        $respuesta->assertSee('value="Contratistas Reales S.A.C."', false);
+    }
+
+    /**
+     * Mismo bug, para la tabla de productos (100% armada por JS, sin un
+     * old() de Blade propio como el resto de los campos). `viewData()` no
+     * ve `$itemsAnteriores` porque es una variable interna del @php de la
+     * vista, no algo que el controlador pasa — por eso se verifica contra
+     * el ITEMS_PREVIOS ya incrustado en el HTML/JS de la respuesta.
+     */
+    public function test_una_recarga_por_error_mantiene_los_productos_ya_agregados(): void
+    {
+        $cot = Venta::create([
+            'fecha' => '2026-10-07', 'tipcomp' => 'COT', 'n_seri' => 'CT01', 'n_comp' => '00000131',
+            'razonsocial' => 'Cliente Varios',
+        ]);
+        VentaDetalle::create([
+            'venta_id' => $cot->id, 'prod_codigo' => 'P-COT', 'prod_nombre' => 'Producto de la cotizacion',
+            'cantidad' => 1, 'precio_unitario' => 10, 'subtotal' => 10,
+        ]);
+
+        $respuesta = $this->withSession(['_old_input' => [
+            'tipcomp' => '01', 'razonsocial' => 'Cliente Real',
+            'items' => [
+                ['producto_nombre' => 'Producto Real Agregado', 'producto_codigo' => 'P-REAL', 'cantidad' => '5', 'precio_unitario' => '20'],
+            ],
+        ]])
+            ->actingAs($this->admin(), 'web')
+            ->get(route('admin.ventas.factura.create', ['tipo' => '01', 'desde' => $cot->id]));
+
+        $respuesta->assertOk();
+        // Confirma que ITEMS_PREVIOS (viene de old('items')) sí trae el
+        // producto que la persona ya había agregado antes de la recarga.
+        $respuesta->assertSee('"codigo":"P-REAL"', false);
+        $respuesta->assertSee('"cantidad":5', false);
     }
 
     public function test_desde_ignora_un_origen_que_no_es_cotizacion(): void

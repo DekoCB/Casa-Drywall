@@ -44,6 +44,19 @@
     // detallados (se creó con "Monto único" en vez de la tabla de abajo).
     $edicionSinItems = $venta && $edicionItems->isEmpty();
 
+    // Si el formulario se recarga por un error de validación en otro campo,
+    // la tabla de productos (100% armada por JS, sin un old() de Blade como
+    // el resto de los campos) debe reponerse con lo que la persona ya tenía
+    // en pantalla — venga de la Cotización de origen, de la venta que se
+    // está editando, o tipeado a mano — en vez de perderse o reemplazarse
+    // en silencio con los datos originales otra vez.
+    $itemsAnteriores = collect(old('items', []))->map(fn ($it) => [
+        'nombre' => $it['producto_nombre'] ?? '',
+        'codigo' => $it['producto_codigo'] ?? '',
+        'precio' => (float) ($it['precio_unitario'] ?? 0),
+        'cantidad' => (float) ($it['cantidad'] ?? 1),
+    ])->values();
+
     // Catálogo de medios de pago para la bancarización de Factura (Ley N°
     // 28194) — solo lo pasa createFactura(); editFactura() nunca aplica a
     // Factura (abort_unless COT/NV), de ahí el valor por defecto.
@@ -426,6 +439,14 @@ const EDITANDO = {{ $venta ? 'true' : 'false' }};
 // sin ningún aviso: la persona reenviaba creyendo que su número seguía ahí.
 const HAY_N_SERI_PREVIO = {{ old('n_seri') !== null ? 'true' : 'false' }};
 const HAY_N_COMP_PREVIO = {{ old('n_comp') !== null ? 'true' : 'false' }};
+// Mismo caso, encontrado al investigar el reporte real de la Factura
+// F001-001879 (12 oct): al generar venta desde una Cotización, si el
+// formulario se recarga por un error en OTRO campo, la precarga de
+// "Generar venta" (cliente, dirección, productos — ver ORIGEN más abajo) se
+// repetía igual y pisaba en silencio al cliente real que la persona ya
+// había buscado y seleccionado a mano, reemplazándolo con el de la
+// Cotización original sin ningún aviso.
+const HAY_RAZONSOCIAL_PREVIA = {{ old('razonsocial') !== null ? 'true' : 'false' }};
 
 // Un token por carga de página (no por clic): si la persona reenvía el
 // mismo formulario — doble clic en "Guardar", o vuelve con "atrás" del
@@ -949,7 +970,11 @@ document.getElementById('formFactura').addEventListener('submit', (e) => {
 // ── Precarga desde una Cotización ("Generar venta") ──────────────────────
 const ORIGEN = @json($origen);
 
-if (ORIGEN) {
+// Solo se precarga en la primera carga real de la página — si ya hay datos
+// previos (recarga por un error de validación en otro campo), se respeta
+// lo que la persona ya había escrito/elegido en vez de volver a traer los
+// datos originales de la Cotización por encima.
+if (ORIGEN && !HAY_RAZONSOCIAL_PREVIA) {
     document.getElementById('f-razonsocial').value = ORIGEN.razonsocial || '';
     document.getElementById('f-n-ruc').value        = ORIGEN.n_ruc || '';
     document.getElementById('f-direccion').value    = ORIGEN.direccion || '';
@@ -972,9 +997,24 @@ if (ORIGEN) {
 // ── Precarga al editar: el detalle ya guardado de la venta ───────────────
 const EDICION_ITEMS = @json($edicionItems);
 
-EDICION_ITEMS.forEach((it) => {
-    agregarFilaFactura({ nombre: it.nombre, codigo: it.codigo, precio: it.precio }, it.cantidad);
-});
+// ── Productos que ya estaban en la tabla antes de una recarga por error ──
+// La tabla de productos es 100% armada por este script, sin un old() de
+// Blade como el resto de los campos — sin esto, una recarga (acá o
+// editando) la dejaba vacía, o peor, la reemplazaba en silencio con los
+// productos originales de la Cotización/venta en vez de respetar lo que
+// la persona ya tenía armado en pantalla. Mutuamente excluyente con
+// ORIGEN.items/EDICION_ITEMS: solo una de las tres aplica en cada carga.
+const ITEMS_PREVIOS = @json($itemsAnteriores);
+
+if (HAY_RAZONSOCIAL_PREVIA) {
+    ITEMS_PREVIOS.forEach((it) => {
+        agregarFilaFactura({ nombre: it.nombre, codigo: it.codigo, precio: it.precio }, it.cantidad);
+    });
+} else {
+    EDICION_ITEMS.forEach((it) => {
+        agregarFilaFactura({ nombre: it.nombre, codigo: it.codigo, precio: it.precio }, it.cantidad);
+    });
+}
 
 recalcularFactura();
 
