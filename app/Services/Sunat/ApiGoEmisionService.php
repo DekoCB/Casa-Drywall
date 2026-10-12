@@ -125,6 +125,12 @@ class ApiGoEmisionService
             'api_go_document_type' => $tipo,
             'estado_factura' => 'registrado',
             'numero_sunat' => $respuesta['data']['numero_completo'] ?? null,
+            // Si esto es un reintento que sí funcionó, limpia el motivo del
+            // fallo anterior — si no, el comprobante queda mostrando
+            // "registrado" junto con el aviso de error viejo, como pasó en
+            // producción con F001-001880 (reintento exitoso, aviso rojo
+            // pegado de antes de arreglar la contraseña de API-GO).
+            'nota_contadora' => null,
         ]);
 
         $this->sincronizarNumeroReal($venta, $respuesta['data']);

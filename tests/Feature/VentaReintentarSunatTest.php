@@ -67,6 +67,11 @@ class VentaReintentarSunatTest extends TestCase
         $this->assertSame(99, $venta->api_go_document_id);
         $this->assertSame('registrado', $venta->estado_factura);
         $this->assertSame('TRAN', $venta->bancarizacion_medio_pago);
+        // Bug real encontrado en producción (F001-001880, 12 de octubre): el
+        // reintento SÍ registraba bien, pero dejaba el aviso de error del
+        // primer intento fallido pegado — el comprobante mostraba
+        // "registrado" junto con un aviso rojo viejo que ya no aplicaba.
+        $this->assertNull($venta->nota_contadora);
 
         Http::assertSent(fn ($r) => str_contains($r->url(), '/invoices')
             && ($r->data()['bancarizacion']['medio_pago'] ?? null) === 'TRAN');
